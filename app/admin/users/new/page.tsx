@@ -61,7 +61,7 @@ export default function NewUserPage() {
                 email: email.trim(),
                 password: password,
                 role,
-                restaurantAccess: role === "viewer" ? selectedRids : [],
+                restaurantIds: role === "viewer" ? selectedRids : [],
             });
             showToast("User created successfully!");
             setTimeout(() => router.push('/admin/users'), 1000);

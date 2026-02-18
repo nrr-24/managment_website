@@ -491,8 +491,7 @@ export type User = {
     name: string;
     email: string;
     role: "manager" | "viewer";
-    restaurantAccess?: string[];
-    backgroundImage?: string;
+    restaurantIds?: string[];
     backgroundImagePath?: string;
     createdAt?: any;
     updatedAt?: any;

@@ -30,8 +30,8 @@ export default function EditUserPage() {
                 setName(u.name || "");
                 setEmail(u.email || "");
                 setRole(u.role || "viewer");
-                setBgPreview(u.backgroundImage || null);
-                setSelectedRids(u.restaurantAccess || []);
+                setBgPreview(u.backgroundImagePath || null);
+                setSelectedRids(u.restaurantIds || []);
             }
             setRestaurants(rests);
             setLoaded(true);
@@ -82,17 +82,15 @@ export default function EditUserPage() {
             const updates: any = {
                 name: name.trim(),
                 role,
-                restaurantAccess: role === "viewer" ? selectedRids : [],
+                restaurantIds: role === "viewer" ? selectedRids : [],
             };
 
             if (bgFile) {
                 const { url, path } = await uploadUserBackgroundImage(bgFile, uid);
-                updates.backgroundImage = url;
                 updates.backgroundImagePath = path;
                 showToast("Image uploaded");
-            } else if (bgPreview === null && user?.backgroundImage) {
+            } else if (bgPreview === null && user?.backgroundImagePath) {
                 // User removed background image
-                updates.backgroundImage = null;
                 updates.backgroundImagePath = null;
             }
 

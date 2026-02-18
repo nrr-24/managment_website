@@ -1,5 +1,6 @@
 import {
     addDoc,
+    arrayUnion,
     collection,
     deleteDoc,
     doc,
@@ -8,7 +9,9 @@ import {
     orderBy,
     query,
     serverTimestamp,
+    setDoc,
     updateDoc,
+    writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from "firebase/storage";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -133,8 +136,15 @@ export type Dish = {
 
 // ---------- Restaurants ----------
 export async function listRestaurants(): Promise<Restaurant[]> {
-    const snap = await getDocs(query(collection(db, "restaurants"), orderBy("createdAt", "desc")));
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    const snap = await getDocs(collection(db, "restaurants"));
+    const restaurants = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    // Sort by createdAt if available, newest first (client-side to avoid missing field issues)
+    restaurants.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
+        const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
+        return tb - ta;
+    });
+    return restaurants;
 }
 
 export async function getRestaurant(id: string): Promise<Restaurant | null> {
@@ -166,35 +176,30 @@ export async function updateRestaurant(id: string, data: Partial<Omit<Restaurant
     });
 }
 
+/**
+ * Delete a restaurant: captures logo+bg paths, cascade-deletes all categories
+ * (which cascade-deletes all dishes+images), deletes restaurant doc,
+ * then deletes restaurant storage assets.
+ * Mimics Swift's deleteRestaurant.
+ */
 export async function deleteRestaurant(id: string) {
-    // Cascading delete: all categories → all dishes → all storage images → restaurant doc
     try {
+        // 1. Capture restaurant image paths before deletion
+        const restDoc = await getDoc(doc(db, "restaurants", id));
+        const logoPath = restDoc.exists() ? (restDoc.data()?.logoPath || restDoc.data()?.imagePath) : null;
+        const bgPath = restDoc.exists() ? restDoc.data()?.backgroundImagePath : null;
+
+        // 2. Cascade delete all categories (each category cascades to its dishes)
         const cats = await listCategories(id);
         for (const cat of cats) {
-            const dishes = await listDishes(id, cat.id);
-            for (const dish of dishes) {
-                // Delete dish images from storage
-                if (dish.imagePaths) {
-                    for (const p of dish.imagePaths) {
-                        await deleteImageByPath(p);
-                    }
-                }
-                await deleteDoc(doc(db, "restaurants", id, "categories", cat.id, "dishes", dish.id));
-            }
-            // Delete category image
-            if (cat.imagePath) await deleteImageByPath(cat.imagePath);
-            await deleteDoc(doc(db, "restaurants", id, "categories", cat.id));
+            await deleteCategory(id, cat.id);
         }
-        // Delete restaurant images from storage
-        try {
-            const storageRef = ref(storage, `restaurants/${id}`);
-            const files = await listAll(storageRef);
-            for (const item of files.items) {
-                await deleteObject(item);
-            }
-        } catch (e) { /* no storage folder is fine */ }
 
+        // 3. Delete the restaurant document
         await deleteDoc(doc(db, "restaurants", id));
+
+        // 4. Delete restaurant-level storage assets (logo, background)
+        await deleteStoragePaths([logoPath, bgPath]);
     } catch (err) {
         console.error("Cascading delete failed:", err);
         throw err;
@@ -241,15 +246,41 @@ export async function updateCategory(
     });
 }
 
+/**
+ * Delete a category: captures icon path, deletes all dishes (with their images),
+ * deletes the category doc, then deletes the category icon from storage.
+ * Mimics Swift's deleteCategory.
+ */
 export async function deleteCategory(restaurantId: string, categoryId: string) {
+    // 1. Capture the category icon path before deletion
+    const catDoc = await getDoc(doc(db, "restaurants", restaurantId, "categories", categoryId));
+    const categoryIconPath = catDoc.exists() ? catDoc.data()?.imagePath : null;
+
+    // 2. Delete all dishes inside this category (cascading — each dish deletes its own images)
+    const dishes = await listDishes(restaurantId, categoryId);
+    for (const dish of dishes) {
+        await deleteDish(restaurantId, categoryId, dish.id);
+    }
+
+    // 3. Delete the category document
     await deleteDoc(doc(db, "restaurants", restaurantId, "categories", categoryId));
+
+    // 4. Delete the category icon from storage
+    await deleteStoragePaths([categoryIconPath]);
 }
 
 // ---------- Dishes ----------
 export async function listDishes(restaurantId: string, categoryId: string): Promise<Dish[]> {
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
-    const snap = await getDocs(query(colRef, orderBy("createdAt", "desc")));
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    const snap = await getDocs(colRef);
+    const dishes = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    // Sort by createdAt if available, newest first (client-side to avoid missing field issues)
+    dishes.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
+        const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
+        return tb - ta;
+    });
+    return dishes;
 }
 
 export async function listAllDishes(restaurantId: string): Promise<(Dish & { categoryName: string; categoryId: string })[]> {
@@ -296,8 +327,20 @@ export async function updateDish(
     });
 }
 
+/**
+ * Delete a dish: captures image paths, deletes Firestore doc, then deletes storage images.
+ * Mimics Swift's deleteDish.
+ */
 export async function deleteDish(restaurantId: string, categoryId: string, dishId: string) {
+    // 1. Read the dish to capture its image paths before deletion
+    const dishDoc = await getDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId));
+    const imagePaths: string[] = dishDoc.exists() ? (dishDoc.data()?.imagePaths || []) : [];
+
+    // 2. Delete the Firestore document
     await deleteDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId));
+
+    // 3. Delete associated storage images
+    await deleteStoragePaths(imagePaths);
 }
 
 // ---------- Image Uploads ----------
@@ -398,6 +441,34 @@ export async function uploadCategoryImage(
     return { url, path };
 }
 
+/**
+ * Check if a string is a valid Firebase Storage path (not a URL or empty).
+ * Mimics Swift's isStoragePath helper.
+ */
+function isStoragePath(path?: string | null): boolean {
+    if (!path) return false;
+    if (path.startsWith("http://") || path.startsWith("https://")) return false;
+    return path.trim().length > 0;
+}
+
+/**
+ * Delete multiple storage paths safely.
+ * Mimics Swift's deleteStoragePaths helper.
+ */
+async function deleteStoragePaths(paths: (string | undefined | null)[]) {
+    for (const path of paths) {
+        if (isStoragePath(path)) {
+            try {
+                const storageRef = ref(storage, path!);
+                await deleteObject(storageRef);
+            } catch (err) {
+                // Silently ignore — file may not exist
+                console.warn("Storage delete skipped:", path, err);
+            }
+        }
+    }
+}
+
 export async function deleteImageByPath(path?: string) {
     if (!path) return;
     try {
@@ -422,8 +493,15 @@ export type User = {
 
 // ---------- Users ----------
 export async function listUsers(): Promise<User[]> {
-    const snap = await getDocs(query(collection(db, "users"), orderBy("createdAt", "desc")));
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    const snap = await getDocs(collection(db, "users"));
+    const users = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    // Sort by createdAt if available, newest first
+    users.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
+        const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
+        return tb - ta;
+    });
+    return users;
 }
 
 export async function getUser(id: string): Promise<User | null> {
@@ -497,8 +575,20 @@ export async function updateUser(id: string, data: Partial<Omit<User, "id">>) {
     });
 }
 
+/**
+ * Delete a user: captures background image path, deletes Firestore doc,
+ * then deletes storage images. Mimics Swift's deleteUser.
+ */
 export async function deleteUser(id: string) {
+    // Capture the background image path before deletion
+    const userDoc = await getDoc(doc(db, "users", id));
+    const bgPath = userDoc.exists() ? userDoc.data()?.backgroundImagePath : null;
+
+    // Delete the Firestore document
     await deleteDoc(doc(db, "users", id));
+
+    // Delete the background image from storage
+    await deleteStoragePaths([bgPath]);
 }
 
 export async function uploadUserBackgroundImage(file: File, userId: string) {
@@ -508,4 +598,237 @@ export async function uploadUserBackgroundImage(file: File, userId: string) {
     await uploadBytes(storageRef, file);
     const url = await getDownloadURL(storageRef);
     return { url, path };
+}
+
+// ---------- Import Data (matches Swift DataImportManager) ----------
+
+// Types matching the Swift import JSON schema
+export type ImportDishOption = {
+    name_en: string;
+    name_ar?: string;
+    price?: number;
+};
+
+export type ImportDish = {
+    id: string;
+    name_en: string;
+    name_ar?: string;
+    description_en?: string;
+    description_ar?: string;
+    price?: number;
+    allergens_en?: string[];
+    allergens_ar?: string[];
+    options?: ImportDishOption[];
+    options_header_en?: string;
+    options_header_ar?: string;
+    are_options_required?: boolean;
+    max_options_selection?: number;
+    is_active?: boolean;
+};
+
+export type ImportCategory = {
+    id: string;
+    name_en: string;
+    name_ar?: string;
+    dishes: ImportDish[];
+};
+
+export type ImportMenu = {
+    id: string;
+    name_en: string;
+    name_ar?: string;
+    categories: ImportCategory[];
+};
+
+export type ImportSummary = {
+    menu: ImportMenu;
+    categoryCount: number;
+    dishCount: number;
+    warnings: string[];
+};
+
+/**
+ * Parse import JSON. Accepts either `{ menu: { ... } }` wrapper or direct `{ id, name_en, categories }`.
+ * Mimics Swift's DataImportManager.parseMenu.
+ */
+export function parseImportJSON(jsonData: string): ImportMenu {
+    const data = JSON.parse(jsonData);
+
+    // Try { menu: { ... } } wrapper first
+    if (data.menu && data.menu.id && data.menu.name_en && data.menu.categories) {
+        return data.menu as ImportMenu;
+    }
+
+    // Try direct format
+    if (data.id && data.name_en && data.categories) {
+        return data as ImportMenu;
+    }
+
+    // Helpful error
+    const keys = Object.keys(data).sort().join(", ");
+    throw new Error(
+        `Invalid JSON structure. Keys found: [${keys}]. Expected 'menu' wrapper or object with 'id', 'name_en', 'categories'.`
+    );
+}
+
+/**
+ * Validate an import menu and return warnings.
+ * Mimics Swift's DataImportManager.validate.
+ */
+export function validateImportMenu(menu: ImportMenu): string[] {
+    const warnings: string[] = [];
+
+    if (menu.categories.length === 0) {
+        warnings.push("No categories found — menu will be empty.");
+    }
+
+    const categoryIDs = new Set<string>();
+    for (const cat of menu.categories) {
+        if (categoryIDs.has(cat.id)) {
+            warnings.push(`Duplicate category ID '${cat.id}' — later entry overwrites.`);
+        }
+        categoryIDs.add(cat.id);
+
+        if (!cat.name_en.trim()) {
+            warnings.push(`Category '${cat.id}' has an empty name.`);
+        }
+        if (cat.dishes.length === 0) {
+            warnings.push(`Category '${cat.name_en}' has no dishes.`);
+        }
+
+        const dishIDs = new Set<string>();
+        for (const dish of cat.dishes) {
+            if (dishIDs.has(dish.id)) {
+                warnings.push(`Duplicate dish ID '${dish.id}' in '${cat.name_en}'.`);
+            }
+            dishIDs.add(dish.id);
+
+            if (dish.price !== undefined && dish.price < 0) {
+                warnings.push(`'${dish.name_en}' has a negative price.`);
+            }
+        }
+    }
+
+    return warnings;
+}
+
+/**
+ * Build Firestore dish fields from import dish data.
+ * Mimics Swift's DataImportManager.dishFields.
+ */
+function buildDishFields(dish: ImportDish): Record<string, any> {
+    const fields: Record<string, any> = {
+        name: dish.name_en,
+        price: dish.price ?? 0,
+        description: dish.description_en ?? "",
+        imagePaths: [],
+        isActive: dish.is_active ?? true,
+        createdAt: serverTimestamp(),
+    };
+
+    if (dish.name_ar) fields.nameAr = dish.name_ar;
+    if (dish.description_ar) fields.descriptionAr = dish.description_ar;
+
+    // Allergens
+    if (dish.allergens_en && dish.allergens_en.length > 0) {
+        const ar = dish.allergens_ar ?? [];
+        fields.allergens = dish.allergens_en.map((name, i) => {
+            const d: Record<string, any> = {
+                id: name.toLowerCase().replace(/ /g, "_"),
+                name,
+            };
+            if (i < ar.length) d.nameAr = ar[i];
+            return d;
+        });
+    }
+
+    // Options
+    if (dish.options && dish.options.length > 0) {
+        fields.options = dish.options.map(opt => {
+            const d: Record<string, any> = {
+                id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                name: opt.name_en,
+                price: opt.price ?? 0,
+            };
+            if (opt.name_ar) d.nameAr = opt.name_ar;
+            return d;
+        });
+        if (dish.options_header_en) fields.optionsHeader = dish.options_header_en;
+        if (dish.options_header_ar) fields.optionsHeaderAr = dish.options_header_ar;
+        if (dish.are_options_required !== undefined) fields.areOptionsRequired = dish.are_options_required;
+        if (dish.max_options_selection !== undefined) fields.maxOptionsSelection = dish.max_options_selection;
+    }
+
+    return fields;
+}
+
+/**
+ * Import a menu into Firestore using batched writes.
+ * Mimics Swift's DataImportManager.performImport exactly:
+ *   Step 1: Restaurant doc + user link in one batch
+ *   Step 2: One batch per category (category doc + all its dishes)
+ *
+ * @param onProgress - Called with (completedSteps, totalSteps, statusMessage)
+ */
+export async function importMenuData(
+    menu: ImportMenu,
+    userId: string,
+    onProgress?: (completed: number, total: number, status: string) => void,
+): Promise<{ categoryCount: number; dishCount: number }> {
+    const restaurantID = menu.id;
+    const allCategories = menu.categories;
+    const totalSteps = 1 + allCategories.length;
+    let completedSteps = 0;
+
+    // Step 1: Restaurant + user link in a single batch
+    onProgress?.(completedSteps, totalSteps, "Creating restaurant...");
+
+    const batch1 = writeBatch(db);
+
+    const restRef = doc(db, "restaurants", restaurantID);
+    batch1.set(restRef, {
+        name: menu.name_en,
+        nameAr: menu.name_ar ?? menu.name_en,
+        imagePath: "",
+        createdAt: serverTimestamp(),
+    }, { merge: true });
+
+    const userRef = doc(db, "users", userId);
+    batch1.update(userRef, {
+        restaurantIds: arrayUnion(restaurantID),
+    });
+
+    await batch1.commit();
+
+    completedSteps += 1;
+    onProgress?.(completedSteps, totalSteps, "Restaurant created");
+
+    // Step 2: One batch per category (category doc + all its dishes)
+    for (const categoryData of allCategories) {
+        onProgress?.(completedSteps, totalSteps, `Importing ${categoryData.name_en}...`);
+
+        const batch = writeBatch(db);
+
+        const catRef = doc(db, "restaurants", restaurantID, "categories", categoryData.id);
+        batch.set(catRef, {
+            name: categoryData.name_en,
+            nameAr: categoryData.name_ar ?? categoryData.name_en,
+            isActive: true,
+            imagePath: "",
+            createdAt: serverTimestamp(),
+        }, { merge: true });
+
+        for (const dishData of categoryData.dishes) {
+            const dishRef = doc(db, "restaurants", restaurantID, "categories", categoryData.id, "dishes", dishData.id);
+            batch.set(dishRef, buildDishFields(dishData), { merge: true });
+        }
+
+        await batch.commit();
+
+        completedSteps += 1;
+        onProgress?.(completedSteps, totalSteps, `Imported ${categoryData.name_en}`);
+    }
+
+    const dishCount = allCategories.reduce((sum, c) => sum + c.dishes.length, 0);
+    return { categoryCount: allCategories.length, dishCount };
 }

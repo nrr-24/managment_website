@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -16,12 +16,15 @@ import {
     Category,
     uploadRestaurantImage,
     deleteCategory,
+    deleteRestaurant,
+    deleteImageByPath,
 } from "@/lib/data";
 import { useToast } from "@/components/ui/Toast";
 import { StorageImage } from "@/components/ui/StorageImage";
 
 export default function RestaurantManagePage() {
     const { rid } = useParams<{ rid: string }>();
+    const router = useRouter();
     const { showToast, ToastComponent } = useToast();
 
     // Restaurant data
@@ -152,7 +155,7 @@ export default function RestaurantManagePage() {
     }
 
     async function handleDeleteCategory(id: string, catName: string) {
-        if (!confirm(`Delete category "${catName}"?`)) return;
+        if (!confirm(`Delete category "${catName}" and all its dishes?`)) return;
         try {
             await deleteCategory(rid, id);
             showToast("Category deleted");
@@ -160,6 +163,41 @@ export default function RestaurantManagePage() {
         } catch {
             showToast("Failed to delete category", "error");
         }
+    }
+
+    async function handleDeleteRestaurant() {
+        if (!confirm(`Delete "${name}" and all its categories, dishes, and images? This cannot be undone.`)) return;
+        try {
+            await deleteRestaurant(rid);
+            showToast("Restaurant deleted");
+            setTimeout(() => router.push('/admin/restaurants'), 1000);
+        } catch {
+            showToast("Failed to delete restaurant", "error");
+        }
+    }
+
+    async function handleRemoveLogo() {
+        if (logoPath) {
+            await deleteImageByPath(logoPath);
+        }
+        setLogoUrl("");
+        setLogoPath("");
+        setLogoFile(null);
+        setLogoPreview("");
+        await updateRestaurant(rid, { logo: "", logoPath: "", imagePath: "" } as any);
+        showToast("Logo removed");
+    }
+
+    async function handleRemoveBg() {
+        if (bgPath) {
+            await deleteImageByPath(bgPath);
+        }
+        setBgUrl("");
+        setBgPath("");
+        setBgFile(null);
+        setBgPreview("");
+        await updateRestaurant(rid, { backgroundImage: "", backgroundImagePath: "" } as any);
+        showToast("Background removed");
     }
 
     const actions = (
@@ -287,11 +325,19 @@ export default function RestaurantManagePage() {
                         </div>
                     )}
                 </Card>
-                <div className="px-4">
-                    <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
-                        Select logo
+                <div className="px-4 flex items-center gap-3 mt-2">
+                    <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline">
+                        {(logoPreview || logoUrl || logoPath) ? "Change logo" : "Select logo"}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
                     </label>
+                    {(logoPreview || logoUrl || logoPath || logoFile) && (
+                        <button
+                            onClick={handleRemoveLogo}
+                            className="text-red-500 text-sm font-bold hover:underline"
+                        >
+                            Remove
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -300,11 +346,43 @@ export default function RestaurantManagePage() {
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Background</label>
                 <Card className="p-0 h-40 bg-gray-200 flex items-center justify-center rounded-3xl overflow-hidden relative">
                     {bgPreview ? (
-                        <img src={bgPreview} alt="" className="w-full h-full object-cover" />
+                        <>
+                            <img src={bgPreview} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
+                                <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer">
+                                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                                </label>
+                                <button
+                                    onClick={handleRemoveBg}
+                                    className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                                >
+                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </>
                     ) : (bgPath || bgUrl) ? (
-                        <StorageImage path={bgPath || bgUrl} alt="" className="w-full h-full object-cover" />
+                        <>
+                            <StorageImage path={bgPath || bgUrl} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
+                                <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer">
+                                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                                </label>
+                                <button
+                                    onClick={handleRemoveBg}
+                                    className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                                >
+                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </>
                     ) : (
-                        <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2 2zm-11-7l2.03 2.71L15 11l4.25 5.67H5L10 12z" /></svg>
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300/50 transition-colors">
+                            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-12.5-5.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                            <span className="text-sm font-bold text-gray-500 mt-2">Set background</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                        </label>
                     )}
                     {uploadProgress.background !== undefined && (
                         <div className="absolute inset-x-0 bottom-0 p-4 bg-black/50 backdrop-blur-sm">
@@ -318,12 +396,6 @@ export default function RestaurantManagePage() {
                         </div>
                     )}
                 </Card>
-                <div className="px-4">
-                    <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
-                        Change background
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
-                    </label>
-                </div>
             </div>
 
             <Button
@@ -375,7 +447,10 @@ export default function RestaurantManagePage() {
 
             <div className="pt-20 pb-10">
                 <Card className="rounded-2xl p-0 overflow-hidden">
-                    <button className="w-full px-6 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold">
+                    <button
+                        onClick={handleDeleteRestaurant}
+                        className="w-full px-6 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold"
+                    >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>

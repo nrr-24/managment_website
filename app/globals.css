@@ -5,7 +5,7 @@
   --foreground: #1c1c1e;
   --card-bg: #ffffff;
   --border-color: #e5e5e7;
-  --accent: #007aff;
+  --accent: #166534;
   --secondary-bg: #f5f5f7;
 }
 
@@ -16,17 +16,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #f5f5f7;
-    --card-bg: #1c1c1e;
-    --border-color: #38383a;
-    --accent: #0a84ff;
-    --secondary-bg: #1c1c1e;
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -34,24 +23,28 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-geist-sans), 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', var(--font-geist-sans), 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Smooth transitions for interactive elements */
-a,
-button {
-  transition: all 0.2s ease-in-out;
+/* ──── Apple-like Smooth Transitions ──── */
+a, button, input, select, textarea {
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Custom scrollbar - iOS style */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+}
+
+/* ──── Custom Scrollbar - macOS style ──── */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -59,37 +52,137 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c7c7cc;
-  border-radius: 4px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #aeaeb2;
+  background: rgba(0,0,0,0.25);
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: #48484a;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #636366;
-  }
-}
-
-/* Animations */
+/* ──── Keyframe Animations ──── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInFromBottom {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 16px) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  to { opacity: 0; transform: translate(-50%, 16px) scale(0.9); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ──── Utility Classes ──── */
 .fade-in {
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.fade-in-scale {
+  animation: fadeInScale 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.slide-down {
+  animation: slideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.toast-enter {
+  animation: toastIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.toast-exit {
+  animation: toastOut 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.18s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.21s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.24s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.27s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.30s; }
+
+/* ──── Glass morphism utility ──── */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+}
+
+/* ──── Haptic-style button press ──── */
+.press {
+  transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.15s ease;
+}
+.press:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
+
+/* ──── Selection color ──── */
+::selection {
+  background: rgba(22, 101, 52, 0.2);
 }

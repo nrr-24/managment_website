@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import { useToast } from "@/components/ui/Toast";
+import { FontPicker } from "@/components/ui/FontPicker";
 import {
     createRestaurant,
     uploadRestaurantImage,
@@ -170,6 +171,11 @@ export default function RestaurantCreatePage() {
                 </Card>
             </div>
 
+            {/* Menu Font */}
+            <div className="space-y-1 mb-6">
+                <FontPicker value={menuFont} onChange={setMenuFont} />
+            </div>
+
             {/* Logo */}
             <div className="space-y-1 mb-6">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Logo</label>
@@ -181,11 +187,19 @@ export default function RestaurantCreatePage() {
                             <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                         )}
                     </div>
-                    <div className="px-4">
-                        <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
-                            Select logo
+                    <div className="px-4 flex items-center gap-3 mt-2">
+                        <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline">
+                            {logoFile ? "Change logo" : "Select logo"}
                             <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
                         </label>
+                        {logoFile && (
+                            <button
+                                onClick={() => setLogoFile(null)}
+                                className="text-red-500 text-sm font-bold hover:underline"
+                            >
+                                Remove
+                            </button>
+                        )}
                     </div>
                 </Card>
             </div>
@@ -195,17 +209,29 @@ export default function RestaurantCreatePage() {
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant Background</label>
                 <Card className="p-0 h-40 bg-gray-200 flex items-center justify-center rounded-3xl overflow-hidden relative">
                     {bgFile ? (
-                        <img src={URL.createObjectURL(bgFile)} alt="" className="w-full h-full object-cover" />
+                        <>
+                            <img src={URL.createObjectURL(bgFile)} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
+                                <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer">
+                                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                                </label>
+                                <button
+                                    onClick={() => setBgFile(null)}
+                                    className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                                >
+                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </>
                     ) : (
-                        <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2 2zm-11-7l2.03 2.71L15 11l4.25 5.67H5L10 12z" /></svg>
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300/50 transition-colors">
+                            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-12.5-5.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                            <span className="text-sm font-bold text-gray-500 mt-2">Set background</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                        </label>
                     )}
                 </Card>
-                <div className="px-4">
-                    <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
-                        Set background
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
-                    </label>
-                </div>
             </div>
 
             <div className="h-20" />

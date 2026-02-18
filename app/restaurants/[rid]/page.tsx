@@ -148,8 +148,7 @@ export default function PublicMenuPage() {
     );
 
     return (
-        <div className={`min-h-screen bg-[#0a0a0a] text-white ${fontConfig.class} antialiased`}>
-            {fontConfig.import && <link rel="stylesheet" href={fontConfig.import} />}
+        <div className="min-h-screen bg-[#0a0a0a] text-white antialiased" style={fontConfig.style}>
 
             {/* Hero Section */}
             <div className="relative h-64 overflow-hidden">

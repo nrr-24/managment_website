@@ -6,7 +6,7 @@ import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { StorageImage } from "@/components/ui/StorageImage";
 import { useToast } from "@/components/ui/Toast";
-import { getCategory, updateCategory, uploadCategoryImage, Category } from "@/lib/data";
+import { getCategory, updateCategory, uploadCategoryImage, deleteImageByPath, Category } from "@/lib/data";
 
 export default function EditCategoryPage() {
     const router = useRouter();
@@ -51,6 +51,18 @@ export default function EditCategoryPage() {
             setIconFile(file);
             setIconPreview(URL.createObjectURL(file));
         }
+    }
+
+    async function handleRemoveIcon() {
+        if (iconPath) {
+            await deleteImageByPath(iconPath);
+        }
+        setIconUrl(null);
+        setIconPath(null);
+        setIconFile(null);
+        setIconPreview(null);
+        await updateCategory(rid, cid, { imageUrl: "", imagePath: "" } as any);
+        showToast("Icon removed");
     }
 
     async function handleSave() {
@@ -190,6 +202,14 @@ export default function EditCategoryPage() {
                                 )}
                             </div>
                         </div>
+                        {(iconUrl || iconPath || iconFile) && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleRemoveIcon(); }}
+                                className="text-red-500 text-sm font-bold pr-2 hover:underline"
+                            >
+                                Remove
+                            </button>
+                        )}
                     </Card>
                 </section>
 

@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
-import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, listRestaurants, User, Restaurant } from "@/lib/data";
+import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, deleteImageByPath, listRestaurants, User, Restaurant } from "@/lib/data";
 
 export default function EditUserPage() {
     const router = useRouter();
@@ -58,7 +58,11 @@ export default function EditUserPage() {
         }
     }
 
-    function handleRemoveBg() {
+    async function handleRemoveBg() {
+        // Delete from storage if there's an existing path
+        if (user?.backgroundImagePath) {
+            await deleteImageByPath(user.backgroundImagePath);
+        }
         setBgFile(null);
         setBgPreview(null);
         showToast("Background image removed");

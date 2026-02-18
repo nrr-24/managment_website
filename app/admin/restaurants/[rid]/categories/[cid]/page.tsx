@@ -9,7 +9,6 @@ import { useToast } from "@/components/ui/Toast";
 import {
     Dish,
     deleteDish,
-    deleteImageByPath,
     getCategory,
     listDishes,
 } from "@/lib/data";
@@ -49,11 +48,7 @@ export default function CategoryManagePage() {
     async function handleDeleteDish(dish: Dish) {
         if (!confirm(`Delete dish "${dish.name}"?`)) return;
         try {
-            if (dish.imagePaths) {
-                for (const path of dish.imagePaths) {
-                    await deleteImageByPath(path);
-                }
-            }
+            // deleteDish now handles image cleanup internally (cascading delete)
             await deleteDish(rid, cid, dish.id);
             showToast("Dish deleted");
             await refresh();

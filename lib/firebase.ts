@@ -13,9 +13,12 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Simple validation to check if essential config is missing
+// Validate essential config
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
-    console.error("Firebase API Key is missing or invalid. Check your .env.local file.");
+    console.error(
+        "Firebase API Key is missing. Set NEXT_PUBLIC_FIREBASE_API_KEY in your environment variables. " +
+        "For Vercel: go to Project Settings > Environment Variables."
+    );
 }
 
 // Initialize Firebase

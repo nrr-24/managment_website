@@ -1,8 +1,21 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+
+    function isManager() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/managers/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/managers/$(request.auth.uid)).data.active == true;
+    }
+
+    match /restaurants/{restaurantId}/categories/{categoryId}/dishes/{allPaths=**} {
+      allow read: if true;
+      allow write: if isManager();
+    }
+
+    // deny everything else by default
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

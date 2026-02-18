@@ -18,6 +18,7 @@ export default function RestaurantCreatePage() {
     const [nameAr, setNameAr] = useState("");
     const [themeColor, setThemeColor] = useState("#00ffff");
     const [layout, setLayout] = useState("list");
+    const [dishColumns, setDishColumns] = useState(2);
     const [menuFont, setMenuFont] = useState("system");
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [bgFile, setBgFile] = useState<File | null>(null);
@@ -34,6 +35,7 @@ export default function RestaurantCreatePage() {
                 nameAr: nameAr.trim(),
                 themeColorHex: themeColor,
                 layout,
+                dishColumns,
                 menuFont,
             });
 
@@ -112,6 +114,28 @@ export default function RestaurantCreatePage() {
                             >
                                 <p className={`text-sm font-bold ${layout === opt.value ? "text-blue-600" : "text-gray-900 dark:text-white"}`}>{opt.label}</p>
                                 <p className="text-[11px] text-gray-400 mt-1">{opt.desc}</p>
+                            </button>
+                        ))}
+                    </div>
+                </Card>
+            </div>
+
+            {/* Dish Columns */}
+            <div className="space-y-1 mb-6">
+                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Dish Columns</label>
+                <Card className="p-4 rounded-2xl">
+                    <div className="flex gap-2">
+                        {[1, 2, 3, 4].map((n) => (
+                            <button
+                                key={n}
+                                onClick={() => setDishColumns(n)}
+                                className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+                                    dishColumns === n
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200"
+                                }`}
+                            >
+                                {n}
                             </button>
                         ))}
                     </div>

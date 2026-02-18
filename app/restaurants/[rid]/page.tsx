@@ -77,6 +77,8 @@ export default function PublicMenuPage() {
 
     const fontConfig = getFontConfig(restaurant?.menuFont || 'system');
     const themeColor = restaurant?.themeColorHex || '#ffffff';
+    const cols = restaurant?.dishColumns || 2;
+    const gridClass = cols === 1 ? 'grid-cols-1' : cols === 3 ? 'grid-cols-3' : cols === 4 ? 'grid-cols-4' : 'grid-cols-2';
 
     if (loading) return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -283,7 +285,7 @@ export default function PublicMenuPage() {
                         <p className="text-xs font-medium text-white/30 mb-4">
                             {getDisplayDishes().length} {isAr ? 'نتيجة' : 'results'}
                         </p>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className={`grid ${gridClass} gap-3`}>
                             {getDisplayDishes().map(dish => (
                                 <DishCard key={dish.id} dish={dish} />
                             ))}
@@ -292,7 +294,7 @@ export default function PublicMenuPage() {
                 ) : restaurant?.layout !== 'list' ? (
                     /* Grid Layout - category-based */
                     <div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className={`grid ${gridClass} gap-3`}>
                             {dishes.map(dish => (
                                 <DishCard key={dish.id} dish={dish} />
                             ))}
@@ -313,7 +315,7 @@ export default function PublicMenuPage() {
                                         <div className="flex-1 h-px bg-white/[0.06]" />
                                         <span className="text-xs text-white/20 font-medium">{catDishes.length}</span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className={`grid ${gridClass} gap-3`}>
                                         {catDishes.map(dish => (
                                             <DishCard key={dish.id} dish={dish} />
                                         ))}
@@ -385,6 +387,41 @@ export default function PublicMenuPage() {
                                 <p className="text-sm text-white/40 leading-relaxed mb-6">
                                     {isAr ? (selectedDish.descriptionAr || selectedDish.description) : selectedDish.description}
                                 </p>
+                            )}
+
+                            {/* Dish Options */}
+                            {selectedDish.options && selectedDish.options.header && (
+                                <div className="border-t border-white/[0.06] pt-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
+                                            {isAr ? (selectedDish.options.headerAr || selectedDish.options.header) : selectedDish.options.header}
+                                        </p>
+                                        {selectedDish.options.required && (
+                                            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">
+                                                {isAr ? "مطلوب" : "Required"}
+                                            </span>
+                                        )}
+                                        {selectedDish.options.maxSelection && (
+                                            <span className="text-[9px] font-medium text-white/30">
+                                                {isAr ? `حد أقصى ${selectedDish.options.maxSelection}` : `Max ${selectedDish.options.maxSelection}`}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        {selectedDish.options.items?.map((item, i) => (
+                                            <div key={i} className="flex items-center justify-between py-2 px-3 bg-white/[0.03] rounded-xl">
+                                                <span className="text-sm font-medium text-white/70">
+                                                    {isAr ? (item.nameAr || item.name) : item.name}
+                                                </span>
+                                                {item.price !== undefined && item.price > 0 && (
+                                                    <span className="text-xs font-bold" style={{ color: themeColor }}>
+                                                        +{item.price.toFixed(3)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
 
                             {selectedDish.allergens && selectedDish.allergens.length > 0 && (

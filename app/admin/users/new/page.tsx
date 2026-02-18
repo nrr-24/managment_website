@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
-import { createUser, listRestaurants, Restaurant } from "@/lib/data";
+import { createUserWithAuth, listRestaurants, Restaurant } from "@/lib/data";
 
 export default function NewUserPage() {
     const router = useRouter();
@@ -16,28 +16,54 @@ export default function NewUserPage() {
     const [password, setPassword] = useState("");
     const [role, setRole] = useState<"manager" | "viewer">("viewer");
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-    const [selectedRid, setSelectedRid] = useState<string | null>(null);
+    const [selectedRids, setSelectedRids] = useState<string[]>([]);
     const [busy, setBusy] = useState(false);
 
     useEffect(() => {
         listRestaurants().then(setRestaurants);
     }, []);
 
+    function toggleRestaurant(rid: string) {
+        setSelectedRids(prev =>
+            prev.includes(rid)
+                ? prev.filter(r => r !== rid)
+                : [...prev, rid]
+        );
+    }
+
     async function handleCreate() {
-        if (!name.trim() || !email.trim()) return;
+        if (!name.trim() || !email.trim() || !password.trim()) return;
+        if (password.length < 6) {
+            showToast("Password must be at least 6 characters", "error");
+            return;
+        }
+        if (role === "viewer" && selectedRids.length === 0) {
+            showToast("Viewers must have at least 1 restaurant assigned", "error");
+            return;
+        }
         setBusy(true);
         try {
-            await createUser({
+            await createUserWithAuth({
                 name: name.trim(),
                 email: email.trim(),
+                password: password,
                 role,
-                restaurantAccess: selectedRid ? [selectedRid] : [],
+                restaurantAccess: role === "viewer" ? selectedRids : [],
             });
             showToast("User created successfully!");
             setTimeout(() => router.push('/admin/users'), 1000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            showToast("Failed to create user", "error");
+            const msg = err.message || "";
+            if (msg.includes("email-already-in-use")) {
+                showToast("This email is already in use", "error");
+            } else if (msg.includes("weak-password")) {
+                showToast("Password is too weak (min 6 chars)", "error");
+            } else if (msg.includes("invalid-email")) {
+                showToast("Invalid email address", "error");
+            } else {
+                showToast("Failed to create user", "error");
+            }
         } finally {
             setBusy(false);
         }
@@ -67,7 +93,7 @@ export default function NewUserPage() {
                     />
                     <input
                         type="password"
-                        placeholder="Password"
+                        placeholder="Password (min 6 characters)"
                         className="w-full h-14 px-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-none font-medium focus:border-blue-500 transition-all"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
@@ -92,26 +118,42 @@ export default function NewUserPage() {
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Restaurant Access</span>
-                    <div className="space-y-2">
-                        {restaurants.map(r => (
-                            <div
-                                key={r.id}
-                                onClick={() => setSelectedRid(r.id)}
-                                className="w-full h-14 px-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer group"
-                            >
-                                <span className="font-bold">{r.name}</span>
-                                <div className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center ${selectedRid === r.id ? 'border-pink-500 bg-pink-500' : 'border-gray-200'}`}>
-                                    {selectedRid === r.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                                </div>
-                            </div>
-                        ))}
+                {role === "viewer" && (
+                    <div className="space-y-3">
+                        <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Restaurant Access</span>
+                        <p className="text-xs text-gray-400">Select which restaurants this viewer can access.</p>
+                        <div className="space-y-2">
+                            {restaurants.map(r => {
+                                const selected = selectedRids.includes(r.id);
+                                return (
+                                    <div
+                                        key={r.id}
+                                        onClick={() => toggleRestaurant(r.id)}
+                                        className={`w-full h-14 px-6 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                                            selected
+                                                ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
+                                                : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
+                                        }`}
+                                    >
+                                        <span className="font-bold">{r.name}</span>
+                                        <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
+                                            selected ? 'border-blue-500 bg-blue-500' : 'border-gray-200'
+                                        }`}>
+                                            {selected && (
+                                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <button
-                    disabled={busy || !name.trim() || !email.trim()}
+                    disabled={busy || !name.trim() || !email.trim() || !password.trim()}
                     onClick={handleCreate}
                     className="w-full h-14 rounded-2xl bg-gray-600 hover:bg-black font-bold text-white shadow-xl shadow-black/10 transition-all active:scale-[0.98] disabled:opacity-50"
                 >

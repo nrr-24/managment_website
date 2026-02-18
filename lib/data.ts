@@ -10,8 +10,11 @@ import {
     serverTimestamp,
     updateDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from "firebase/storage";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { db, storage } from "./firebase";
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth";
 
 // Helper to remove undefined values recursively (Firestore doesn't accept undefined)
 function cleanData(data: any): any {
@@ -88,6 +91,7 @@ export type Restaurant = {
     imagePath?: string;
     themeColorHex?: string;
     layout?: string;
+    dishColumns?: number;
     menuFont?: string;
     createdAt?: any;
     updatedAt?: any;
@@ -101,6 +105,8 @@ export type Category = {
     imagePath?: string;
     imageUrl?: string;
     isActive?: boolean;
+    availabilityStart?: string;
+    availabilityEnd?: string;
 };
 
 export type Dish = {
@@ -161,9 +167,38 @@ export async function updateRestaurant(id: string, data: Partial<Omit<Restaurant
 }
 
 export async function deleteRestaurant(id: string) {
-    // NOTE: subcollections are NOT auto-deleted. Keep it simple:
-    // only delete restaurant doc. If you want recursive delete, do it via Admin SDK / Cloud Function.
-    await deleteDoc(doc(db, "restaurants", id));
+    // Cascading delete: all categories → all dishes → all storage images → restaurant doc
+    try {
+        const cats = await listCategories(id);
+        for (const cat of cats) {
+            const dishes = await listDishes(id, cat.id);
+            for (const dish of dishes) {
+                // Delete dish images from storage
+                if (dish.imagePaths) {
+                    for (const p of dish.imagePaths) {
+                        await deleteImageByPath(p);
+                    }
+                }
+                await deleteDoc(doc(db, "restaurants", id, "categories", cat.id, "dishes", dish.id));
+            }
+            // Delete category image
+            if (cat.imagePath) await deleteImageByPath(cat.imagePath);
+            await deleteDoc(doc(db, "restaurants", id, "categories", cat.id));
+        }
+        // Delete restaurant images from storage
+        try {
+            const storageRef = ref(storage, `restaurants/${id}`);
+            const files = await listAll(storageRef);
+            for (const item of files.items) {
+                await deleteObject(item);
+            }
+        } catch (e) { /* no storage folder is fine */ }
+
+        await deleteDoc(doc(db, "restaurants", id));
+    } catch (err) {
+        console.error("Cascading delete failed:", err);
+        throw err;
+    }
 }
 
 // ---------- Categories ----------
@@ -180,12 +215,15 @@ export async function getCategory(restaurantId: string, categoryId: string): Pro
     return { id: snap.id, ...(snap.data() as any) };
 }
 
-export async function createCategory(restaurantId: string, data: { name: string; order?: number }) {
+export async function createCategory(restaurantId: string, data: Partial<Omit<Category, "id">>) {
     const colRef = collection(db, "restaurants", restaurantId, "categories");
     const docRef = await addDoc(colRef, {
         ...cleanData(data),
         order: data.order ?? 0,
         imagePath: "",
+        isActive: data.isActive !== false,
+        availabilityStart: data.availabilityStart || null,
+        availabilityEnd: data.availabilityEnd || null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });
@@ -394,6 +432,54 @@ export async function getUser(id: string): Promise<User | null> {
     return { id: snap.id, ...(snap.data() as any) };
 }
 
+/**
+ * Create a user with Firebase Auth + Firestore profile.
+ * Uses a secondary Firebase app instance so the current manager session isn't interrupted.
+ */
+export async function createUserWithAuth(
+    data: Omit<User, "id"> & { password: string }
+) {
+    const { password, ...profile } = data;
+
+    // Use a secondary app so the manager's auth session is not affected
+    const secondaryApp = getApps().find(a => a.name === "secondary")
+        || initializeApp(
+            {
+                apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+                authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            },
+            "secondary"
+        );
+    const secondaryAuth = getAuth(secondaryApp);
+
+    // Create the Firebase Auth user
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
+    const uid = cred.user.uid;
+
+    // Sign out the secondary auth immediately
+    await secondaryAuth.signOut();
+
+    // Create the Firestore profile using the auth UID as the document ID
+    const userDocRef = doc(db, "users", uid);
+    await updateDoc(userDocRef, {
+        ...cleanData(profile),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    }).catch(async () => {
+        // If doc doesn't exist yet, create it with setDoc
+        const { setDoc } = await import("firebase/firestore");
+        await setDoc(userDocRef, {
+            ...cleanData(profile),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+    });
+
+    return uid;
+}
+
+/** Create user profile only (no auth account) — for backwards compat */
 export async function createUser(data: Omit<User, "id">) {
     const colRef = collection(db, "users");
     const docRef = await addDoc(colRef, {

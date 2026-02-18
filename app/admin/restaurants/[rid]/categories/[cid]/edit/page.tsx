@@ -20,6 +20,9 @@ export default function EditCategoryPage() {
     const [iconPath, setIconPath] = useState<string | null>(null);
     const [iconFile, setIconFile] = useState<File | null>(null);
     const [iconPreview, setIconPreview] = useState<string | null>(null);
+    const [limitAvailability, setLimitAvailability] = useState(false);
+    const [startTime, setStartTime] = useState("09:00");
+    const [endTime, setEndTime] = useState("17:00");
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [progress, setProgress] = useState<number | null>(null);
@@ -32,6 +35,11 @@ export default function EditCategoryPage() {
                 setIsActive(cat.isActive !== false);
                 setIconUrl(cat.imageUrl || null);
                 setIconPath(cat.imagePath || null);
+                if (cat.availabilityStart) {
+                    setLimitAvailability(true);
+                    setStartTime(cat.availabilityStart);
+                    setEndTime(cat.availabilityEnd || "17:00");
+                }
             }
             setLoaded(true);
         });
@@ -53,6 +61,8 @@ export default function EditCategoryPage() {
                 name: name.trim(),
                 nameAr: nameAr.trim(),
                 isActive,
+                availabilityStart: limitAvailability ? startTime : null,
+                availabilityEnd: limitAvailability ? endTime : null,
             };
 
             if (iconFile) {
@@ -180,6 +190,43 @@ export default function EditCategoryPage() {
                                 )}
                             </div>
                         </div>
+                    </Card>
+                </section>
+
+                <section className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Availability</label>
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                        <div className="px-6 py-4 flex items-center justify-between">
+                            <span className="font-bold">Limit availability</span>
+                            <button
+                                onClick={() => setLimitAvailability(!limitAvailability)}
+                                className={`w-12 h-6 rounded-full transition-colors relative ${limitAvailability ? 'bg-green-600' : 'bg-gray-300'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${limitAvailability ? 'left-7' : 'left-1'}`} />
+                            </button>
+                        </div>
+                        {limitAvailability && (
+                            <>
+                                <div className="px-6 py-4 flex items-center justify-between">
+                                    <span className="font-bold">Start Time</span>
+                                    <input
+                                        type="time"
+                                        className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg outline-none font-bold"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                    />
+                                </div>
+                                <div className="px-6 py-4 flex items-center justify-between">
+                                    <span className="font-bold">End Time</span>
+                                    <input
+                                        type="time"
+                                        className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg outline-none font-bold"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </Card>
                 </section>
 

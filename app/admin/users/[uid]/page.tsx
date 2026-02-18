@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
-import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, User } from "@/lib/data";
+import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, listRestaurants, User, Restaurant } from "@/lib/data";
 
 export default function EditUserPage() {
     const router = useRouter();
@@ -16,23 +16,35 @@ export default function EditUserPage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<"manager" | "viewer">("viewer");
+    const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+    const [selectedRids, setSelectedRids] = useState<string[]>([]);
     const [bgFile, setBgFile] = useState<File | null>(null);
     const [bgPreview, setBgPreview] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        getUser(uid).then(u => {
+        Promise.all([getUser(uid), listRestaurants()]).then(([u, rests]) => {
             if (u) {
                 setUser(u);
                 setName(u.name || "");
                 setEmail(u.email || "");
                 setRole(u.role || "viewer");
                 setBgPreview(u.backgroundImage || null);
+                setSelectedRids(u.restaurantAccess || []);
             }
+            setRestaurants(rests);
             setLoaded(true);
         });
     }, [uid]);
+
+    function toggleRestaurant(rid: string) {
+        setSelectedRids(prev =>
+            prev.includes(rid)
+                ? prev.filter(r => r !== rid)
+                : [...prev, rid]
+        );
+    }
 
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -44,11 +56,16 @@ export default function EditUserPage() {
 
     async function handleSave() {
         if (!name.trim()) return;
+        if (role === "viewer" && selectedRids.length === 0) {
+            showToast("Viewers must have at least 1 restaurant assigned", "error");
+            return;
+        }
         setBusy(true);
         try {
             const updates: any = {
                 name: name.trim(),
                 role,
+                restaurantAccess: role === "viewer" ? selectedRids : [],
             };
 
             if (bgFile) {
@@ -85,7 +102,7 @@ export default function EditUserPage() {
     if (!user) return <Page title="Not Found"><div>User not found</div></Page>;
 
     return (
-        <Page title="Edit User">
+        <Page title="Edit User" showBack={true}>
             <div className="max-w-xl mx-auto space-y-8 py-8 px-4">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-20 h-20 bg-pink-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
@@ -133,6 +150,40 @@ export default function EditUserPage() {
                             </button>
                         </div>
                     </div>
+
+                    {role === "viewer" && (
+                        <div className="space-y-3">
+                            <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Restaurant Access</span>
+                            <p className="text-xs text-gray-400">Select which restaurants this viewer can access.</p>
+                            <div className="space-y-2">
+                                {restaurants.map(r => {
+                                    const selected = selectedRids.includes(r.id);
+                                    return (
+                                        <div
+                                            key={r.id}
+                                            onClick={() => toggleRestaurant(r.id)}
+                                            className={`w-full h-14 px-6 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                                                selected
+                                                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
+                                                    : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
+                                            }`}
+                                        >
+                                            <span className="font-bold">{r.name}</span>
+                                            <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
+                                                selected ? 'border-blue-500 bg-blue-500' : 'border-gray-200'
+                                            }`}>
+                                                {selected && (
+                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Background Image</label>

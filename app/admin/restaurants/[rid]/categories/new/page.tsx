@@ -44,6 +44,8 @@ export default function NewCategoryPage() {
                 name: name.trim(),
                 nameAr: nameAr.trim(),
                 isActive,
+                availabilityStart: limitAvailability ? startTime : undefined,
+                availabilityEnd: limitAvailability ? endTime : undefined,
             } as any);
 
             if (iconFile) {

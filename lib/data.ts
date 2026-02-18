@@ -183,27 +183,26 @@ export async function updateRestaurant(id: string, data: Partial<Omit<Restaurant
  * Mimics Swift's deleteRestaurant.
  */
 export async function deleteRestaurant(id: string) {
-    try {
-        // 1. Capture restaurant image paths before deletion
-        const restDoc = await getDoc(doc(db, "restaurants", id));
-        const logoPath = restDoc.exists() ? (restDoc.data()?.logoPath || restDoc.data()?.imagePath) : null;
-        const bgPath = restDoc.exists() ? restDoc.data()?.backgroundImagePath : null;
+    // 1. Capture restaurant image paths before deletion
+    const restDoc = await getDoc(doc(db, "restaurants", id));
+    const logoPath = restDoc.exists() ? (restDoc.data()?.logoPath || restDoc.data()?.imagePath) : null;
+    const bgPath = restDoc.exists() ? restDoc.data()?.backgroundImagePath : null;
 
-        // 2. Cascade delete all categories (each category cascades to its dishes)
-        const cats = await listCategories(id);
-        for (const cat of cats) {
+    // 2. Cascade delete all categories (each category cascades to its dishes)
+    const cats = await listCategories(id);
+    for (const cat of cats) {
+        try {
             await deleteCategory(id, cat.id);
+        } catch (err) {
+            console.warn(`Failed to delete category ${cat.id}, continuing:`, err);
         }
-
-        // 3. Delete the restaurant document
-        await deleteDoc(doc(db, "restaurants", id));
-
-        // 4. Delete restaurant-level storage assets (logo, background)
-        await deleteStoragePaths([logoPath, bgPath]);
-    } catch (err) {
-        console.error("Cascading delete failed:", err);
-        throw err;
     }
+
+    // 3. Delete the restaurant document
+    await deleteDoc(doc(db, "restaurants", id));
+
+    // 4. Delete restaurant-level storage assets (logo, background)
+    await deleteStoragePaths([logoPath, bgPath]);
 }
 
 // ---------- Categories ----------
@@ -257,9 +256,17 @@ export async function deleteCategory(restaurantId: string, categoryId: string) {
     const categoryIconPath = catDoc.exists() ? catDoc.data()?.imagePath : null;
 
     // 2. Delete all dishes inside this category (cascading — each dish deletes its own images)
-    const dishes = await listDishes(restaurantId, categoryId);
-    for (const dish of dishes) {
-        await deleteDish(restaurantId, categoryId, dish.id);
+    try {
+        const dishes = await listDishes(restaurantId, categoryId);
+        for (const dish of dishes) {
+            try {
+                await deleteDish(restaurantId, categoryId, dish.id);
+            } catch (err) {
+                console.warn(`Failed to delete dish ${dish.id}, continuing:`, err);
+            }
+        }
+    } catch (err) {
+        console.warn("Failed to list dishes for deletion, continuing:", err);
     }
 
     // 3. Delete the category document
@@ -513,6 +520,7 @@ export async function getUser(id: string): Promise<User | null> {
 /**
  * Create a user with Firebase Auth + Firestore profile.
  * Uses a secondary Firebase app instance so the current manager session isn't interrupted.
+ * Matches Swift's createUser(withEmail:password:name:restaurants:role:).
  */
 export async function createUserWithAuth(
     data: Omit<User, "id"> & { password: string }
@@ -538,20 +546,12 @@ export async function createUserWithAuth(
     // Sign out the secondary auth immediately
     await secondaryAuth.signOut();
 
-    // Create the Firestore profile using the auth UID as the document ID
+    // Create the Firestore profile using setDoc (matches Swift's setData)
     const userDocRef = doc(db, "users", uid);
-    await updateDoc(userDocRef, {
+    await setDoc(userDocRef, {
         ...cleanData(profile),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-    }).catch(async () => {
-        // If doc doesn't exist yet, create it with setDoc
-        const { setDoc } = await import("firebase/firestore");
-        await setDoc(userDocRef, {
-            ...cleanData(profile),
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        });
     });
 
     return uid;

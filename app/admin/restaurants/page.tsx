@@ -10,6 +10,7 @@ import { deleteRestaurant, listRestaurants, Restaurant } from "@/lib/data";
 export default function RestaurantsPage() {
     const { showToast, ToastComponent } = useToast();
     const [list, setList] = useState<Restaurant[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
     async function refresh() {
@@ -17,6 +18,8 @@ export default function RestaurantsPage() {
             setList(await listRestaurants());
         } catch {
             showToast("Failed to load restaurants", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -24,14 +27,20 @@ export default function RestaurantsPage() {
         refresh();
     }, []);
 
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
     async function handleDelete(id: string, name: string) {
-        if (!confirm(`Delete restaurant "${name}"?`)) return;
+        if (!confirm(`Delete restaurant "${name}" and all its data? This cannot be undone.`)) return;
+        setDeletingId(id);
         try {
             await deleteRestaurant(id);
             showToast("Restaurant deleted");
             await refresh();
-        } catch {
+        } catch (err) {
+            console.error("Delete restaurant failed:", err);
             showToast("Failed to delete restaurant", "error");
+        } finally {
+            setDeletingId(null);
         }
     }
 
@@ -66,7 +75,11 @@ export default function RestaurantsPage() {
             </div>
 
             <div className="space-y-2">
-                {filteredList.length === 0 ? (
+                {loading ? (
+                    <div className="py-20 flex justify-center">
+                        <div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" />
+                    </div>
+                ) : filteredList.length === 0 ? (
                     <Card className="p-12 text-center text-gray-500 rounded-3xl">
                         {list.length === 0
                             ? "No restaurants found. Click + to create your first one."
@@ -94,11 +107,16 @@ export default function RestaurantsPage() {
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={() => handleDelete(res.id, res.name)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        disabled={deletingId === res.id}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                                     >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                        {deletingId === res.id ? (
+                                            <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+                                        ) : (
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        )}
                                     </button>
                                     <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />

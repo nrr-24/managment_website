@@ -156,8 +156,8 @@ export default function EditDishPage() {
         </button>
     );
 
-    if (!loaded) return <Page title="Loading..."><div>Loading...</div></Page>;
-    if (!dish) return <Page title="Not Found"><div>Dish not found</div></Page>;
+    if (!loaded) return <Page title="Loading..."><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    if (!dish) return <Page title="Not Found"><div className="text-center py-20 text-gray-400">Dish not found</div></Page>;
 
     return (
         <Page title="Edit Dish" actions={actions} leftAction={leftAction} backPath={`/admin/restaurants/${rid}/categories/${cid}`}>

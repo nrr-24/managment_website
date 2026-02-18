@@ -127,7 +127,7 @@ export default function EditCategoryPage() {
         </button>
     );
 
-    if (!loaded) return <Page title="Loading..."><div>Loading...</div></Page>;
+    if (!loaded) return <Page title="Loading..."><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
 
     return (
         <Page title="Edit Category" actions={actions} leftAction={leftAction} backPath={`/admin/restaurants/${rid}/categories`}>

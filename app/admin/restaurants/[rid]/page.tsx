@@ -165,14 +165,19 @@ export default function RestaurantManagePage() {
         }
     }
 
+    const [deleting, setDeleting] = useState(false);
+
     async function handleDeleteRestaurant() {
         if (!confirm(`Delete "${name}" and all its categories, dishes, and images? This cannot be undone.`)) return;
+        setDeleting(true);
         try {
             await deleteRestaurant(rid);
             showToast("Restaurant deleted");
             setTimeout(() => router.push('/admin/restaurants'), 1000);
-        } catch {
+        } catch (err) {
+            console.error("Delete restaurant failed:", err);
             showToast("Failed to delete restaurant", "error");
+            setDeleting(false);
         }
     }
 
@@ -208,7 +213,7 @@ export default function RestaurantManagePage() {
         </Link>
     );
 
-    if (!loaded) return <Page title="Loading..."><div>Loading settings...</div></Page>;
+    if (!loaded) return <Page title="Loading..." backPath="/"><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
 
     return (
         <Page title={name || rid} actions={actions} backPath="/">
@@ -442,12 +447,17 @@ export default function RestaurantManagePage() {
                 <Card className="rounded-2xl p-0 overflow-hidden">
                     <button
                         onClick={handleDeleteRestaurant}
-                        className="w-full px-6 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold"
+                        disabled={deleting}
+                        className="w-full px-6 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold disabled:opacity-50"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete Restaurant
+                        {deleting ? (
+                            <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+                        ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        )}
+                        {deleting ? "Deleting..." : "Delete Restaurant"}
                     </button>
                 </Card>
             </div>

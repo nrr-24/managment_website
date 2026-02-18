@@ -201,6 +201,32 @@ export default function RestaurantManagePage() {
                 </Card>
             </div>
 
+            {/* Menu Layout */}
+            <div className="space-y-1 mb-6">
+                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Menu Layout</label>
+                <Card className="p-4 rounded-2xl">
+                    <div className="flex gap-3">
+                        {[
+                            { value: "list", label: "List", desc: "All dishes in scrollable sections" },
+                            { value: "grid", label: "Grid", desc: "Category tabs with grid view" },
+                        ].map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setLayout(opt.value)}
+                                className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                                    layout === opt.value
+                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                                        : "border-gray-100 dark:border-gray-800 hover:border-gray-200"
+                                }`}
+                            >
+                                <p className={`text-sm font-bold ${layout === opt.value ? "text-blue-600" : "text-gray-900 dark:text-white"}`}>{opt.label}</p>
+                                <p className="text-[11px] text-gray-400 mt-1">{opt.desc}</p>
+                            </button>
+                        ))}
+                    </div>
+                </Card>
+            </div>
+
             {/* Menu Font */}
             <div className="space-y-1 mb-6">
                 <FontPicker value={menuFont} onChange={setMenuFont} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getRestaurant, listCategories, listDishes, Restaurant, Category, Dish } from "@/lib/data";
 import { getFontConfig } from "@/components/ui/FontPicker";
@@ -19,6 +19,7 @@ export default function PublicMenuPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [showSearch, setShowSearch] = useState(false);
     const [lang, setLang] = useState<'en' | 'ar'>('en');
+    const tabsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!rid) return;
@@ -67,248 +68,337 @@ export default function PublicMenuPage() {
         listDishes(rid, activeCid).then(setDishes);
     }, [rid, activeCid, searchTerm, restaurant?.layout]);
 
+    // Scroll active tab into view
+    useEffect(() => {
+        if (!activeCid || !tabsRef.current) return;
+        const tab = tabsRef.current.querySelector(`#tab-${activeCid}`);
+        if (tab) tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, [activeCid]);
+
     const fontConfig = getFontConfig(restaurant?.menuFont || 'system');
+    const themeColor = restaurant?.themeColorHex || '#ffffff';
 
     if (loading) return (
-        <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-white/10 border-t-white rounded-full animate-spin" />
         </div>
     );
 
     if (!restaurant) return (
-        <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white/50">
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white/40 text-sm font-medium">
             Restaurant not found
         </div>
     );
 
-    return (
-        <div className={`min-h-screen bg-[#1c1c1e] text-white ${fontConfig.class} antialiased relative overflow-hidden`}>
-            {fontConfig.import && <link rel="stylesheet" href={fontConfig.import} />}
+    const isAr = lang === 'ar';
+    const dir = isAr ? 'rtl' : 'ltr';
 
-            {/* Background Texture & Image */}
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-30 pointer-events-none z-0" />
-            {(restaurant.imagePath || restaurant.backgroundImagePath || restaurant.backgroundImage) && (
-                <div className="absolute inset-0 z-0">
-                    <StorageImage path={restaurant.imagePath || restaurant.backgroundImagePath || restaurant.backgroundImage} alt="" className="w-full h-full object-cover opacity-20" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#1c1c1e] via-transparent to-[#1c1c1e]" />
-                </div>
-            )}
+    // Helper: get the display dishes based on search/layout
+    const getDisplayDishes = () => {
+        if (searchTerm) {
+            return allDishes.filter(d =>
+                d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (d.nameAr && d.nameAr.includes(searchTerm)) ||
+                (d.description && d.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                ((d as any).categoryName?.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
+        return dishes;
+    };
 
-            {/* Header */}
-            <header className="sticky top-0 z-30 bg-[#1c1c1e]/80 backdrop-blur-xl px-4 py-4 flex items-center justify-between border-b border-white/5">
-                <button onClick={() => router.push('/')} className="w-10 h-10 flex items-center justify-center text-white/40">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <div className="text-center flex flex-col items-center">
-                    {(restaurant.imagePath || restaurant.logoPath || restaurant.logo) ? (
-                        <StorageImage path={restaurant.imagePath || restaurant.logoPath || restaurant.logo} alt={restaurant.name} className="h-8 w-auto object-contain mb-1" />
+    const DishCard = ({ dish, size = "normal" }: { dish: Dish; size?: "normal" | "compact" }) => (
+        <div
+            onClick={() => setSelectedDish(dish)}
+            className="group cursor-pointer"
+        >
+            <div className={`${size === "compact" ? "rounded-2xl" : "rounded-3xl"} overflow-hidden bg-[#1a1a1a] border border-white/[0.04] hover:border-white/10 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50`}>
+                <div className={`${size === "compact" ? "aspect-[4/3]" : "aspect-square"} bg-[#111] relative overflow-hidden`}>
+                    {(dish.imagePaths?.[0] || dish.imageUrls?.[0]) ? (
+                        <StorageImage
+                            path={dish.imagePaths?.[0] || dish.imageUrls?.[0]}
+                            alt={dish.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                        />
                     ) : (
-                        <>
-                            <p className="text-[10px] font-bold tracking-widest text-white/30 truncate max-w-[150px] mx-auto uppercase">
-                                {lang === 'ar' ? "أهلاً بك" : "WELCOME"}
-                            </p>
-                            <h1 className="font-bold tracking-tight text-white/90">
-                                {lang === 'ar' ? (restaurant.nameAr || restaurant.name) : restaurant.name}
-                            </h1>
-                        </>
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/[0.02] to-transparent">
+                            <svg className="w-10 h-10 text-white/[0.06]" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
+                            </svg>
+                        </div>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="p-4" dir={dir}>
+                    <h3 className="text-sm font-semibold text-white/90 leading-tight mb-1.5">
+                        {isAr ? (dish.nameAr || dish.name) : dish.name}
+                    </h3>
+                    {dish.description && !isAr && (
+                        <p className="text-xs text-white/30 leading-relaxed line-clamp-2 mb-2">{dish.description}</p>
+                    )}
+                    {dish.descriptionAr && isAr && (
+                        <p className="text-xs text-white/30 leading-relaxed line-clamp-2 mb-2">{dish.descriptionAr || dish.description}</p>
+                    )}
+                    <p className="text-sm font-bold" style={{ color: themeColor }}>
+                        {dish.price?.toFixed(3)}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className={`min-h-screen bg-[#0a0a0a] text-white ${fontConfig.class} antialiased`}>
+            {fontConfig.import && <link rel="stylesheet" href={fontConfig.import} />}
+
+            {/* Hero Section */}
+            <div className="relative h-64 overflow-hidden">
+                {(restaurant.backgroundImagePath || restaurant.backgroundImage || restaurant.imagePath) ? (
+                    <>
+                        <StorageImage
+                            path={restaurant.backgroundImagePath || restaurant.backgroundImage || restaurant.imagePath}
+                            alt=""
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-[#0a0a0a]" />
+                    </>
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
+                )}
+
+                {/* Back button */}
+                <button
+                    onClick={() => router.back()}
+                    className="absolute top-5 left-5 z-10 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors border border-white/10"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+
+                {/* Controls */}
+                <div className="absolute top-5 right-5 z-10 flex items-center gap-2">
                     <button
                         onClick={() => setShowSearch(!showSearch)}
-                        className={`w-8 h-8 flex items-center justify-center transition-colors ${showSearch ? 'text-cyan-400' : 'text-white/30'}`}
+                        className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center transition-all border ${showSearch ? 'bg-white text-black border-white' : 'bg-black/40 text-white/70 hover:text-white border-white/10'}`}
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </button>
                     <button
-                        onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-                        className={`px-2 py-0.5 rounded-full flex gap-1 text-[10px] font-bold transition-all border ${lang === 'ar' ? 'bg-cyan-500 border-cyan-500 text-white' : 'bg-white/5 border-white/10 text-white/30'}`}
+                        onClick={() => setLang(isAr ? 'en' : 'ar')}
+                        className="h-10 px-4 bg-black/40 backdrop-blur-md rounded-full text-xs font-bold text-white/70 hover:text-white transition-all border border-white/10"
                     >
-                        <span>EN</span>
-                        <span className="opacity-20">/</span>
-                        <span>AR</span>
+                        {isAr ? 'EN' : 'AR'}
                     </button>
-                    <button className="w-8 h-8 flex items-center justify-center text-white/30"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" /></svg></button>
                 </div>
-            </header>
+
+                {/* Restaurant Info - overlapping hero bottom */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 pb-0">
+                    <div className="flex items-end gap-4">
+                        {(restaurant.logoPath || restaurant.logo) && (
+                            <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#0a0a0a] shadow-xl bg-[#1a1a1a] flex-shrink-0 translate-y-4">
+                                <StorageImage
+                                    path={restaurant.logoPath || restaurant.logo}
+                                    alt={restaurant.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+                        <div className="pb-1 translate-y-4">
+                            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
+                                {isAr ? (restaurant.nameAr || restaurant.name) : restaurant.name}
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Spacer for overlapping content */}
+            <div className="h-6" />
 
             {/* Search Bar */}
             {showSearch && (
-                <div className="sticky top-[73px] z-30 bg-[#1c1c1e] px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="px-5 pb-4">
                     <div className="relative">
                         <input
                             autoFocus
-                            placeholder={lang === 'ar' ? "ابحث عن الأطباق..." : "Search dishes..."}
-                            className="w-full h-12 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/10 outline-none text-sm font-medium focus:border-cyan-500/50 transition-all text-left"
-                            style={{ textAlign: lang === 'ar' ? 'right' : 'left' }}
+                            placeholder={isAr ? "ابحث عن الأطباق..." : "Search dishes..."}
+                            className="w-full h-12 pl-11 pr-10 rounded-xl bg-[#1a1a1a] border border-white/[0.06] outline-none text-sm font-medium focus:border-white/20 transition-all placeholder:text-white/20"
+                            style={{ textAlign: isAr ? 'right' : 'left' }}
+                            dir={dir}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                         {searchTerm && (
-                            <button onClick={() => setSearchTerm("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">✕</button>
+                            <button onClick={() => setSearchTerm("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white text-sm">
+                                ✕
+                            </button>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* Categories Tabs */}
-            <div className="sticky top-[73px] z-20 bg-[#1c1c1e]/90 backdrop-blur-md border-b border-white/5 no-scrollbar overflow-x-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                <div className="flex px-4 items-center gap-2">
-                    {categories.map(cat => (
-                        <button
-                            key={cat.id}
-                            id={`tab-${cat.id}`}
-                            onClick={() => {
-                                setActiveCid(cat.id);
-                                if (restaurant?.layout === 'list') {
-                                    document.getElementById(`section-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }
-                            }}
-                            className={`px-4 py-4 flex flex-col items-center gap-1 min-w-[80px] relative whitespace-nowrap text-[10px] font-bold transition-colors ${activeCid === cat.id ? 'text-white' : 'text-white/30'}`}
-                        >
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-1 transition-all ${activeCid === cat.id ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30' : 'bg-white/5 text-white/30'} overflow-hidden`}>
-                                {(cat.imagePath || cat.imageUrl) ? (
-                                    <StorageImage path={cat.imagePath || cat.imageUrl} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
+            {/* Category Tabs */}
+            <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-white/[0.04]">
+                <div ref={tabsRef} className="flex overflow-x-auto no-scrollbar px-5 gap-2 py-3" dir={dir}>
+                    {categories.map(cat => {
+                        const isActive = activeCid === cat.id;
+                        return (
+                            <button
+                                key={cat.id}
+                                id={`tab-${cat.id}`}
+                                onClick={() => {
+                                    setActiveCid(cat.id);
+                                    if (restaurant?.layout === 'list') {
+                                        document.getElementById(`section-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-sm font-semibold transition-all duration-200 flex-shrink-0 ${
+                                    isActive
+                                        ? 'text-black shadow-lg'
+                                        : 'bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.07]'
+                                }`}
+                                style={isActive ? { backgroundColor: themeColor } : undefined}
+                            >
+                                {(cat.imagePath || cat.imageUrl) && (
+                                    <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                                        <StorageImage path={cat.imagePath || cat.imageUrl} alt="" className="w-full h-full object-cover" />
+                                    </div>
                                 )}
-                            </div>
-                            {lang === 'ar' ? (cat.nameAr || cat.name) : cat.name}
-                            {activeCid === cat.id && (
-                                <div className="absolute bottom-1 w-1.5 h-1.5 bg-cyan-400 rounded-full" />
-                            )}
-                        </button>
-                    ))}
+                                {isAr ? (cat.nameAr || cat.name) : cat.name}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Content */}
-            <main className="p-6 relative z-10" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                {searchTerm || restaurant?.layout !== 'list' ? (
-                    <>
-                        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <h2 className="text-2xl font-bold tracking-tight">
-                                {categories.find(c => c.id === activeCid)?.[lang === 'ar' ? 'nameAr' : 'name'] || categories.find(c => c.id === activeCid)?.name}
-                            </h2>
+            <main className="px-5 py-6" dir={dir}>
+                {searchTerm ? (
+                    /* Search Results */
+                    <div>
+                        <p className="text-xs font-medium text-white/30 mb-4">
+                            {getDisplayDishes().length} {isAr ? 'نتيجة' : 'results'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            {getDisplayDishes().map(dish => (
+                                <DishCard key={dish.id} dish={dish} />
+                            ))}
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            {(searchTerm ? allDishes : dishes)
-                                .filter(d =>
-                                    d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (d.nameAr && d.nameAr.includes(searchTerm)) ||
-                                    (d.description && d.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                    (searchTerm && (d as any).categoryName?.toLowerCase().includes(searchTerm.toLowerCase()))
-                                )
-                                .map(dish => (
-                                    <div
-                                        key={dish.id}
-                                        onClick={() => setSelectedDish(dish)}
-                                        className="bg-[#2c2c2e]/50 backdrop-blur-sm border border-white/5 rounded-[2rem] overflow-hidden group active:scale-95 transition-all shadow-xl"
-                                    >
-                                        <div className="aspect-square bg-white/5 relative overflow-hidden">
-                                            {(dish.imagePaths?.[0] || dish.imageUrls?.[0]) ? (
-                                                <StorageImage path={dish.imagePaths?.[0] || dish.imageUrls?.[0]} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-white/5">
-                                                    <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-4 text-center">
-                                            <h3 className="text-xs font-bold text-white/90 mb-1">{lang === 'ar' ? (dish.nameAr || dish.name) : dish.name}</h3>
-                                            <p className="text-[10px] font-bold text-white/30">{dish.price?.toFixed(3)}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                    </div>
+                ) : restaurant?.layout !== 'list' ? (
+                    /* Grid Layout - category-based */
+                    <div>
+                        <div className="grid grid-cols-2 gap-3">
+                            {dishes.map(dish => (
+                                <DishCard key={dish.id} dish={dish} />
+                            ))}
                         </div>
-                    </>
+                    </div>
                 ) : (
-                    <div className="space-y-12">
-                        {categories.map(cat => (
-                            <section key={cat.id} id={`section-${cat.id}`} className="scroll-mt-[180px]">
-                                <h2 className="text-2xl font-bold tracking-tight mb-6 px-2">{lang === 'ar' ? (cat.nameAr || cat.name) : cat.name}</h2>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {allDishes.filter(d => d.categoryId === cat.id).map(dish => (
-                                        <div
-                                            key={dish.id}
-                                            onClick={() => setSelectedDish(dish)}
-                                            className="bg-[#2c2c2e]/50 backdrop-blur-sm border border-white/5 rounded-[2rem] overflow-hidden group active:scale-95 transition-all shadow-xl"
-                                        >
-                                            <div className="aspect-square bg-white/5 relative overflow-hidden">
-                                                {(dish.imagePaths?.[0] || dish.imageUrls?.[0]) ? (
-                                                    <StorageImage path={dish.imagePaths?.[0] || dish.imageUrls?.[0]} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-white/5">
-                                                        <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="p-4 text-center">
-                                                <h3 className="text-xs font-bold text-white/90 mb-1">{lang === 'ar' ? (dish.nameAr || dish.name) : dish.name}</h3>
-                                                <p className="text-[10px] font-bold text-white/30">{dish.price?.toFixed(3)}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        ))}
+                    /* List Layout - all sections */
+                    <div className="space-y-10">
+                        {categories.map(cat => {
+                            const catDishes = allDishes.filter(d => d.categoryId === cat.id);
+                            if (catDishes.length === 0) return null;
+                            return (
+                                <section key={cat.id} id={`section-${cat.id}`} className="scroll-mt-[60px]">
+                                    <div className="flex items-center gap-3 mb-5">
+                                        <h2 className="text-xl font-bold tracking-tight">
+                                            {isAr ? (cat.nameAr || cat.name) : cat.name}
+                                        </h2>
+                                        <div className="flex-1 h-px bg-white/[0.06]" />
+                                        <span className="text-xs text-white/20 font-medium">{catDishes.length}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {catDishes.map(dish => (
+                                            <DishCard key={dish.id} dish={dish} />
+                                        ))}
+                                    </div>
+                                </section>
+                            );
+                        })}
                     </div>
                 )}
 
-                {(searchTerm ? allDishes : dishes).length === 0 && (
-                    <div className="py-20 text-center text-white/20 font-medium">
-                        {searchTerm ? (lang === 'ar' ? "لا توجد أطباق تطابق بحثك." : "No dishes match your search.") : (lang === 'ar' ? "لا توجد أطباق في هذا القسم بعد." : "No dishes in this category yet.")}
+                {/* Empty States */}
+                {!searchTerm && restaurant?.layout !== 'list' && dishes.length === 0 && (
+                    <div className="py-20 text-center">
+                        <p className="text-white/20 text-sm font-medium">
+                            {isAr ? "لا توجد أطباق في هذا القسم بعد." : "No dishes in this category yet."}
+                        </p>
+                    </div>
+                )}
+                {searchTerm && getDisplayDishes().length === 0 && (
+                    <div className="py-20 text-center">
+                        <p className="text-white/20 text-sm font-medium">
+                            {isAr ? "لا توجد أطباق تطابق بحثك." : "No dishes match your search."}
+                        </p>
                     </div>
                 )}
             </main>
 
-            {/* Dish Detail Popup */}
+            {/* Dish Detail Modal */}
             {selectedDish && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12 animate-in fade-in duration-300">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedDish(null)} />
-                    <div className="relative w-full max-w-lg bg-[#1c1c1e] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedDish(null)} />
+                    <div className="relative w-full max-w-lg bg-[#141414] border border-white/[0.06] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
+                        {/* Close */}
                         <button
                             onClick={() => setSelectedDish(null)}
-                            className="absolute top-6 right-6 z-10 w-8 h-8 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                            className="absolute top-4 right-4 z-10 w-9 h-9 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
                         >
-                            ✕
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
 
-                        <div className="aspect-[4/3] bg-white/5 relative overflow-hidden">
-                            {(selectedDish.imagePaths?.[0] || selectedDish.imageUrls?.[0]) ? (
-                                <StorageImage path={selectedDish.imagePaths?.[0] || selectedDish.imageUrls?.[0]} alt={selectedDish.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-white/10">
-                                    <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 00-2 2z" /></svg>
-                                </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c1e] via-transparent to-transparent" />
-                        </div>
+                        {/* Image */}
+                        {(selectedDish.imagePaths?.[0] || selectedDish.imageUrls?.[0]) ? (
+                            <div className="aspect-[16/10] bg-[#111] relative overflow-hidden">
+                                <StorageImage
+                                    path={selectedDish.imagePaths?.[0] || selectedDish.imageUrls?.[0]}
+                                    alt={selectedDish.name}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent" />
+                            </div>
+                        ) : (
+                            <div className="h-8" />
+                        )}
 
-                        <div className="p-8 text-center -mt-12 relative" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                            <h2 className="text-3xl font-bold tracking-tight mb-2">
-                                {lang === 'ar' ? (selectedDish.nameAr || selectedDish.name) : selectedDish.name}
-                            </h2>
-                            <p className="text-xl font-bold text-white/30 mb-6">{selectedDish.price?.toFixed(3)}</p>
+                        {/* Info */}
+                        <div className="p-6 -mt-8 relative" dir={dir}>
+                            <div className="flex items-start justify-between gap-4 mb-4">
+                                <h2 className="text-2xl font-bold tracking-tight flex-1">
+                                    {isAr ? (selectedDish.nameAr || selectedDish.name) : selectedDish.name}
+                                </h2>
+                                <span className="text-lg font-bold flex-shrink-0 mt-1" style={{ color: themeColor }}>
+                                    {selectedDish.price?.toFixed(3)}
+                                </span>
+                            </div>
 
-                            {(lang === 'ar' ? (selectedDish.descriptionAr || selectedDish.description) : selectedDish.description) && (
-                                <p className="text-sm text-white/40 leading-relaxed max-w-sm mx-auto mb-8 font-medium">
-                                    {lang === 'ar' ? (selectedDish.descriptionAr || selectedDish.description) : selectedDish.description}
+                            {(isAr ? (selectedDish.descriptionAr || selectedDish.description) : selectedDish.description) && (
+                                <p className="text-sm text-white/40 leading-relaxed mb-6">
+                                    {isAr ? (selectedDish.descriptionAr || selectedDish.description) : selectedDish.description}
                                 </p>
                             )}
 
                             {selectedDish.allergens && selectedDish.allergens.length > 0 && (
-                                <div className="mt-8 border-t border-white/5 pt-6">
-                                    <p className="text-[10px] font-bold text-red-500 uppercase tracking-[0.2em] mb-2">
-                                        {lang === 'ar' ? "يحتوي على:" : "Contains:"}
+                                <div className="border-t border-white/[0.06] pt-4">
+                                    <p className="text-[11px] font-bold text-amber-500/80 uppercase tracking-wider mb-2">
+                                        {isAr ? "يحتوي على" : "Allergens"}
                                     </p>
-                                    <p className="text-xs text-red-500/80 font-bold">
-                                        {selectedDish.allergens.map(a => lang === 'ar' ? (a.nameAr || a.name) : a.name).join(", ")}
-                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedDish.allergens.map((a, i) => (
+                                            <span key={i} className="text-xs font-medium text-amber-500/60 bg-amber-500/10 px-3 py-1 rounded-full">
+                                                {isAr ? (a.nameAr || a.name) : a.name}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

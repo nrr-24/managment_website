@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // Role lookup for current user
+    function isManager() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "manager";
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // USERS
+    match /users/{userId} {
+      // Allow signed-in to read user docs (so role checks never break).
+      // If you want privacy later, we can tighten this and still keep role check working.
+      allow get: if signedIn();
+      allow list: if isManager();
+
+      // Allow self-signup doc creation BUT only as viewer (prevents self-promotion).
+      allow create: if (isSelf(userId)
+                        && request.resource.data.role == "viewer"
+                        && request.resource.data.email == request.auth.token.email
+                        && request.resource.data.id == userId)
+                    // Allow managers to create any user doc (supports createUserAsManager)
+                    || (isManager()
+                        && request.resource.data.id == userId);
+
+      // Managers can update anyone
+      allow update, delete: if isManager();
+    }
+
+    // RESTAURANTS / MENU
+    match /restaurants/{restaurantId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isManager();
+
+      match /categories/{categoryId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isManager();
+
+        match /dishes/{dishId} {
+          allow read: if signedIn();
+          allow create, update, delete: if isManager();
+        }
+      }
+    }
+  }
+}

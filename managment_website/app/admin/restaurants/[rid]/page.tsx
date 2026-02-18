@@ -1,0 +1,330 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Page } from "@/components/ui/Page";
+import { ColorPicker } from "@/components/ui/ColorPicker";
+import { FontPicker } from "@/components/ui/FontPicker";
+import {
+    getRestaurant,
+    updateRestaurant,
+    listCategories,
+    Category,
+    uploadRestaurantImage,
+    deleteCategory,
+} from "@/lib/data";
+import { useToast } from "@/components/ui/Toast";
+import { StorageImage } from "@/components/ui/StorageImage";
+
+export default function RestaurantManagePage() {
+    const { rid } = useParams<{ rid: string }>();
+    const { showToast, ToastComponent } = useToast();
+
+    // Restaurant data
+    const [name, setName] = useState("");
+    const [nameAr, setNameAr] = useState("");
+    const [themeColor, setThemeColor] = useState("#007aff");
+    const [layout, setLayout] = useState("list");
+    const [menuFont, setMenuFont] = useState("system");
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [bgFile, setBgFile] = useState<File | null>(null);
+    const [logoUrl, setLogoUrl] = useState("");
+    const [bgUrl, setBgUrl] = useState("");
+    const [logoPath, setLogoPath] = useState("");
+    const [bgPath, setBgPath] = useState("");
+
+    const [loaded, setLoaded] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    const [cats, setCats] = useState<Category[]>([]);
+
+    // Local Previews
+    const [logoPreview, setLogoPreview] = useState("");
+    const [bgPreview, setBgPreview] = useState("");
+    const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+
+    useEffect(() => {
+        if (logoFile) {
+            const url = URL.createObjectURL(logoFile);
+            setLogoPreview(url);
+            return () => URL.revokeObjectURL(url);
+        } else {
+            setLogoPreview("");
+        }
+    }, [logoFile]);
+
+    useEffect(() => {
+        if (bgFile) {
+            const url = URL.createObjectURL(bgFile);
+            setBgPreview(url);
+            return () => URL.revokeObjectURL(url);
+        } else {
+            setBgPreview("");
+        }
+    }, [bgFile]);
+
+    async function refresh() {
+        const r = await getRestaurant(rid);
+        if (r) {
+            setName(r.name || "");
+            setNameAr(r.nameAr || "");
+            setThemeColor(r.themeColorHex || "#007aff");
+            setLayout(r.layout || "list");
+            setMenuFont(r.menuFont || "system");
+            setLogoUrl(r.logo || "");
+            setBgUrl(r.backgroundImage || "");
+            setLogoPath(r.imagePath || r.logoPath || "");
+            setBgPath(r.backgroundImagePath || "");
+        }
+        setCats(await listCategories(rid));
+        setLoaded(true);
+    }
+
+    useEffect(() => {
+        refresh();
+    }, [rid]);
+
+    async function handleSave() {
+        if (!name.trim()) return;
+        setSaving(true);
+        try {
+            const updates: any = {
+                name: name.trim(),
+                nameAr: nameAr.trim() || "",
+                themeColorHex: themeColor,
+                layout,
+                menuFont,
+            };
+
+            // Handle Logo Upload with timeout/error safety
+            if (logoFile) {
+                try {
+                    const result = await uploadRestaurantImage(logoFile, rid, "logo", (p) => {
+                        setUploadProgress(prev => ({ ...prev, logo: p }));
+                    });
+                    updates.logo = result.url;
+                    updates.logoPath = result.path;
+                    updates.imagePath = result.path;
+                    setLogoUrl(result.url);
+                } catch (err) {
+                    console.error("Logo upload failed:", err);
+                    showToast("Logo upload failed, but settings will still save", "error");
+                }
+            }
+
+            // Handle Background Upload with timeout/error safety
+            if (bgFile) {
+                try {
+                    const result = await uploadRestaurantImage(bgFile, rid, "background", (p) => {
+                        setUploadProgress(prev => ({ ...prev, background: p }));
+                    });
+                    updates.backgroundImage = result.url;
+                    updates.backgroundImagePath = result.path;
+                    setBgUrl(result.url);
+                } catch (err) {
+                    console.error("Background upload failed:", err);
+                    showToast("Background upload failed, but settings will still save", "error");
+                }
+            }
+
+            await updateRestaurant(rid, updates);
+
+            // Clear files after successful upload
+            setLogoFile(null);
+            setBgFile(null);
+
+            await refresh();
+            showToast("Settings saved successfully!");
+        } catch (err) {
+            console.error("Save failed:", err);
+            showToast("Failed to save changes. Please check your connection.", "error");
+        } finally {
+            setSaving(false);
+            setUploadProgress({});
+        }
+    }
+
+    async function handleDeleteCategory(id: string, catName: string) {
+        if (!confirm(`Delete category "${catName}"?`)) return;
+        await deleteCategory(rid, id);
+        await refresh();
+    }
+
+    const actions = (
+        <div className="flex items-center gap-1">
+            <Link href={`/admin/restaurants/${rid}/categories`}>
+                <button className="text-green-600 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
+                    Edit Menu <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                </button>
+            </Link>
+            <Link href={`/restaurants/${rid}`}>
+                <button className="p-1 px-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <svg className="w-5 h-5 text-gray-500 hover:text-green-600 transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>
+                </button>
+            </Link>
+        </div>
+    );
+
+    if (!loaded) return <Page title="Loading..."><div>Loading settings...</div></Page>;
+
+    return (
+        <Page title={name || rid} actions={actions} backPath="/">
+            {/* Restaurant Details */}
+            <div className="space-y-1 mb-8">
+                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant Details</label>
+                <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-2xl">
+                    <input
+                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900 dark:text-white"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Restaurant name"
+                    />
+                    <input
+                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900 dark:text-white text-right font-medium"
+                        value={nameAr}
+                        onChange={(e) => setNameAr(e.target.value)}
+                        placeholder="لوما الحلقة الثانية"
+                        dir="rtl"
+                    />
+                </Card>
+            </div>
+
+            {/* Theme Color */}
+            <div className="space-y-1 mb-6">
+                <Card className="p-4 flex items-center justify-between rounded-2xl">
+                    <span className="font-bold">Theme Color</span>
+                    <ColorPicker value={themeColor} onChange={setThemeColor} />
+                </Card>
+            </div>
+
+            {/* Menu Font */}
+            <div className="space-y-1 mb-6">
+                <FontPicker value={menuFont} onChange={setMenuFont} />
+            </div>
+
+            {/* Logo */}
+            <div className="space-y-1 mb-6">
+                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Logo</label>
+                <Card className="p-8 flex flex-col items-center justify-center text-center rounded-3xl">
+                    <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
+                        {logoPreview ? (
+                            <img src={logoPreview} alt="" className="w-full h-full object-cover" />
+                        ) : (logoPath || logoUrl) ? (
+                            <StorageImage path={logoPath || logoUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
+                        )}
+                    </div>
+                    <h3 className="font-bold text-xl mb-1">{name}</h3>
+                    {uploadProgress.logo !== undefined && (
+                        <div className="w-full max-w-[200px] mt-4">
+                            <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-500 transition-all duration-300"
+                                    style={{ width: `${uploadProgress.logo}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-wider">Uploading {Math.round(uploadProgress.logo)}%</p>
+                        </div>
+                    )}
+                </Card>
+                <div className="px-4">
+                    <label className="text-blue-500 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
+                        Select logo
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                </div>
+            </div>
+
+            {/* Background */}
+            <div className="space-y-1 mb-10">
+                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Background</label>
+                <Card className="p-0 h-40 bg-gray-200 dark:bg-gray-800 flex items-center justify-center rounded-3xl overflow-hidden relative">
+                    {bgPreview ? (
+                        <img src={bgPreview} alt="" className="w-full h-full object-cover" />
+                    ) : (bgPath || bgUrl) ? (
+                        <StorageImage path={bgPath || bgUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                        <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2 2zm-11-7l2.03 2.71L15 11l4.25 5.67H5L10 12z" /></svg>
+                    )}
+                    {uploadProgress.background !== undefined && (
+                        <div className="absolute inset-x-0 bottom-0 p-4 bg-black/50 backdrop-blur-sm">
+                            <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-white transition-all duration-300"
+                                    style={{ width: `${uploadProgress.background}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] font-bold text-white mt-1 uppercase tracking-wider">Uploading {Math.round(uploadProgress.background)}%</p>
+                        </div>
+                    )}
+                </Card>
+                <div className="px-4">
+                    <label className="text-blue-500 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
+                        Change background
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                </div>
+            </div>
+
+            <Button
+                variant="primary-black"
+                onClick={handleSave}
+                loading={saving}
+                disabled={saving || !name.trim()}
+                className="mb-12"
+            >
+                Save Changes
+            </Button>
+
+            {/* Categories Section (as seen in mockup 4) */}
+            <div className="space-y-4 pt-8 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between px-4">
+                    <h2 className="text-lg font-bold">Categories</h2>
+                    <Link href={`/admin/restaurants/${rid}/categories/new`}>
+                        <Button variant="ghost" className="text-blue-500">+ Add</Button>
+                    </Link>
+                </div>
+                <div className="space-y-2">
+                    {cats.map((c) => (
+                        <Card key={c.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all rounded-2xl group">
+                            <div className="flex items-center justify-between">
+                                <Link href={`/admin/restaurants/${rid}/categories/${c.id}`} className="flex-1 flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 text-green-700 rounded-xl flex items-center justify-center">
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" /></svg>
+                                    </div>
+                                    <span className="font-bold text-blue-500 hover:underline">{c.name} {c.nameAr ? `(${c.nameAr})` : ''}</span>
+                                </Link>
+                                <div className="flex items-center gap-1">
+                                    <Link href={`/admin/restaurants/${rid}/categories/${c.id}/edit`}>
+                                        <button className="p-2 text-green-500 hover:bg-green-50 rounded-lg">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                        </button>
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDeleteCategory(c.id, c.name)}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+
+            <div className="pt-20 pb-10">
+                <p className="text-gray-400 font-bold text-xs uppercase px-4 mb-2">Danger Zone</p>
+                <Card className="border-red-100 dark:border-red-900/30 rounded-2xl">
+                    <Button variant="ghost" className="text-red-500 w-full justify-start font-bold">Delete Restaurant</Button>
+                </Card>
+            </div>
+            {ToastComponent}
+        </Page>
+    );
+}

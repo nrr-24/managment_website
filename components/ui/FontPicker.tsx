@@ -1,21 +1,22 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card } from './Card';
 
 const FONTS = [
-    { id: 'system', name: 'System', preview: 'Aa' },
-    { id: 'serif', name: 'Serif', preview: 'Aa' },
-    { id: 'rounded', name: 'Rounded', preview: 'Aa' },
-    { id: 'monospaced', name: 'Monospaced', preview: 'Aa' },
-    { id: 'condensed', name: 'Condensed', preview: 'Aa' },
-    { id: 'expanded', name: 'Expanded', preview: 'Aa' },
-    { id: 'italic', name: 'Italic', preview: 'Aa' },
-    { id: 'slab', name: 'Slab', preview: 'Aa' },
-    { id: 'elegant', name: 'Elegant', preview: 'Aa' },
-    { id: 'handwritten', name: 'Handwritten', preview: 'Aa' },
-    { id: 'geometric', name: 'Geometric', preview: 'Aa' },
-    { id: 'classic', name: 'Classic', preview: 'Aa' },
+    { id: 'system', name: 'System' },
+    { id: 'serif', name: 'Serif' },
+    { id: 'rounded', name: 'Rounded' },
+    { id: 'monospaced', name: 'Monospaced' },
+    { id: 'condensed', name: 'Condensed' },
+    { id: 'expanded', name: 'Expanded' },
+    { id: 'italic', name: 'Italic' },
+    { id: 'slab', name: 'Slab' },
+    { id: 'elegant', name: 'Elegant' },
+    { id: 'handwritten', name: 'Handwritten' },
+    { id: 'geometric', name: 'Geometric' },
+    { id: 'classic', name: 'Classic' },
 ];
 
 // Font style maps for preview rendering
@@ -41,11 +42,81 @@ interface FontPickerProps {
 
 export function FontPicker({ value, onChange }: FontPickerProps) {
     const [open, setOpen] = useState(false);
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (open && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const dropdownHeight = Math.min(440, window.innerHeight * 0.6);
+
+            if (spaceBelow < dropdownHeight && rect.top > spaceBelow) {
+                setDropdownStyle({
+                    position: 'fixed',
+                    bottom: window.innerHeight - rect.top + 8,
+                    left: rect.left,
+                    width: rect.width,
+                    maxHeight: Math.min(dropdownHeight, rect.top - 16),
+                });
+            } else {
+                setDropdownStyle({
+                    position: 'fixed',
+                    top: rect.bottom + 8,
+                    left: rect.left,
+                    width: rect.width,
+                    maxHeight: Math.min(dropdownHeight, spaceBelow - 16),
+                });
+            }
+        }
+    }, [open]);
 
     const selectedFont = FONTS.find(f => f.id === value) || FONTS[0];
 
+    const dropdown = open && mounted ? createPortal(
+        <>
+            <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
+            <div
+                className="z-[61] bg-white border border-gray-100 rounded-3xl shadow-2xl p-2 overflow-y-auto slide-down"
+                style={dropdownStyle}
+            >
+                {FONTS.map(f => (
+                    <div
+                        key={f.id}
+                        onClick={() => {
+                            onChange(f.id);
+                            setOpen(false);
+                        }}
+                        className={`px-4 py-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between ${value === f.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <span
+                                className="text-lg font-bold w-8 text-center"
+                                style={fontStyleMap[f.id] || {}}
+                            >
+                                Aa
+                            </span>
+                            <span className={`font-semibold text-[14px] ${value === f.id ? 'text-blue-600' : 'text-gray-700'}`}>
+                                {f.name}
+                            </span>
+                        </div>
+                        {value === f.id && (
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </>,
+        document.body
+    ) : null;
+
     return (
-        <div className="relative">
+        <div ref={triggerRef}>
             <label className="text-xs font-bold text-gray-400 px-4 uppercase block mb-1">Menu Font</label>
             <Card
                 onClick={() => setOpen(!open)}
@@ -64,39 +135,7 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
                 </div>
                 <svg className={`w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
             </Card>
-
-            {open && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-                    <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-gray-100 rounded-3xl shadow-2xl p-2 max-h-[400px] overflow-y-auto slide-down">
-                        {FONTS.map(f => (
-                            <div
-                                key={f.id}
-                                onClick={() => {
-                                    onChange(f.id);
-                                    setOpen(false);
-                                }}
-                                className={`px-4 py-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${value === f.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span
-                                        className="text-lg font-bold w-8 text-center"
-                                        style={fontStyleMap[f.id] || {}}
-                                    >
-                                        Aa
-                                    </span>
-                                    <span className={`font-semibold text-[14px] ${value === f.id ? 'text-blue-600' : 'text-gray-700'}`}>
-                                        {f.name}
-                                    </span>
-                                </div>
-                                {value === f.id && (
-                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </>
-            )}
+            {dropdown}
         </div>
     );
 }

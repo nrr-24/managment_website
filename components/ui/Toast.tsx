@@ -22,7 +22,7 @@ export function Toast({ message, type = "success", onClose }: ToastProps) {
     }, [handleClose]);
 
     return (
-        <div className={`fixed bottom-6 left-1/2 z-[100] ${exiting ? 'toast-exit' : 'toast-enter'}`}>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] ${exiting ? 'toast-exit' : 'toast-enter'}`}>
             <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 border ${
                 type === "success"
                     ? "bg-gray-900/90 backdrop-blur-xl border-white/5 text-white"

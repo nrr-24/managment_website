@@ -201,18 +201,11 @@ export default function RestaurantManagePage() {
     }
 
     const actions = (
-        <div className="flex items-center gap-1">
-            <Link href={`/admin/restaurants/${rid}/categories`}>
-                <button className="text-green-800 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
-                    Edit Menu <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                </button>
-            </Link>
-            <Link href={`/restaurants/${rid}`}>
-                <button className="p-1 px-2 hover:bg-gray-100 rounded-full transition-colors">
-                    <svg className="w-5 h-5 text-gray-500 hover:text-green-600 transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>
-                </button>
-            </Link>
-        </div>
+        <Link href={`/admin/restaurants/${rid}/categories`}>
+            <button className="text-green-800 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
+                Edit Menu <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </button>
+        </Link>
     );
 
     if (!loaded) return <Page title="Loading..."><div>Loading settings...</div></Page>;

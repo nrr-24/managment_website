@@ -153,14 +153,19 @@ export default function RestaurantManagePage() {
 
     async function handleDeleteCategory(id: string, catName: string) {
         if (!confirm(`Delete category "${catName}"?`)) return;
-        await deleteCategory(rid, id);
-        await refresh();
+        try {
+            await deleteCategory(rid, id);
+            showToast("Category deleted");
+            await refresh();
+        } catch {
+            showToast("Failed to delete category", "error");
+        }
     }
 
     const actions = (
         <div className="flex items-center gap-1">
             <Link href={`/admin/restaurants/${rid}/categories`}>
-                <button className="text-green-600 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
+                <button className="text-green-800 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
                     Edit Menu <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
                 </button>
             </Link>
@@ -179,15 +184,15 @@ export default function RestaurantManagePage() {
             {/* Restaurant Details */}
             <div className="space-y-1 mb-8">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant Details</label>
-                <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-2xl">
+                <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-2xl">
                     <input
-                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900 dark:text-white"
+                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Restaurant name"
                     />
                     <input
-                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900 dark:text-white text-right font-medium"
+                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900 text-right font-medium"
                         value={nameAr}
                         onChange={(e) => setNameAr(e.target.value)}
                         placeholder="لوما الحلقة الثانية"
@@ -207,23 +212,22 @@ export default function RestaurantManagePage() {
             {/* Menu Layout */}
             <div className="space-y-1 mb-6">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Menu Layout</label>
-                <Card className="p-4 rounded-2xl">
-                    <div className="flex gap-3">
+                <Card className="p-1.5 rounded-2xl">
+                    <div className="flex bg-gray-100 rounded-xl p-1">
                         {[
-                            { value: "list", label: "List", desc: "All dishes in scrollable sections" },
-                            { value: "grid", label: "Grid", desc: "Category tabs with grid view" },
+                            { value: "list", label: "Classic Scroll" },
+                            { value: "grid", label: "Category Grid" },
                         ].map((opt) => (
                             <button
                                 key={opt.value}
                                 onClick={() => setLayout(opt.value)}
-                                className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all ${
                                     layout === opt.value
-                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                                        : "border-gray-100 dark:border-gray-800 hover:border-gray-200"
+                                        ? "bg-white text-gray-900 shadow-sm"
+                                        : "text-gray-500"
                                 }`}
                             >
-                                <p className={`text-sm font-bold ${layout === opt.value ? "text-blue-600" : "text-gray-900 dark:text-white"}`}>{opt.label}</p>
-                                <p className="text-[11px] text-gray-400 mt-1">{opt.desc}</p>
+                                {opt.label}
                             </button>
                         ))}
                     </div>
@@ -233,16 +237,16 @@ export default function RestaurantManagePage() {
             {/* Dish Columns */}
             <div className="space-y-1 mb-6">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Dish Columns</label>
-                <Card className="p-4 rounded-2xl">
-                    <div className="flex gap-2">
+                <Card className="p-1.5 rounded-2xl">
+                    <div className="flex bg-gray-100 rounded-xl p-1">
                         {[1, 2, 3, 4].map((n) => (
                             <button
                                 key={n}
                                 onClick={() => setDishColumns(n)}
-                                className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                                     dishColumns === n
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200"
+                                        ? "bg-white text-gray-900 shadow-sm"
+                                        : "text-gray-500"
                                 }`}
                             >
                                 {n}
@@ -261,7 +265,7 @@ export default function RestaurantManagePage() {
             <div className="space-y-1 mb-6">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Logo</label>
                 <Card className="p-8 flex flex-col items-center justify-center text-center rounded-3xl">
-                    <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
+                    <div className="w-24 h-24 bg-green-50 text-green-800 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
                         {logoPreview ? (
                             <img src={logoPreview} alt="" className="w-full h-full object-cover" />
                         ) : (logoPath || logoUrl) ? (
@@ -273,18 +277,18 @@ export default function RestaurantManagePage() {
                     <h3 className="font-bold text-xl mb-1">{name}</h3>
                     {uploadProgress.logo !== undefined && (
                         <div className="w-full max-w-[200px] mt-4">
-                            <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-blue-500 transition-all duration-300"
+                                    className="h-full bg-green-800 transition-all duration-300"
                                     style={{ width: `${uploadProgress.logo}%` }}
                                 />
                             </div>
-                            <p className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-wider">Uploading {Math.round(uploadProgress.logo)}%</p>
+                            <p className="text-[10px] font-bold text-green-800 mt-1 uppercase tracking-wider">Uploading {Math.round(uploadProgress.logo)}%</p>
                         </div>
                     )}
                 </Card>
                 <div className="px-4">
-                    <label className="text-blue-500 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
+                    <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
                         Select logo
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
                     </label>
@@ -294,7 +298,7 @@ export default function RestaurantManagePage() {
             {/* Background */}
             <div className="space-y-1 mb-10">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Background</label>
-                <Card className="p-0 h-40 bg-gray-200 dark:bg-gray-800 flex items-center justify-center rounded-3xl overflow-hidden relative">
+                <Card className="p-0 h-40 bg-gray-200 flex items-center justify-center rounded-3xl overflow-hidden relative">
                     {bgPreview ? (
                         <img src={bgPreview} alt="" className="w-full h-full object-cover" />
                     ) : (bgPath || bgUrl) ? (
@@ -315,7 +319,7 @@ export default function RestaurantManagePage() {
                     )}
                 </Card>
                 <div className="px-4">
-                    <label className="text-blue-500 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
+                    <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline inline-block mt-2">
                         Change background
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
                     </label>
@@ -333,26 +337,26 @@ export default function RestaurantManagePage() {
             </Button>
 
             {/* Categories Section (as seen in mockup 4) */}
-            <div className="space-y-4 pt-8 border-t border-gray-100 dark:border-gray-800">
+            <div className="space-y-4 pt-8 border-t border-gray-100">
                 <div className="flex items-center justify-between px-4">
                     <h2 className="text-lg font-bold">Categories</h2>
                     <Link href={`/admin/restaurants/${rid}/categories/new`}>
-                        <Button variant="ghost" className="text-blue-500">+ Add</Button>
+                        <Button variant="ghost" className="text-green-800">+ Add</Button>
                     </Link>
                 </div>
                 <div className="space-y-2">
                     {cats.map((c) => (
-                        <Card key={c.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all rounded-2xl group">
+                        <Card key={c.id} className="p-3 hover:bg-gray-50 transition-all rounded-2xl group">
                             <div className="flex items-center justify-between">
                                 <Link href={`/admin/restaurants/${rid}/categories/${c.id}`} className="flex-1 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 text-green-700 rounded-xl flex items-center justify-center">
+                                    <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center">
                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" /></svg>
                                     </div>
-                                    <span className="font-bold text-blue-500 hover:underline">{c.name} {c.nameAr ? `(${c.nameAr})` : ''}</span>
+                                    <span className="font-bold text-blue-600">{c.name} {c.nameAr ? `(${c.nameAr})` : ''}</span>
                                 </Link>
                                 <div className="flex items-center gap-1">
                                     <Link href={`/admin/restaurants/${rid}/categories/${c.id}/edit`}>
-                                        <button className="p-2 text-green-500 hover:bg-green-50 rounded-lg">
+                                        <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                         </button>
                                     </Link>
@@ -370,9 +374,13 @@ export default function RestaurantManagePage() {
             </div>
 
             <div className="pt-20 pb-10">
-                <p className="text-gray-400 font-bold text-xs uppercase px-4 mb-2">Danger Zone</p>
-                <Card className="border-red-100 dark:border-red-900/30 rounded-2xl">
-                    <Button variant="ghost" className="text-red-500 w-full justify-start font-bold">Delete Restaurant</Button>
+                <Card className="rounded-2xl p-0 overflow-hidden">
+                    <button className="w-full px-6 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Restaurant
+                    </button>
                 </Card>
             </div>
             {ToastComponent}

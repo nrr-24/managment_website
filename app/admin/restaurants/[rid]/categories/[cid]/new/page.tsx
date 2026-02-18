@@ -88,7 +88,7 @@ export default function NewDishPage() {
         <button
             onClick={handleCreate}
             disabled={busy || !name.trim()}
-            className="text-green-600 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
+            className="text-green-800 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
         >
             {busy ? "..." : "Create"}
         </button>
@@ -97,7 +97,7 @@ export default function NewDishPage() {
     const leftAction = (
         <button
             onClick={() => router.back()}
-            className="text-green-600 font-medium hover:opacity-70 transition-opacity"
+            className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel
         </button>
@@ -110,7 +110,7 @@ export default function NewDishPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Dish info</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4">
                             <input placeholder="Name (English)" className="w-full bg-transparent outline-none text-lg" value={name} onChange={e => setName(e.target.value)} />
                         </div>
@@ -131,7 +131,7 @@ export default function NewDishPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Options (Optional)</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4">
                             <input placeholder="Header (max 1 line)" className="w-full bg-transparent outline-none text-sm" value={optHeader} onChange={e => setOptHeader(e.target.value)} />
                         </div>
@@ -149,7 +149,7 @@ export default function NewDishPage() {
                         </div>
                         <div className="p-4 flex flex-col gap-2">
                             {optItems.map((item, idx) => (
-                                <div key={idx} className="flex gap-2 items-center bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl">
+                                <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
                                     <input placeholder="Name" className="flex-1 bg-transparent text-xs" value={item.name} onChange={e => {
                                         const newItems = [...optItems];
                                         newItems[idx].name = e.target.value;
@@ -164,7 +164,7 @@ export default function NewDishPage() {
                             ))}
                             <button
                                 onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
-                                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                             </button>
@@ -174,7 +174,7 @@ export default function NewDishPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Allergens & Status</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4 flex items-center justify-between">
                             <span className="font-bold">Active</span>
                             <button onClick={() => setIsActive(!isActive)} className={`w-12 h-6 rounded-full transition-colors relative ${isActive ? 'bg-green-600' : 'bg-gray-300'}`}>
@@ -183,7 +183,7 @@ export default function NewDishPage() {
                         </div>
                         <div className="p-4 flex flex-col gap-2">
                             {allergens.map((alg, idx) => (
-                                <div key={idx} className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl">
+                                <div key={idx} className="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded-xl">
                                     <input placeholder="English" className="bg-transparent text-xs" value={alg.name} onChange={e => {
                                         const newAllergens = [...allergens];
                                         newAllergens[idx].name = e.target.value;
@@ -198,7 +198,7 @@ export default function NewDishPage() {
                             ))}
                             <button
                                 onClick={() => setAllergens([...allergens, { name: "", nameAr: "" }])}
-                                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                             </button>
@@ -227,7 +227,7 @@ export default function NewDishPage() {
                                     <img
                                         src={URL.createObjectURL(file)}
                                         alt="Preview"
-                                        className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100 dark:border-gray-800"
+                                        className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100"
                                     />
                                     <button
                                         onClick={() => setImageFiles(prev => prev.filter((_, i) => i !== idx))}
@@ -236,7 +236,7 @@ export default function NewDishPage() {
                                         ✕
                                     </button>
                                     {uploadProgress[file.name] !== undefined && (
-                                        <div className="absolute inset-x-0 bottom-0 bg-blue-500 text-white text-center text-[8px] font-bold py-0.5 rounded-b-xl">
+                                        <div className="absolute inset-x-0 bottom-0 bg-green-800 text-white text-center text-[8px] font-bold py-0.5 rounded-b-xl">
                                             {Math.round(uploadProgress[file.name])}%
                                         </div>
                                     )}
@@ -253,7 +253,7 @@ export default function NewDishPage() {
                             <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                             </div>
-                            <span className="text-green-600 font-bold">
+                            <span className="text-green-800 font-bold">
                                 {imageFiles.length > 0 ? "Add more images" : "Select Images"}
                             </span>
                         </div>

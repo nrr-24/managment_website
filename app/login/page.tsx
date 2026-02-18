@@ -19,11 +19,11 @@ export default function LoginPage() {
 
         try {
             await signIn(email, password);
-            router.push('/admin/restaurants');
+            router.push('/admin');
         } catch (err: any) {
             const msg = err.message || 'Failed to sign in';
             if (msg.includes('api-key-not-valid')) {
-                setError('Service configuration error. Please contact support.');
+                setError('Service configuration error. Please check your environment variables.');
             } else if (msg.includes('invalid-credential') || msg.includes('wrong-password') || msg.includes('user-not-found')) {
                 setError('Invalid email or password.');
             } else {
@@ -107,9 +107,6 @@ export default function LoginPage() {
 
                 </form>
 
-                <p className="mt-10 text-white/20 text-sm font-medium">
-                    Facing issues? <a href="#" className="text-white/40 hover:text-white transition-colors">Contact Support</a>
-                </p>
             </div>
         </div>
     );

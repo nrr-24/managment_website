@@ -20,7 +20,9 @@ export default function NewUserPage() {
     const [busy, setBusy] = useState(false);
 
     useEffect(() => {
-        listRestaurants().then(setRestaurants);
+        listRestaurants().then(setRestaurants).catch(() => {
+            showToast("Failed to load restaurants", "error");
+        });
     }, []);
 
     function toggleRestaurant(rid: string) {
@@ -32,7 +34,18 @@ export default function NewUserPage() {
     }
 
     async function handleCreate() {
-        if (!name.trim() || !email.trim() || !password.trim()) return;
+        if (!name.trim()) {
+            showToast("Please enter a name", "error");
+            return;
+        }
+        if (!email.trim()) {
+            showToast("Please enter an email", "error");
+            return;
+        }
+        if (!password.trim()) {
+            showToast("Please enter a password", "error");
+            return;
+        }
         if (password.length < 6) {
             showToast("Password must be at least 6 characters", "error");
             return;
@@ -71,30 +84,30 @@ export default function NewUserPage() {
 
     return (
         <Page title="Create User" showBack={true}>
-            <div className="max-w-xl mx-auto space-y-8 py-8 px-4">
+            <div className="max-w-xl mx-auto space-y-8 py-4 px-4">
                 <div>
-                    <h1 className="text-4xl font-bold mb-2">Create User</h1>
-                    <p className="text-gray-400 font-medium">Add a new user to the system.</p>
+                    <h1 className="text-3xl font-bold mb-1">Create User</h1>
+                    <p className="text-gray-400 font-medium text-sm">Add a new user to the system.</p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                     <input
                         placeholder="Full Name"
-                        className="w-full h-14 px-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-none font-medium focus:border-blue-500 transition-all"
+                        className="w-full h-14 px-6 rounded-2xl bg-white border border-gray-100 outline-none font-medium focus:border-green-800 transition-all"
                         value={name}
                         onChange={e => setName(e.target.value)}
                     />
                     <input
                         type="email"
                         placeholder="Email Address"
-                        className="w-full h-14 px-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-none font-medium focus:border-blue-500 transition-all"
+                        className="w-full h-14 px-6 rounded-2xl bg-white border border-gray-100 outline-none font-medium focus:border-green-800 transition-all"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                     />
                     <input
                         type="password"
                         placeholder="Password (min 6 characters)"
-                        className="w-full h-14 px-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-none font-medium focus:border-blue-500 transition-all"
+                        className="w-full h-14 px-6 rounded-2xl bg-white border border-gray-100 outline-none font-medium focus:border-green-800 transition-all"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                     />
@@ -102,16 +115,16 @@ export default function NewUserPage() {
 
                 <div className="flex items-center justify-between">
                     <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Role</span>
-                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-full flex gap-1">
+                    <div className="bg-gray-100 p-1 rounded-full flex gap-1">
                         <button
                             onClick={() => setRole("viewer")}
-                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "viewer" ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-400'}`}
+                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "viewer" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
                         >
                             Viewer
                         </button>
                         <button
                             onClick={() => setRole("manager")}
-                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "manager" ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-400'}`}
+                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "manager" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
                         >
                             Manager
                         </button>
@@ -131,13 +144,13 @@ export default function NewUserPage() {
                                         onClick={() => toggleRestaurant(r.id)}
                                         className={`w-full h-14 px-6 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
                                             selected
-                                                ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
-                                                : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
+                                                ? "bg-green-50 border-green-800"
+                                                : "bg-white border-gray-100 hover:bg-gray-50"
                                         }`}
                                     >
                                         <span className="font-bold">{r.name}</span>
                                         <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
-                                            selected ? 'border-blue-500 bg-blue-500' : 'border-gray-200'
+                                            selected ? 'border-green-800 bg-green-800' : 'border-gray-200'
                                         }`}>
                                             {selected && (
                                                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,6 +161,9 @@ export default function NewUserPage() {
                                     </div>
                                 );
                             })}
+                            {restaurants.length === 0 && (
+                                <p className="text-xs text-gray-400 text-center py-4">No restaurants found.</p>
+                            )}
                         </div>
                     </div>
                 )}
@@ -155,7 +171,7 @@ export default function NewUserPage() {
                 <button
                     disabled={busy || !name.trim() || !email.trim() || !password.trim()}
                     onClick={handleCreate}
-                    className="w-full h-14 rounded-2xl bg-gray-600 hover:bg-black font-bold text-white shadow-xl shadow-black/10 transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="w-full h-14 rounded-2xl bg-green-800 hover:bg-green-900 font-bold text-white shadow-xl shadow-green-800/10 transition-all active:scale-[0.98] disabled:opacity-50"
                 >
                     {busy ? "Creating..." : "Create User"}
                 </button>

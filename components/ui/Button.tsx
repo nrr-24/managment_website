@@ -25,11 +25,11 @@ export function Button({
     };
 
     const variants = {
-        primary: 'bg-[#007aff] text-white hover:bg-[#0051d5] focus:ring-[#007aff] shadow-sm active:scale-[0.98]',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 focus:ring-gray-400 active:scale-[0.98]',
-        outline: 'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-gray-400 active:scale-[0.98]',
-        ghost: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-400 active:scale-[0.98]',
-        danger: 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800 focus:ring-red-500',
+        primary: 'bg-green-800 text-white hover:bg-green-900 focus:ring-green-800 shadow-sm active:scale-[0.98]',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-400 active:scale-[0.98]',
+        outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-400 active:scale-[0.98]',
+        ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-400 active:scale-[0.98]',
+        danger: 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 focus:ring-red-500',
         'primary-black': 'bg-black text-white hover:bg-gray-900 focus:ring-gray-800 shadow-md hover:shadow-lg font-bold py-3.5 px-6 rounded-2xl w-full',
     };
 

@@ -183,52 +183,61 @@ export default function ImportPage() {
         }
     }
 
-    return (
-        <Page title="Import Data" showBack={true}>
-            <div className="max-w-2xl mx-auto space-y-8 py-8 px-4">
-                <div>
-                    <h1 className="text-4xl font-bold mb-2">Import Data</h1>
-                    <p className="text-gray-400 font-medium">Upload a JSON file or paste JSON to import restaurant menu data.</p>
-                </div>
+    const actions = (
+        <button
+            disabled={busy || !jsonText.trim()}
+            onClick={handleImport}
+            className="text-green-800 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
+        >
+            {busy ? "..." : "Import"}
+        </button>
+    );
 
+    return (
+        <Page title="Import Data" actions={actions}>
+            <div className="space-y-6 max-w-2xl mx-auto">
                 {/* Mode Toggle */}
-                <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Import Mode</span>
-                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-full flex gap-1">
-                        <button
-                            onClick={() => setMode("new")}
-                            className={`px-5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "new" ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-400'}`}
-                        >
-                            New Restaurant
-                        </button>
-                        <button
-                            onClick={() => { setMode("existing"); loadRestaurants(); }}
-                            className={`px-5 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "existing" ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-400'}`}
-                        >
-                            Existing Restaurant
-                        </button>
-                    </div>
-                </div>
+                <section className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Import Mode</label>
+                    <Card className="p-1.5 rounded-2xl">
+                        <div className="flex bg-gray-100 rounded-xl p-1">
+                            <button
+                                onClick={() => setMode("new")}
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all ${mode === "new" ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                            >
+                                New Restaurant
+                            </button>
+                            <button
+                                onClick={() => { setMode("existing"); loadRestaurants(); }}
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all ${mode === "existing" ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                            >
+                                Existing Restaurant
+                            </button>
+                        </div>
+                    </Card>
+                </section>
 
                 {/* Restaurant Selector (existing mode) */}
                 {mode === "existing" && (
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Target Restaurant</label>
-                        <select
-                            value={selectedRid}
-                            onChange={e => setSelectedRid(e.target.value)}
-                            className="w-full h-14 px-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-none font-medium"
-                        >
-                            {restaurants.map(r => (
-                                <option key={r.id} value={r.id}>{r.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <section className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Target Restaurant</label>
+                        <Card className="p-0 overflow-hidden rounded-3xl">
+                            <select
+                                value={selectedRid}
+                                onChange={e => setSelectedRid(e.target.value)}
+                                className="w-full px-6 py-4 bg-transparent outline-none font-medium"
+                            >
+                                {restaurants.map(r => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                ))}
+                            </select>
+                        </Card>
+                    </section>
                 )}
 
                 {/* File Upload */}
-                <div className="space-y-3">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">JSON Data</label>
+                <section className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">JSON Data</label>
                     <input
                         type="file"
                         id="json-file"
@@ -238,24 +247,25 @@ export default function ImportPage() {
                     />
                     <Card
                         onClick={() => document.getElementById("json-file")?.click()}
-                        className="p-6 flex flex-col items-center gap-3 rounded-3xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 active:scale-[0.99] transition-all border-2 border-dashed border-gray-200 dark:border-gray-700"
+                        className="p-4 flex items-center justify-between rounded-3xl cursor-pointer hover:bg-gray-50 active:scale-[0.99] transition-all"
                     >
-                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-xl flex items-center justify-center">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                            </div>
+                            <span className="text-green-800 font-bold">Upload JSON File</span>
                         </div>
-                        <span className="text-blue-600 font-bold text-sm">Upload JSON File</span>
-                        <span className="text-gray-400 text-xs">or paste below</span>
                     </Card>
 
                     <textarea
                         placeholder='Paste JSON here...'
-                        className="w-full h-64 px-6 py-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-none font-mono text-sm resize-none focus:border-blue-500 transition-all"
+                        className="w-full h-48 px-6 py-4 rounded-2xl bg-white border border-gray-100 outline-none font-mono text-sm resize-none focus:border-green-800 transition-all"
                         value={jsonText}
                         onChange={e => setJsonText(e.target.value)}
                     />
-                </div>
+                </section>
 
                 {/* Preview */}
                 {jsonText && (() => {
@@ -264,8 +274,8 @@ export default function ImportPage() {
                         const cats = d.categories || [];
                         const totalDishes = cats.reduce((sum: number, c: any) => sum + (c.dishes?.length || 0), 0);
                         return (
-                            <Card className="p-4 rounded-2xl bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
-                                <div className="text-sm font-medium text-green-700 dark:text-green-400 space-y-1">
+                            <Card className="p-4 rounded-2xl bg-green-50 border-green-200">
+                                <div className="text-sm font-medium text-green-700 space-y-1">
                                     <p className="font-bold text-base">{d.name || "Unnamed Restaurant"}</p>
                                     <p>{cats.length} categories, {totalDishes} dishes</p>
                                     {d.layout && <p>Layout: {d.layout}</p>}
@@ -281,26 +291,17 @@ export default function ImportPage() {
                         );
                     } catch {
                         return (
-                            <Card className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800">
+                            <Card className="p-4 rounded-2xl bg-red-50 border-red-200">
                                 <p className="text-sm font-bold text-red-600">Invalid JSON</p>
                             </Card>
                         );
                     }
                 })()}
 
-                {/* Import Button */}
-                <button
-                    disabled={busy || !jsonText.trim()}
-                    onClick={handleImport}
-                    className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 font-bold text-white shadow-xl shadow-blue-600/10 transition-all active:scale-[0.98] disabled:opacity-50"
-                >
-                    {busy ? "Importing..." : "Start Import"}
-                </button>
-
                 {/* Log Output */}
                 {log.length > 0 && (
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Import Log</label>
+                    <section className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Import Log</label>
                         <Card className="p-4 rounded-2xl max-h-80 overflow-y-auto">
                             <div className="space-y-1 font-mono text-xs">
                                 {log.map((entry, i) => (
@@ -313,14 +314,14 @@ export default function ImportPage() {
                                     </p>
                                 ))}
                                 {busy && (
-                                    <p className="text-blue-500 animate-pulse">Processing...</p>
+                                    <p className="text-green-800 animate-pulse">Processing...</p>
                                 )}
                             </div>
                         </Card>
-                    </div>
+                    </section>
                 )}
 
-                <div className="h-8" />
+                <div className="h-20" />
             </div>
             {ToastComponent}
         </Page>

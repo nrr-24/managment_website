@@ -100,7 +100,7 @@ export default function EditCategoryPage() {
         <button
             onClick={handleSave}
             disabled={busy || !name.trim()}
-            className="text-green-600 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
+            className="text-green-800 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
         >
             {busy ? "..." : "Save"}
         </button>
@@ -109,7 +109,7 @@ export default function EditCategoryPage() {
     const leftAction = (
         <button
             onClick={() => router.back()}
-            className="text-green-600 font-medium hover:opacity-70 transition-opacity"
+            className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel
         </button>
@@ -124,7 +124,7 @@ export default function EditCategoryPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Category info</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4">
                             <input
                                 placeholder="Name (English)"
@@ -168,7 +168,7 @@ export default function EditCategoryPage() {
                         className="p-4 flex items-center justify-between rounded-3xl cursor-pointer hover:bg-gray-50 active:scale-[0.99] transition-all"
                     >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-50 dark:bg-green-900/10 text-green-700 rounded-xl flex items-center justify-center overflow-hidden">
+                            <div className="w-12 h-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center overflow-hidden">
                                 {iconPreview ? (
                                     <img src={iconPreview} alt="" className="w-full h-full object-cover" />
                                 ) : (iconPath || iconUrl) ? (
@@ -180,7 +180,7 @@ export default function EditCategoryPage() {
                                 )}
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-green-600 font-bold">
+                                <span className="text-green-800 font-bold">
                                     {iconUrl || iconFile ? "Change icon" : "Select icon"}
                                 </span>
                                 {progress !== null && (
@@ -195,7 +195,7 @@ export default function EditCategoryPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Availability</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4 flex items-center justify-between">
                             <span className="font-bold">Limit availability</span>
                             <button
@@ -211,7 +211,7 @@ export default function EditCategoryPage() {
                                     <span className="font-bold">Start Time</span>
                                     <input
                                         type="time"
-                                        className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg outline-none font-bold"
+                                        className="bg-gray-100 px-3 py-1 rounded-lg outline-none font-bold"
                                         value={startTime}
                                         onChange={(e) => setStartTime(e.target.value)}
                                     />
@@ -220,7 +220,7 @@ export default function EditCategoryPage() {
                                     <span className="font-bold">End Time</span>
                                     <input
                                         type="time"
-                                        className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg outline-none font-bold"
+                                        className="bg-gray-100 px-3 py-1 rounded-lg outline-none font-bold"
                                         value={endTime}
                                         onChange={(e) => setEndTime(e.target.value)}
                                     />

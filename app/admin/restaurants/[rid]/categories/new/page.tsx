@@ -69,7 +69,7 @@ export default function NewCategoryPage() {
         <button
             onClick={handleCreate}
             disabled={busy || !name.trim()}
-            className="text-green-600 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
+            className="text-green-800 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
         >
             {busy ? "..." : "Create"}
         </button>
@@ -78,7 +78,7 @@ export default function NewCategoryPage() {
     const leftAction = (
         <button
             onClick={() => router.back()}
-            className="text-green-600 font-medium hover:opacity-70 transition-opacity"
+            className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel
         </button>
@@ -91,7 +91,7 @@ export default function NewCategoryPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Category info</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4">
                             <input
                                 placeholder="Name (English)"
@@ -138,13 +138,13 @@ export default function NewCategoryPage() {
                             {iconPreview ? (
                                 <img src={iconPreview} alt="Icon preview" className="w-10 h-10 object-cover rounded-xl shadow-sm" />
                             ) : (
-                                <div className="w-10 h-10 bg-green-50 dark:bg-green-900/10 text-green-700 rounded-xl flex items-center justify-center">
+                                <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
                                     </svg>
                                 </div>
                             )}
-                            <span className="text-green-600 font-bold">
+                            <span className="text-green-800 font-bold">
                                 {iconFile ? "Change icon" : "Select icon"}
                             </span>
                             {progress !== null && (
@@ -166,7 +166,7 @@ export default function NewCategoryPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Availability</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4 flex items-center justify-between">
                             <span className="font-bold">Limit availability</span>
                             <button
@@ -182,7 +182,7 @@ export default function NewCategoryPage() {
                                     <span className="font-bold">Start Time</span>
                                     <input
                                         type="time"
-                                        className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg outline-none font-bold"
+                                        className="bg-gray-100 px-3 py-1 rounded-lg outline-none font-bold"
                                         value={startTime}
                                         onChange={(e) => setStartTime(e.target.value)}
                                     />
@@ -191,7 +191,7 @@ export default function NewCategoryPage() {
                                     <span className="font-bold">End Time</span>
                                     <input
                                         type="time"
-                                        className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg outline-none font-bold"
+                                        className="bg-gray-100 px-3 py-1 rounded-lg outline-none font-bold"
                                         value={endTime}
                                         onChange={(e) => setEndTime(e.target.value)}
                                     />

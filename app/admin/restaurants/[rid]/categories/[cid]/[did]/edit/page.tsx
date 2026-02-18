@@ -141,7 +141,7 @@ export default function EditDishPage() {
         <button
             onClick={handleSave}
             disabled={busy || !name.trim()}
-            className="text-green-600 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
+            className="text-green-800 font-bold hover:opacity-70 disabled:opacity-30 transition-opacity"
         >
             {busy ? "..." : "Save"}
         </button>
@@ -150,7 +150,7 @@ export default function EditDishPage() {
     const leftAction = (
         <button
             onClick={() => router.back()}
-            className="text-green-600 font-medium hover:opacity-70 transition-opacity"
+            className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel
         </button>
@@ -166,7 +166,7 @@ export default function EditDishPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Dish info</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4">
                             <input placeholder="Name (English)" className="w-full bg-transparent outline-none text-lg" value={name} onChange={e => setName(e.target.value)} />
                         </div>
@@ -187,7 +187,7 @@ export default function EditDishPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Options (Optional)</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 rounded-3xl">
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
                         <div className="px-6 py-4">
                             <input placeholder="Header" className="w-full bg-transparent outline-none text-sm" value={optHeader} onChange={e => setOptHeader(e.target.value)} />
                         </div>
@@ -205,7 +205,7 @@ export default function EditDishPage() {
                         </div>
                         <div className="p-4 flex flex-col gap-2">
                             {optItems.map((item, idx) => (
-                                <div key={idx} className="flex gap-2 items-center bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl">
+                                <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
                                     <input placeholder="Item Name" className="flex-1 bg-transparent text-xs" value={item.name} onChange={e => {
                                         const newItems = [...optItems];
                                         newItems[idx].name = e.target.value;
@@ -221,7 +221,42 @@ export default function EditDishPage() {
                             ))}
                             <button
                                 onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
-                                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center self-end"
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end"
+                            >
+                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                            </button>
+                        </div>
+                    </Card>
+                </section>
+
+                <section className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Allergens & Status</label>
+                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
+                        <div className="px-6 py-4 flex items-center justify-between">
+                            <span className="font-bold">Active</span>
+                            <button onClick={() => setIsActive(!isActive)} className={`w-12 h-6 rounded-full transition-colors relative ${isActive ? 'bg-green-600' : 'bg-gray-300'}`}>
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isActive ? 'left-7' : 'left-1'}`} />
+                            </button>
+                        </div>
+                        <div className="p-4 flex flex-col gap-2">
+                            {allergens.map((alg, idx) => (
+                                <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
+                                    <input placeholder="English" className="flex-1 bg-transparent text-xs" value={alg.name} onChange={e => {
+                                        const newAllergens = [...allergens];
+                                        newAllergens[idx].name = e.target.value;
+                                        setAllergens(newAllergens);
+                                    }} />
+                                    <input placeholder="Arabic" className="flex-1 bg-transparent text-xs text-right" dir="rtl" value={alg.nameAr} onChange={e => {
+                                        const newAllergens = [...allergens];
+                                        newAllergens[idx].nameAr = e.target.value;
+                                        setAllergens(newAllergens);
+                                    }} />
+                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
+                                </div>
+                            ))}
+                            <button
+                                onClick={() => setAllergens([...allergens, { name: "", nameAr: "" }])}
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                             </button>
@@ -234,18 +269,18 @@ export default function EditDishPage() {
                     <div className="flex flex-wrap gap-3 px-4">
                         {existingImages.map((img, idx) => (
                             <div key={`ex-${idx}`} className="relative w-24 h-24 group">
-                                <StorageImage path={img.path || img.url} className="w-full h-full object-cover rounded-2xl border dark:border-gray-800" />
+                                <StorageImage path={img.path || img.url} className="w-full h-full object-cover rounded-2xl border" />
                                 <button onClick={() => handleRemoveImage(idx, true)} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg transform group-hover:scale-110 transition-transform">✕</button>
                             </div>
                         ))}
                         {newImageFiles.map((file, idx) => (
                             <div key={`new-${idx}`} className="relative w-24 h-24 group">
-                                <img src={URL.createObjectURL(file)} className="w-full h-full object-cover rounded-2xl border dark:border-gray-800 opacity-60" />
+                                <img src={URL.createObjectURL(file)} className="w-full h-full object-cover rounded-2xl border opacity-60" />
                                 <button onClick={() => handleRemoveImage(idx, false)} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg transform group-hover:scale-110 transition-transform">✕</button>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 rounded-2xl">
                                     <p className="text-[10px] font-bold text-white uppercase bg-black/50 px-1 rounded mb-1">New</p>
                                     {uploadProgress[file.name] !== undefined && (
-                                        <p className="text-[10px] font-bold text-white bg-blue-500 px-1 rounded">{Math.round(uploadProgress[file.name])}%</p>
+                                        <p className="text-[10px] font-bold text-white bg-green-800 px-1 rounded">{Math.round(uploadProgress[file.name])}%</p>
                                     )}
                                 </div>
                             </div>
@@ -254,7 +289,7 @@ export default function EditDishPage() {
                         {(existingImages.length + newImageFiles.length) < 6 && (
                             <button
                                 onClick={() => document.getElementById('dish-images-upload')?.click()}
-                                className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-green-500 hover:text-green-500 transition-all"
+                                className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-green-500 hover:text-green-500 transition-all"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                                 <span className="text-[10px] font-bold">Add</span>

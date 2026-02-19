@@ -64,14 +64,9 @@ export default function EditDishPage() {
 
                 setAllergens(d.allergens?.map(a => ({ name: a.name || "", nameAr: a.nameAr || "" })) || []);
 
-                // Build existing images from whichever array is longer (iOS may only have imagePaths)
+                // Build existing images from imagePaths only
                 const paths = d.imagePaths || [];
-                const urls = d.imageUrls || [];
-                const count = Math.max(paths.length, urls.length);
-                const images = [];
-                for (let i = 0; i < count; i++) {
-                    images.push({ url: urls[i] || "", path: paths[i] || "" });
-                }
+                const images = paths.map(p => ({ url: "", path: p }));
                 setExistingImages(images);
             }
             setLoaded(true);
@@ -100,7 +95,6 @@ export default function EditDishPage() {
             };
 
             // Handle New Images with error safety
-            let finalUrls = [...existingImages.map(img => img.url)];
             let finalPaths = [...existingImages.map(img => img.path)];
 
             if (newImageFiles.length > 0) {
@@ -109,12 +103,10 @@ export default function EditDishPage() {
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
                 });
                 for (const res of results) {
-                    finalUrls.push(res.url);
                     finalPaths.push(res.path);
                 }
             }
 
-            updates.imageUrls = finalUrls;
             updates.imagePaths = finalPaths;
 
             await updateDish(rid, cid, did, updates);

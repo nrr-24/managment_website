@@ -118,9 +118,9 @@ export default function PublicMenuPage() {
         >
             <div className={`${size === "compact" ? "rounded-2xl" : "rounded-3xl"} overflow-hidden bg-[#1a1a1a] border border-white/[0.04] hover:border-white/10 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50`}>
                 <div className={`${size === "compact" ? "aspect-[4/3]" : "aspect-square"} bg-[#111] relative overflow-hidden`}>
-                    {(dish.imagePaths?.[0] || dish.imageUrls?.[0]) ? (
+                    {dish.imagePaths?.[0] ? (
                         <StorageImage
-                            path={dish.imagePaths?.[0] || dish.imageUrls?.[0]}
+                            path={dish.imagePaths[0]}
                             alt={dish.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                         />
@@ -361,10 +361,10 @@ export default function PublicMenuPage() {
                         </button>
 
                         {/* Image */}
-                        {(selectedDish.imagePaths?.[0] || selectedDish.imageUrls?.[0]) ? (
+                        {selectedDish.imagePaths?.[0] ? (
                             <div className="aspect-[16/10] bg-[#111] relative overflow-hidden">
                                 <StorageImage
-                                    path={selectedDish.imagePaths?.[0] || selectedDish.imageUrls?.[0]}
+                                    path={selectedDish.imagePaths[0]}
                                     alt={selectedDish.name}
                                     className="w-full h-full object-cover"
                                 />

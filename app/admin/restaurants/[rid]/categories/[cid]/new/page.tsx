@@ -65,9 +65,8 @@ export default function NewDishPage() {
                     const file = imageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
                 });
-                const urls = results.map(r => r.url);
                 const paths = results.map(r => r.path);
-                await updateDish(rid, cid, dishId, { imageUrls: urls, imagePaths: paths } as any);
+                await updateDish(rid, cid, dishId, { imagePaths: paths } as any);
             }
 
             showToast("Dish created successfully!");

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
 import { useToast } from "@/components/ui/Toast";
+import { StorageImage } from "@/components/ui/StorageImage";
 import {
     Dish,
     deleteDish,
@@ -102,8 +103,8 @@ export default function CategoryManagePage() {
                                 <div className="flex items-center justify-between">
                                     <Link href={`/admin/restaurants/${rid}/categories/${cid}/${d.id}/edit`} className="flex-1 flex items-center gap-3">
                                         <div className="w-10 h-10 bg-green-50 text-green-700 rounded-full flex items-center justify-center overflow-hidden">
-                                            {d.imageUrls && d.imageUrls[0] ? (
-                                                <img src={d.imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                                            {d.imagePaths?.[0] ? (
+                                                <StorageImage path={d.imagePaths[0]} alt="" className="w-full h-full object-cover" />
                                             ) : (
                                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />

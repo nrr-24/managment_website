@@ -164,7 +164,6 @@ export type Dish = {
     descriptionAr?: string;
     price?: number;
     imagePaths?: string[];
-    imageUrls?: string[];
     allergens?: DishAllergen[];
     isActive?: boolean;
     createdAt?: any;
@@ -404,7 +403,6 @@ export async function createDish(
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
     const docRef = await addDoc(colRef, {
         price: data.price ?? null,
-        imageUrls: [],
         imagePaths: [],
         ...cleanData(data),
         createdAt: serverTimestamp(),

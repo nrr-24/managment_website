@@ -6,7 +6,7 @@ import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath } from "@/lib/data";
+import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
 
 export default function EditDishPage() {
@@ -39,6 +39,15 @@ export default function EditDishPage() {
     const [loaded, setLoaded] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [fileName: string]: number }>({});
 
+    // Fetch restaurant & category names for iOS-compatible image paths
+    const [restaurantName, setRestaurantName] = useState("");
+    const [categoryName, setCategoryName] = useState("");
+
+    useEffect(() => {
+        getRestaurant(rid).then(r => { if (r) setRestaurantName(r.name); });
+        getCategory(rid, cid).then(c => { if (c) setCategoryName(c.name); });
+    }, [rid, cid]);
+
     useEffect(() => {
         getDish(rid, cid, did).then(d => {
             if (d) {
@@ -64,10 +73,14 @@ export default function EditDishPage() {
 
                 setAllergens(d.allergens?.map(a => ({ name: a.name || "", nameAr: a.nameAr || "" })) || []);
 
-                const images = (d.imageUrls || []).map((url, i) => ({
-                    url,
-                    path: d.imagePaths?.[i] || ""
-                }));
+                // Build existing images from whichever array is longer (iOS may only have imagePaths)
+                const paths = d.imagePaths || [];
+                const urls = d.imageUrls || [];
+                const count = Math.max(paths.length, urls.length);
+                const images = [];
+                for (let i = 0; i < count; i++) {
+                    images.push({ url: urls[i] || "", path: paths[i] || "" });
+                }
                 setExistingImages(images);
             }
             setLoaded(true);
@@ -103,7 +116,7 @@ export default function EditDishPage() {
                 const results = await uploadSequentialDishImages(newImageFiles, rid, cid, (idx, p) => {
                     const file = newImageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
-                });
+                }, { restaurantName, categoryName, dishName: name.trim() });
                 for (const res of results) {
                     finalUrls.push(res.url);
                     finalPaths.push(res.path);
@@ -271,6 +284,7 @@ export default function EditDishPage() {
 
                 <section className="space-y-4">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Images</label>
+                    <p className="text-[11px] text-gray-400 px-4">Ideal: 2048 x 1536 px (4:3 ratio). Max 6 images, 10 MB each.</p>
                     <div className="flex flex-wrap gap-3 px-4">
                         {existingImages.map((img, idx) => (
                             <div key={`ex-${idx}`} className="relative w-24 h-24 group">

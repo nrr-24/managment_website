@@ -1,17 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { createDish, uploadSequentialDishImages } from "@/lib/data";
+import { createDish, uploadSequentialDishImages, getRestaurant, getCategory } from "@/lib/data";
 
 export default function NewDishPage() {
     const router = useRouter();
     const { rid, cid } = useParams<{ rid: string; cid: string }>();
     const { showToast, ToastComponent } = useToast();
+
+    // Fetch restaurant & category names for iOS-compatible image paths
+    const [restaurantName, setRestaurantName] = useState("");
+    const [categoryName, setCategoryName] = useState("");
+    useEffect(() => {
+        getRestaurant(rid).then(r => { if (r) setRestaurantName(r.name); });
+        getCategory(rid, cid).then(c => { if (c) setCategoryName(c.name); });
+    }, [rid, cid]);
 
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
@@ -46,7 +54,7 @@ export default function NewDishPage() {
                 const results = await uploadSequentialDishImages(imageFiles, rid, cid, (idx, p) => {
                     const file = imageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
-                });
+                }, { restaurantName, categoryName, dishName: name.trim() });
                 for (const res of results) {
                     urls.push(res.url);
                     paths.push(res.path);
@@ -207,6 +215,7 @@ export default function NewDishPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Images (optional)</label>
+                    <p className="text-[11px] text-gray-400 px-4">Ideal: 2048 x 1536 px (4:3 ratio). Max 6 images, 10 MB each.</p>
                     <input
                         type="file"
                         id="dish-images-upload"

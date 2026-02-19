@@ -33,11 +33,34 @@ function cleanData(data: any): any {
     return cleaned;
 }
 
+/*
+ * ──────────────────────────────────────────────────────────────────────
+ *  Image Upload Specifications (must match iOS app)
+ * ──────────────────────────────────────────────────────────────────────
+ *  Type              │ Ideal Size       │ Format │ Aspect  │ Max Dim │ Quality
+ *  ──────────────────┼──────────────────┼────────┼─────────┼─────────┼────────
+ *  Restaurant Logo   │ 1024 x 1024      │ JPEG   │ 1:1     │ 1024    │ 0.8
+ *  Restaurant BG     │ 2048 x 2048      │ JPEG   │ Device  │ 2048    │ 0.6
+ *  Category Icon     │ 1384 x 820       │ JPEG   │ ~1.69:1 │ 1024    │ 0.8
+ *  Dish Photo        │ 2048 x 1536      │ JPEG   │ 4:3     │ 2048    │ 0.6
+ *  User Background   │ 2048 x 2048      │ JPEG   │ Device  │ 2048    │ 0.6
+ *  ──────────────────┴──────────────────┴────────┴─────────┴─────────┴────────
+ *  Constraints: Max 10 MB per image, max 6 dish photos per dish.
+ * ──────────────────────────────────────────────────────────────────────
+ */
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 /**
  * Resizes and compresses an image before upload.
- * Mimics Swift's resized(maxDimension:) and jpegData(compressionQuality:)
+ * Mimics Swift's resized(maxDimension:) and jpegData(compressionQuality:).
+ * Throws if the file exceeds 10 MB.
  */
 async function processImage(file: File, maxDimension: number, quality: number): Promise<Blob> {
+    if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 10 MB.`);
+    }
+
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -75,6 +98,20 @@ async function processImage(file: File, maxDimension: number, quality: number): 
         reader.onerror = reject;
         reader.readAsDataURL(file);
     });
+}
+
+/**
+ * Generate a URL-safe slug from a name, matching the iOS app convention.
+ * e.g. "LUMA Episode III" → "luma_episode_iii"
+ *      "Arroz (Rice)"     → "arroz_rice"
+ */
+function slugify(name: string): string {
+    return name
+        .toLowerCase()
+        .replace(/[()]/g, '')        // remove parentheses
+        .replace(/[^a-z0-9\s]/g, '') // remove non-alphanumeric
+        .trim()
+        .replace(/\s+/g, '_');       // spaces → underscores
 }
 
 export type Allergen = {
@@ -388,6 +425,12 @@ export async function deleteDish(restaurantId: string, categoryId: string, dishI
 }
 
 // ---------- Image Uploads ----------
+
+/**
+ * Upload a restaurant image (logo or background).
+ * Logo:       ideal 1024x1024 (1:1 square), max 1024px, quality 0.8
+ * Background: ideal 2048x2048 (device ratio), max 2048px, quality 0.6
+ */
 export async function uploadRestaurantImage(
     file: File,
     restaurantId: string,
@@ -415,20 +458,34 @@ export async function uploadRestaurantImage(
     }
 }
 
+/**
+ * Upload a single dish image.
+ * Ideal size: 2048 x 1536 (4:3 aspect ratio).
+ * Path format matches iOS: dishes/{restaurantSlug}/{categorySlug}/{dishSlug}/{uuid}_{index}.jpg
+ */
 export async function uploadDishImage(
     file: File,
     restaurantId: string,
     categoryId: string,
-    onProgress?: (p: number) => void
+    onProgress?: (p: number) => void,
+    slugs?: { restaurantName: string; categoryName: string; dishName: string; index: number }
 ) {
-    console.log(`Starting dish image upload for restaurant ${restaurantId}, category ${categoryId}...`);
-
-    // Process image: 2048px max, 0.6 quality (matches Swift)
+    // Process image: 2048px max, 0.6 quality (matches Swift — ideal 2048x1536 @ 4:3)
     const processedBlob = await processImage(file, 2048, 0.6);
 
-    const ts = Date.now();
-    const ext = "jpg"; // We convert everything to jpeg in processImage
-    const path = `restaurants/${restaurantId}/categories/${categoryId}/dishes/${ts}.${ext}`;
+    // Build iOS-compatible path if names are provided, otherwise fall back to ID-based path
+    let path: string;
+    if (slugs) {
+        const rSlug = slugify(slugs.restaurantName);
+        const cSlug = slugify(slugs.categoryName);
+        const dSlug = slugify(slugs.dishName);
+        const uuid = crypto.randomUUID().toUpperCase();
+        path = `dishes/${rSlug}/${cSlug}/${dSlug}/${uuid}_${slugs.index}.jpg`;
+    } else {
+        const ts = Date.now();
+        path = `restaurants/${restaurantId}/categories/${categoryId}/dishes/${ts}.jpg`;
+    }
+
     const storageRef = ref(storage, path);
 
     const url = await (async () => {
@@ -448,19 +505,24 @@ export async function uploadSequentialDishImages(
     files: File[],
     restaurantId: string,
     categoryId: string,
-    onProgress?: (idx: number, p: number) => void
+    onProgress?: (idx: number, p: number) => void,
+    slugs?: { restaurantName: string; categoryName: string; dishName: string }
 ) {
     const results: { url: string; path: string }[] = [];
     for (let i = 0; i < files.length; i++) {
         const res = await uploadDishImage(files[i], restaurantId, categoryId, (p) => {
             onProgress?.(i, p);
-        });
+        }, slugs ? { ...slugs, index: i } : undefined);
         results.push(res);
         onProgress?.(i, 100);
     }
     return results;
 }
 
+/**
+ * Upload a category icon image.
+ * Ideal size: 1384 x 820 (~1.69:1 aspect ratio). Max 1024px, quality 0.8.
+ */
 export async function uploadCategoryImage(
     file: File,
     restaurantId: string,
@@ -468,8 +530,6 @@ export async function uploadCategoryImage(
     onProgress?: (p: number) => void
 ) {
     console.log(`Starting category image upload for restaurant ${restaurantId}, category ${categoryId}...`);
-
-    // Process image: 1024px max, 0.8 quality
     const processedBlob = await processImage(file, 1024, 0.8);
 
     const ext = "jpg";
@@ -628,11 +688,15 @@ export async function deleteUser(id: string) {
     await deleteStoragePaths([bgPath]);
 }
 
+/**
+ * Upload a user background image.
+ * Ideal size: 2048 x 2048 (or 1920x1080). Resized to max 2048px, 0.6 quality.
+ */
 export async function uploadUserBackgroundImage(file: File, userId: string) {
-    const ext = file.name.split(".").pop();
-    const path = `users/${userId}/background.${ext}`;
+    const processedBlob = await processImage(file, 2048, 0.6);
+    const path = `users/${userId}/background.jpg`;
     const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
+    await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
     const url = await getDownloadURL(storageRef);
     return { url, path };
 }

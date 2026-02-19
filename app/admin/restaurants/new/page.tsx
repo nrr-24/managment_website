@@ -176,9 +176,10 @@ export default function RestaurantCreatePage() {
                 <FontPicker value={menuFont} onChange={setMenuFont} />
             </div>
 
-            {/* Logo */}
+            {/* Logo — ideal 1024x1024 (1:1 square) */}
             <div className="space-y-1 mb-6">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Logo</label>
+                <p className="text-[11px] text-gray-400 px-4">Ideal: 1024 x 1024 px, square (1:1). Max 10 MB.</p>
                 <Card className="p-8 flex flex-col items-center justify-center text-center rounded-3xl">
                     <div className="w-24 h-24 bg-green-50 text-green-800 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
                         {logoFile ? (
@@ -204,9 +205,10 @@ export default function RestaurantCreatePage() {
                 </Card>
             </div>
 
-            {/* Restaurant background */}
+            {/* Restaurant background — ideal 2048x2048 or 1920x1080 */}
             <div className="space-y-1 mb-10">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant Background</label>
+                <p className="text-[11px] text-gray-400 px-4">Ideal: 2048 x 2048 px or 1920 x 1080 px. Max 10 MB.</p>
                 <Card className="p-0 h-40 bg-gray-200 flex items-center justify-center rounded-3xl overflow-hidden relative">
                     {bgFile ? (
                         <>

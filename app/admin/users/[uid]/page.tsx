@@ -220,9 +220,10 @@ export default function EditUserPage() {
                     </div>
                 )}
 
-                {/* Background Image */}
+                {/* Background Image — ideal 2048x2048 or 1920x1080 */}
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Background Image</label>
+                    <p className="text-[11px] text-gray-400">Ideal: 2048 x 2048 px or 1920 x 1080 px. Max 10 MB.</p>
                     <input type="file" id="user-bg" className="hidden" accept="image/*" onChange={handleFileChange} />
                     {bgPreview ? (
                         <div className="relative w-full h-40 rounded-3xl overflow-hidden">

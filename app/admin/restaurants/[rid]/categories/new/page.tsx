@@ -122,6 +122,7 @@ export default function NewCategoryPage() {
 
                 <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Icon (optional)</label>
+                    <p className="text-[11px] text-gray-400 px-4">Ideal: 1384 x 820 px (~1.69:1 ratio). Max 10 MB.</p>
                     <input
                         type="file"
                         id="icon-upload"

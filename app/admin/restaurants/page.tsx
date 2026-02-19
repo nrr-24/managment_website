@@ -51,7 +51,7 @@ export default function RestaurantsPage() {
 
     const actions = (
         <Link href="/admin/restaurants/new">
-            <button className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+            <button aria-label="Add new restaurant" className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                 <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
@@ -108,6 +108,7 @@ export default function RestaurantsPage() {
                                     <button
                                         onClick={() => handleDelete(res.id, res.name)}
                                         disabled={deletingId === res.id}
+                                        aria-label={`Delete ${res.name}`}
                                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                                     >
                                         {deletingId === res.id ? (

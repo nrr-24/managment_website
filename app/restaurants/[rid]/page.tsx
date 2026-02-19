@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getRestaurant, listCategories, listDishes, Restaurant, Category, Dish } from "@/lib/data";
 import { getFontConfig } from "@/components/ui/FontPicker";
@@ -40,7 +40,9 @@ export default function PublicMenuPage() {
 
     useEffect(() => {
         if (!rid) return;
-        import("@/lib/data").then(m => m.listAllDishes(rid)).then(setAllDishes);
+        import("@/lib/data").then(m => m.listAllDishes(rid)).then(setAllDishes).catch(err => {
+            console.error("Failed to load dishes:", err);
+        });
     }, [rid]);
 
     useEffect(() => {
@@ -96,17 +98,18 @@ export default function PublicMenuPage() {
     const dir = isAr ? 'rtl' : 'ltr';
 
     // Helper: get the display dishes based on search/layout
-    const getDisplayDishes = () => {
+    const displayDishes = useMemo(() => {
         if (searchTerm) {
+            const term = searchTerm.toLowerCase();
             return allDishes.filter(d =>
-                d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                d.name.toLowerCase().includes(term) ||
                 (d.nameAr && d.nameAr.includes(searchTerm)) ||
-                (d.description && d.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                ((d as any).categoryName?.toLowerCase().includes(searchTerm.toLowerCase()))
+                (d.description && d.description.toLowerCase().includes(term)) ||
+                ((d as any).categoryName?.toLowerCase().includes(term))
             );
         }
         return dishes;
-    };
+    }, [searchTerm, allDishes, dishes]);
 
     const DishCard = ({ dish, size = "normal" }: { dish: Dish; size?: "normal" | "compact" }) => (
         <div
@@ -282,10 +285,10 @@ export default function PublicMenuPage() {
                     /* Search Results */
                     <div>
                         <p className="text-xs font-medium text-white/30 mb-4">
-                            {getDisplayDishes().length} {isAr ? 'نتيجة' : 'results'}
+                            {displayDishes.length} {isAr ? 'نتيجة' : 'results'}
                         </p>
                         <div className={`grid ${gridClass} gap-3`}>
-                            {getDisplayDishes().map(dish => (
+                            {displayDishes.map(dish => (
                                 <DishCard key={dish.id} dish={dish} />
                             ))}
                         </div>
@@ -333,7 +336,7 @@ export default function PublicMenuPage() {
                         </p>
                     </div>
                 )}
-                {searchTerm && getDisplayDishes().length === 0 && (
+                {searchTerm && displayDishes.length === 0 && (
                     <div className="py-20 text-center">
                         <p className="text-white/20 text-sm font-medium">
                             {isAr ? "لا توجد أطباق تطابق بحثك." : "No dishes match your search."}

@@ -90,9 +90,9 @@ export default function EditDishPage() {
                     headerAr: optHeaderAr,
                     required: optRequired,
                     maxSelection: parseInt(optMax) || undefined,
-                    items: optItems.map(i => ({ ...i, price: parseFloat(i.price) || 0 }))
+                    items: optItems.filter(i => i.name.trim()).map(i => ({ ...i, price: parseFloat(i.price) || 0 }))
                 } : null,
-                allergens: allergens.length > 0 ? allergens : null
+                allergens: allergens.filter(a => a.name.trim()).length > 0 ? allergens.filter(a => a.name.trim()) : null
             };
 
             // Handle New Images with error safety
@@ -129,8 +129,13 @@ export default function EditDishPage() {
         if (isExisting) {
             const img = existingImages[idx];
             if (confirm("Permanently delete this image from storage?")) {
-                await deleteImageByPath(img.path);
-                setExistingImages(prev => prev.filter((_, i) => i !== idx));
+                try {
+                    await deleteImageByPath(img.path);
+                    setExistingImages(prev => prev.filter((_, i) => i !== idx));
+                } catch (err) {
+                    console.error("Failed to delete image:", err);
+                    showToast("Failed to delete image", "error");
+                }
             }
         } else {
             setNewImageFiles(prev => prev.filter((_, i) => i !== idx));

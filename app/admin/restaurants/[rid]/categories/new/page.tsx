@@ -57,10 +57,9 @@ export default function NewCategoryPage() {
 
             showToast("Category created successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories`), 1000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            showToast("Failed to create category", "error");
-        } finally {
+            showToast(err.message || "Failed to create category", "error");
             setBusy(false);
         }
     }

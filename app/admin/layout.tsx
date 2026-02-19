@@ -17,14 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         else if (!isManager) r.replace("/not-authorized");
     }, [user, loading, isManager, r]);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-[#f8f8fa] flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" />
-            </div>
-        );
-    }
-    if (!user || !isManager) {
+    if (loading || !user || !isManager) {
         return (
             <div className="min-h-screen bg-[#f8f8fa] flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" />
@@ -72,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <span className="text-[12px] text-gray-400 font-medium hidden sm:block">{user.email}</span>
                             <button
                                 onClick={() => setShowProfileMenu(!showProfileMenu)}
+                                aria-label="Profile menu"
                                 className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all"
                             >
                                 <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">

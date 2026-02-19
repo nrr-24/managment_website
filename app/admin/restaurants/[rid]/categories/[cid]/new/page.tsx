@@ -67,19 +67,18 @@ export default function NewDishPage() {
                     headerAr: optHeaderAr,
                     required: optRequired,
                     maxSelection: parseInt(optMax) || undefined,
-                    items: optItems.map(i => ({ ...i, price: parseFloat(i.price) || 0 }))
+                    items: optItems.filter(i => i.name.trim()).map(i => ({ ...i, price: parseFloat(i.price) || 0 }))
                 } : undefined,
-                allergens: allergens.length > 0 ? allergens : undefined
+                allergens: allergens.filter(a => a.name.trim()).length > 0 ? allergens.filter(a => a.name.trim()) : undefined
             };
 
             await createDish(rid, cid, dishData);
 
             showToast("Dish created successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${cid}`), 1000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            showToast("Failed to create dish", "error");
-        } finally {
+            showToast(err.message || "Failed to create dish", "error");
             setBusy(false);
         }
     }
@@ -216,7 +215,10 @@ export default function NewDishPage() {
                         accept="image/*"
                         onChange={e => {
                             const files = Array.from(e.target.files || []);
-                            setImageFiles(prev => [...prev, ...files]);
+                            setImageFiles(prev => {
+                                const combined = [...prev, ...files];
+                                return combined.slice(0, 6);
+                            });
                         }}
                     />
 

@@ -59,13 +59,17 @@ export default function EditUserPage() {
     }
 
     async function handleRemoveBg() {
-        // Delete from storage if there's an existing path
-        if (user?.backgroundImagePath) {
-            await deleteImageByPath(user.backgroundImagePath);
+        try {
+            if (user?.backgroundImagePath) {
+                await deleteImageByPath(user.backgroundImagePath);
+            }
+            setBgFile(null);
+            setBgPreview(null);
+            showToast("Background image removed");
+        } catch (err) {
+            console.error("Failed to remove background:", err);
+            showToast("Failed to remove background image", "error");
         }
-        setBgFile(null);
-        setBgPreview(null);
-        showToast("Background image removed");
     }
 
     async function handleSave() {

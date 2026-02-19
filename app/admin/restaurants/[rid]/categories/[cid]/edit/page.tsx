@@ -54,15 +54,20 @@ export default function EditCategoryPage() {
     }
 
     async function handleRemoveIcon() {
-        if (iconPath) {
-            await deleteImageByPath(iconPath);
+        try {
+            if (iconPath) {
+                await deleteImageByPath(iconPath);
+            }
+            setIconUrl(null);
+            setIconPath(null);
+            setIconFile(null);
+            setIconPreview(null);
+            await updateCategory(rid, cid, { imageUrl: "", imagePath: "" } as any);
+            showToast("Icon removed");
+        } catch (err) {
+            console.error("Failed to remove icon:", err);
+            showToast("Failed to remove icon", "error");
         }
-        setIconUrl(null);
-        setIconPath(null);
-        setIconFile(null);
-        setIconPreview(null);
-        await updateCategory(rid, cid, { imageUrl: "", imagePath: "" } as any);
-        showToast("Icon removed");
     }
 
     async function handleSave() {

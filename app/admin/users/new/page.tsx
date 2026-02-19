@@ -75,7 +75,7 @@ export default function NewUserPage() {
             } else if (msg.includes("invalid-email")) {
                 showToast("Invalid email address", "error");
             } else {
-                showToast("Failed to create user", "error");
+                showToast(msg || "Failed to create user", "error");
             }
         } finally {
             setBusy(false);

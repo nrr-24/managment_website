@@ -134,6 +134,44 @@ export type Dish = {
     updatedAt?: any;
 };
 
+/**
+ * Normalize a raw Firestore dish document to the web Dish type.
+ * Handles differences between Swift app schema and web schema:
+ * - Swift uses `optionsHeader` / `optionsHeaderAr` / `areOptionsRequired` + `options` as array of items
+ * - Web uses `options` as a single object with `header`, `headerAr`, `required`, `items[]`
+ * - Swift allergens may have an `id` field (ignored here)
+ */
+function normalizeDish(raw: any): Dish {
+    const dish: Dish = { ...raw };
+
+    // Normalize options: Swift stores as separate top-level fields + options as array
+    if (!dish.options?.header && raw.optionsHeader) {
+        dish.options = {
+            header: raw.optionsHeader,
+            headerAr: raw.optionsHeaderAr || "",
+            required: raw.areOptionsRequired ?? false,
+            maxSelection: raw.maxSelection,
+            items: Array.isArray(raw.options)
+                ? raw.options.map((item: any) => ({
+                    name: item.name || "",
+                    nameAr: item.nameAr || "",
+                    price: item.price ?? 0,
+                }))
+                : [],
+        };
+    }
+
+    // Normalize allergens: strip extra `id` field from Swift data
+    if (Array.isArray(dish.allergens)) {
+        dish.allergens = dish.allergens.map((a: any) => ({
+            name: a.name || "",
+            nameAr: a.nameAr || "",
+        }));
+    }
+
+    return dish;
+}
+
 // ---------- Restaurants ----------
 export async function listRestaurants(): Promise<Restaurant[]> {
     const snap = await getDocs(collection(db, "restaurants"));
@@ -278,7 +316,7 @@ export async function deleteCategory(restaurantId: string, categoryId: string) {
 export async function listDishes(restaurantId: string, categoryId: string): Promise<Dish[]> {
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
     const snap = await getDocs(colRef);
-    const dishes = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    const dishes = snap.docs.map((d) => normalizeDish({ id: d.id, ...(d.data() as any) }));
     // Sort by createdAt if available, newest first (client-side to avoid missing field issues)
     dishes.sort((a, b) => {
         const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
@@ -301,7 +339,7 @@ export async function listAllDishes(restaurantId: string): Promise<(Dish & { cat
 export async function getDish(restaurantId: string, categoryId: string, dishId: string): Promise<Dish | null> {
     const snap = await getDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId));
     if (!snap.exists()) return null;
-    return { id: snap.id, ...(snap.data() as any) };
+    return normalizeDish({ id: snap.id, ...(snap.data() as any) });
 }
 
 export async function createDish(

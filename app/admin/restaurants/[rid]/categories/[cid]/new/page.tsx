@@ -47,14 +47,14 @@ export default function NewDishPage() {
                 descriptionAr: descAr.trim(),
                 price: parseFloat(price) || 0,
                 isActive,
-                options: optHeader ? {
+                options: optItems.filter(i => i.name.trim()).length > 0 ? {
                     header: optHeader,
                     headerAr: optHeaderAr,
                     required: optRequired,
                     maxSelection: parseInt(optMax) || undefined,
                     items: optItems.filter(i => i.name.trim()).map(i => ({ ...i, price: parseFloat(i.price) || 0 }))
-                } : undefined,
-                allergens: allergens.filter(a => a.name.trim()).length > 0 ? allergens.filter(a => a.name.trim()) : undefined
+                } : null,
+                allergens: allergens.filter(a => a.name.trim()).length > 0 ? allergens.filter(a => a.name.trim()) : null
             };
 
             const dishId = await createDish(rid, cid, dishData);
@@ -149,11 +149,17 @@ export default function NewDishPage() {
                                         newItems[idx].name = e.target.value;
                                         setOptItems(newItems);
                                     }} />
-                                    <input placeholder="Price" className="w-16 bg-transparent text-xs" value={item.price} onChange={e => {
+                                    <input placeholder="Arabic" className="flex-1 bg-transparent text-xs text-right" dir="rtl" value={item.nameAr} onChange={e => {
+                                        const newItems = [...optItems];
+                                        newItems[idx].nameAr = e.target.value;
+                                        setOptItems(newItems);
+                                    }} />
+                                    <input placeholder="Price" className="w-16 bg-transparent text-xs" type="number" step="0.01" value={item.price} onChange={e => {
                                         const newItems = [...optItems];
                                         newItems[idx].price = e.target.value;
                                         setOptItems(newItems);
                                     }} />
+                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
                                 </div>
                             ))}
                             <button
@@ -177,17 +183,18 @@ export default function NewDishPage() {
                         </div>
                         <div className="p-4 flex flex-col gap-2">
                             {allergens.map((alg, idx) => (
-                                <div key={idx} className="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded-xl">
-                                    <input placeholder="English" className="bg-transparent text-xs" value={alg.name} onChange={e => {
+                                <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
+                                    <input placeholder="English" className="flex-1 bg-transparent text-xs" value={alg.name} onChange={e => {
                                         const newAllergens = [...allergens];
                                         newAllergens[idx].name = e.target.value;
                                         setAllergens(newAllergens);
                                     }} />
-                                    <input placeholder="Arabic" className="bg-transparent text-xs text-right" dir="rtl" value={alg.nameAr} onChange={e => {
+                                    <input placeholder="Arabic" className="flex-1 bg-transparent text-xs text-right" dir="rtl" value={alg.nameAr} onChange={e => {
                                         const newAllergens = [...allergens];
                                         newAllergens[idx].nameAr = e.target.value;
                                         setAllergens(newAllergens);
                                     }} />
+                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
                                 </div>
                             ))}
                             <button

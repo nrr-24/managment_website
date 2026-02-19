@@ -85,7 +85,7 @@ export default function EditDishPage() {
                 descriptionAr: descAr.trim(),
                 price: parseFloat(price) || 0,
                 isActive,
-                options: optHeader ? {
+                options: optItems.filter(i => i.name.trim()).length > 0 ? {
                     header: optHeader,
                     headerAr: optHeaderAr,
                     required: optRequired,
@@ -208,17 +208,22 @@ export default function EditDishPage() {
                         <div className="p-4 flex flex-col gap-2">
                             {optItems.map((item, idx) => (
                                 <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
-                                    <input placeholder="Item Name" className="flex-1 bg-transparent text-xs" value={item.name} onChange={e => {
+                                    <input placeholder="Name" className="flex-1 bg-transparent text-xs" value={item.name} onChange={e => {
                                         const newItems = [...optItems];
                                         newItems[idx].name = e.target.value;
                                         setOptItems(newItems);
                                     }} />
-                                    <input placeholder="Price" className="w-16 bg-transparent text-xs" value={item.price} onChange={e => {
+                                    <input placeholder="Arabic" className="flex-1 bg-transparent text-xs text-right" dir="rtl" value={item.nameAr} onChange={e => {
+                                        const newItems = [...optItems];
+                                        newItems[idx].nameAr = e.target.value;
+                                        setOptItems(newItems);
+                                    }} />
+                                    <input placeholder="Price" className="w-16 bg-transparent text-xs" type="number" step="0.01" value={item.price} onChange={e => {
                                         const newItems = [...optItems];
                                         newItems[idx].price = e.target.value;
                                         setOptItems(newItems);
                                     }} />
-                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} className="text-red-500">✕</button>
+                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
                                 </div>
                             ))}
                             <button

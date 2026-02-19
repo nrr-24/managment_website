@@ -197,24 +197,31 @@ export type Dish = {
 function normalizeDish(raw: any): Dish {
     const dish: Dish = { ...raw };
 
-    // Normalize options: iOS stores as separate top-level fields + options as array of items
-    if (raw.optionsHeader) {
-        dish.options = {
-            header: raw.optionsHeader,
-            headerAr: raw.optionsHeaderAr || "",
-            required: raw.areOptionsRequired ?? false,
-            maxSelection: raw.maxOptionsSelection ?? raw.maxSelection,
-            items: Array.isArray(raw.options)
-                ? raw.options.map((item: any) => ({
-                    id: item.id,
-                    name: item.name || "",
-                    nameAr: item.nameAr || "",
-                    price: item.price ?? 0,
-                }))
-                : [],
-        };
+    // Normalize options: iOS stores as separate top-level fields + options as array of items.
+    // Options can exist even when optionsHeader is null.
+    const hasIosOptions = raw.optionsHeader !== undefined || raw.areOptionsRequired !== undefined || Array.isArray(raw.options);
+    if (hasIosOptions) {
+        const items = Array.isArray(raw.options)
+            ? raw.options.map((item: any) => ({
+                id: item.id,
+                name: item.name || "",
+                nameAr: item.nameAr || "",
+                price: item.price ?? 0,
+            }))
+            : [];
+        // Only create an options object if there are items or a header
+        if (items.length > 0 || raw.optionsHeader) {
+            dish.options = {
+                header: raw.optionsHeader || "",
+                headerAr: raw.optionsHeaderAr || "",
+                required: raw.areOptionsRequired ?? false,
+                maxSelection: raw.maxOptionsSelection ?? raw.maxSelection,
+                items,
+            };
+        } else {
+            dish.options = undefined;
+        }
     } else if (dish.options === null || dish.options === undefined) {
-        // No options
         dish.options = undefined;
     }
 
@@ -246,13 +253,9 @@ function toFirestoreDishFormat(data: any): any {
     const result = { ...data };
 
     // Convert web-format nested options to top-level iOS fields
-    if (result.options && typeof result.options === "object" && !Array.isArray(result.options) && result.options.header) {
+    if (result.options && typeof result.options === "object" && !Array.isArray(result.options)) {
         const opts = result.options;
-        result.optionsHeader = opts.header;
-        result.optionsHeaderAr = opts.headerAr || null;
-        result.areOptionsRequired = opts.required ?? false;
-        result.maxOptionsSelection = opts.maxSelection ?? null;
-        result.options = Array.isArray(opts.items)
+        const items = Array.isArray(opts.items)
             ? opts.items.map((item: any) => ({
                 id: item.id || generateUUID(),
                 name: item.name || "",
@@ -260,6 +263,21 @@ function toFirestoreDishFormat(data: any): any {
                 price: item.price ?? 0,
             }))
             : [];
+        // Only write options if there are actual items
+        if (items.length > 0) {
+            result.optionsHeader = opts.header || null;
+            result.optionsHeaderAr = opts.headerAr || null;
+            result.areOptionsRequired = opts.required ?? false;
+            result.maxOptionsSelection = opts.maxSelection ?? null;
+            result.options = items;
+        } else {
+            // No items — clear everything
+            result.options = null;
+            result.optionsHeader = null;
+            result.optionsHeaderAr = null;
+            result.areOptionsRequired = false;
+            result.maxOptionsSelection = null;
+        }
     } else if (result.options === undefined || result.options === null) {
         // No options — write null for all fields (matching iOS)
         result.options = null;

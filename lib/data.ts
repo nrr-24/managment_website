@@ -198,7 +198,7 @@ function normalizeDish(raw: any): Dish {
     const dish: Dish = { ...raw };
 
     // Normalize options: iOS stores as separate top-level fields + options as array of items
-    if (!dish.options?.header && raw.optionsHeader) {
+    if (raw.optionsHeader) {
         dish.options = {
             header: raw.optionsHeader,
             headerAr: raw.optionsHeaderAr || "",
@@ -206,23 +206,81 @@ function normalizeDish(raw: any): Dish {
             maxSelection: raw.maxOptionsSelection ?? raw.maxSelection,
             items: Array.isArray(raw.options)
                 ? raw.options.map((item: any) => ({
+                    id: item.id,
                     name: item.name || "",
                     nameAr: item.nameAr || "",
                     price: item.price ?? 0,
                 }))
                 : [],
         };
+    } else if (dish.options === null || dish.options === undefined) {
+        // No options
+        dish.options = undefined;
     }
 
-    // Normalize allergens: keep name/nameAr, strip iOS `id` field
+    // Clean up raw iOS fields from the normalized object
+    delete (dish as any).optionsHeader;
+    delete (dish as any).optionsHeaderAr;
+    delete (dish as any).areOptionsRequired;
+    delete (dish as any).maxOptionsSelection;
+
+    // Normalize allergens: keep id/name/nameAr
     if (Array.isArray(dish.allergens)) {
         dish.allergens = dish.allergens.map((a: any) => ({
+            id: a.id,
             name: a.name || "",
             nameAr: a.nameAr || "",
         }));
     }
 
     return dish;
+}
+
+/**
+ * Convert web-format dish data to iOS/Firestore format before writing.
+ * Web uses: options: { header, headerAr, required, maxSelection, items[] }
+ * Firestore uses: optionsHeader, optionsHeaderAr, areOptionsRequired, maxOptionsSelection, options[] (array)
+ * Web uses allergens without id. Firestore uses allergens with id.
+ */
+function toFirestoreDishFormat(data: any): any {
+    const result = { ...data };
+
+    // Convert web-format nested options to top-level iOS fields
+    if (result.options && typeof result.options === "object" && !Array.isArray(result.options) && result.options.header) {
+        const opts = result.options;
+        result.optionsHeader = opts.header;
+        result.optionsHeaderAr = opts.headerAr || null;
+        result.areOptionsRequired = opts.required ?? false;
+        result.maxOptionsSelection = opts.maxSelection ?? null;
+        result.options = Array.isArray(opts.items)
+            ? opts.items.map((item: any) => ({
+                id: item.id || generateUUID(),
+                name: item.name || "",
+                nameAr: item.nameAr || "",
+                price: item.price ?? 0,
+            }))
+            : [];
+    } else if (result.options === undefined || result.options === null) {
+        // No options — write null for all fields (matching iOS)
+        result.options = null;
+        result.optionsHeader = null;
+        result.optionsHeaderAr = null;
+        result.areOptionsRequired = false;
+        result.maxOptionsSelection = null;
+    }
+
+    // Ensure allergens have id field
+    if (Array.isArray(result.allergens)) {
+        result.allergens = result.allergens.map((a: any) => ({
+            id: a.id || a.name?.toLowerCase().replace(/\s+/g, "_") || generateUUID(),
+            name: a.name || "",
+            nameAr: a.nameAr || "",
+        }));
+    } else {
+        result.allergens = [];
+    }
+
+    return result;
 }
 
 // ---------- Restaurants ----------
@@ -401,10 +459,11 @@ export async function createDish(
     data: Omit<Dish, "id">
 ) {
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
+    const firestoreData = toFirestoreDishFormat(cleanData(data));
     const docRef = await addDoc(colRef, {
-        price: data.price ?? null,
+        price: firestoreData.price ?? null,
         imagePaths: [],
-        ...cleanData(data),
+        ...firestoreData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });
@@ -417,8 +476,9 @@ export async function updateDish(
     dishId: string,
     data: Partial<Omit<Dish, "id">>
 ) {
+    const firestoreData = toFirestoreDishFormat(cleanData(data));
     await updateDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId), {
-        ...cleanData(data),
+        ...firestoreData,
         updatedAt: serverTimestamp(),
     });
 }

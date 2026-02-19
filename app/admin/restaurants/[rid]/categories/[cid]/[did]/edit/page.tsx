@@ -27,10 +27,10 @@ export default function EditDishPage() {
     const [optHeaderAr, setOptHeaderAr] = useState("");
     const [optRequired, setOptRequired] = useState(false);
     const [optMax, setOptMax] = useState("");
-    const [optItems, setOptItems] = useState<{ name: string; nameAr: string; price: string }[]>([]);
+    const [optItems, setOptItems] = useState<{ id?: string; name: string; nameAr: string; price: string }[]>([]);
 
     // Allergens
-    const [allergens, setAllergens] = useState<{ name: string; nameAr: string }[]>([]);
+    const [allergens, setAllergens] = useState<{ id?: string; name: string; nameAr: string }[]>([]);
 
     // Images
     const [existingImages, setExistingImages] = useState<{ url: string, path: string }[]>([]);
@@ -56,13 +56,14 @@ export default function EditDishPage() {
                     setOptRequired(d.options.required || false);
                     setOptMax(d.options.maxSelection?.toString() || "");
                     setOptItems(d.options.items?.map(i => ({
+                        id: i.id,
                         name: i.name || "",
                         nameAr: i.nameAr || "",
                         price: i.price?.toString() || ""
                     })) || []);
                 }
 
-                setAllergens(d.allergens?.map(a => ({ name: a.name || "", nameAr: a.nameAr || "" })) || []);
+                setAllergens(d.allergens?.map(a => ({ id: a.id, name: a.name || "", nameAr: a.nameAr || "" })) || []);
 
                 // Build existing images from imagePaths only
                 const paths = d.imagePaths || [];

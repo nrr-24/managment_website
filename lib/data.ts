@@ -549,6 +549,7 @@ export async function createUserWithAuth(
     const userDocRef = doc(db, "users", uid);
     await setDoc(userDocRef, {
         ...cleanData(profile),
+        id: uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });

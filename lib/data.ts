@@ -37,15 +37,18 @@ function cleanData(data: any): any {
  * ──────────────────────────────────────────────────────────────────────
  *  Image Upload Specifications (must match iOS app)
  * ──────────────────────────────────────────────────────────────────────
- *  Type              │ Ideal Size       │ Format │ Aspect  │ Max Dim │ Quality
- *  ──────────────────┼──────────────────┼────────┼─────────┼─────────┼────────
- *  Restaurant Logo   │ 1024 x 1024      │ JPEG   │ 1:1     │ 1024    │ 0.8
- *  Restaurant BG     │ 2048 x 2048      │ JPEG   │ Device  │ 2048    │ 0.6
- *  Category Icon     │ 1384 x 820       │ JPEG   │ ~1.69:1 │ 1024    │ 0.8
- *  Dish Photo        │ 2048 x 1536      │ JPEG   │ 4:3     │ 2048    │ 0.6
- *  User Background   │ 2048 x 2048      │ JPEG   │ Device  │ 2048    │ 0.6
- *  ──────────────────┴──────────────────┴────────┴─────────┴─────────┴────────
+ *  Type              │ Ideal Size       │ Format │ Max Dim │ Quality │ Storage Path
+ *  ──────────────────┼──────────────────┼────────┼─────────┼─────────┼─────────────────────────────────────────────
+ *  Restaurant Logo   │ 1024 x 1024      │ PNG    │ 1024    │ 0.8     │ restaurants/{rid}/logo_{uuid}.png
+ *  Restaurant BG     │ 2048 x 2048      │ JPEG   │ 2048    │ 0.6     │ restaurants/{rid}/background_{uuid}.jpg
+ *  Category Icon     │ 1384 x 820       │ JPEG   │ 1024    │ 0.8     │ restaurants/{rid}/categories/{cid}/icon.jpg
+ *  Dish Photo        │ 2048 x 1536      │ JPEG   │ 2048    │ 0.6     │ dishes/{rid}/{cid}/{did}/{batchID}_{index}.jpg
+ *  User Background   │ 2048 x 2048      │ JPEG   │ 2048    │ 0.6     │ users/{uid}/background_{uuid}.jpg
+ *  ──────────────────┴──────────────────┴────────┴─────────┴─────────┴─────────────────────────────────────────────
  *  Constraints: Max 10 MB per image, max 6 dish photos per dish.
+ *
+ *  Firestore: restaurants/{rid}/categories/{cid}/dishes/{did}
+ *  All content is bilingual (English + Arabic).
  * ──────────────────────────────────────────────────────────────────────
  */
 
@@ -100,18 +103,9 @@ async function processImage(file: File, maxDimension: number, quality: number): 
     });
 }
 
-/**
- * Generate a URL-safe slug from a name, matching the iOS app convention.
- * e.g. "LUMA Episode III" → "luma_episode_iii"
- *      "Arroz (Rice)"     → "arroz_rice"
- */
-function slugify(name: string): string {
-    return name
-        .toLowerCase()
-        .replace(/[()]/g, '')        // remove parentheses
-        .replace(/[^a-z0-9\s]/g, '') // remove non-alphanumeric
-        .trim()
-        .replace(/\s+/g, '_');       // spaces → underscores
+/** Generate an uppercase UUID, matching iOS's UUID().uuidString format. */
+function generateUUID(): string {
+    return crypto.randomUUID().toUpperCase();
 }
 
 export type Allergen = {
@@ -149,6 +143,19 @@ export type Category = {
     availabilityEnd?: string;
 };
 
+export type DishAllergen = {
+    id?: string;  // UUID — set by iOS, optional on web
+    name: string;
+    nameAr?: string;
+};
+
+export type DishOption = {
+    id?: string;  // UUID — set by iOS, optional on web
+    name: string;
+    nameAr?: string;
+    price?: number;
+};
+
 export type Dish = {
     id: string;
     name: string;
@@ -158,36 +165,46 @@ export type Dish = {
     price?: number;
     imagePaths?: string[];
     imageUrls?: string[];
-    allergens?: { name: string; nameAr?: string }[];
+    allergens?: DishAllergen[];
+    isActive?: boolean;
+    createdAt?: any;
+    updatedAt?: any;
+
+    // Normalized options (web format)
     options?: {
         header: string;
         headerAr?: string;
         required?: boolean;
         maxSelection?: number;
-        items: { name: string; nameAr?: string; price?: number }[];
+        items: DishOption[];
     };
-    isActive?: boolean;
-    createdAt?: any;
-    updatedAt?: any;
+
+    // iOS stores options differently — these fields are normalized
+    // into `options` above by normalizeDish() when reading from Firestore:
+    //   optionsHeader?, optionsHeaderAr?, areOptionsRequired?, maxOptionsSelection?
+    //   options[] (as array of DishOption items)
 };
 
 /**
  * Normalize a raw Firestore dish document to the web Dish type.
- * Handles differences between Swift app schema and web schema:
- * - Swift uses `optionsHeader` / `optionsHeaderAr` / `areOptionsRequired` + `options` as array of items
- * - Web uses `options` as a single object with `header`, `headerAr`, `required`, `items[]`
- * - Swift allergens may have an `id` field (ignored here)
+ *
+ * iOS schema uses separate top-level fields for options:
+ *   optionsHeader, optionsHeaderAr, areOptionsRequired, maxOptionsSelection,
+ *   options[] (array of {id, name, nameAr, price})
+ *
+ * Web normalizes these into a single `options` object:
+ *   options: { header, headerAr, required, maxSelection, items[] }
  */
 function normalizeDish(raw: any): Dish {
     const dish: Dish = { ...raw };
 
-    // Normalize options: Swift stores as separate top-level fields + options as array
+    // Normalize options: iOS stores as separate top-level fields + options as array of items
     if (!dish.options?.header && raw.optionsHeader) {
         dish.options = {
             header: raw.optionsHeader,
             headerAr: raw.optionsHeaderAr || "",
             required: raw.areOptionsRequired ?? false,
-            maxSelection: raw.maxSelection,
+            maxSelection: raw.maxOptionsSelection ?? raw.maxSelection,
             items: Array.isArray(raw.options)
                 ? raw.options.map((item: any) => ({
                     name: item.name || "",
@@ -198,7 +215,7 @@ function normalizeDish(raw: any): Dish {
         };
     }
 
-    // Normalize allergens: strip extra `id` field from Swift data
+    // Normalize allergens: keep name/nameAr, strip iOS `id` field
     if (Array.isArray(dish.allergens)) {
         dish.allergens = dish.allergens.map((a: any) => ({
             name: a.name || "",
@@ -428,8 +445,8 @@ export async function deleteDish(restaurantId: string, categoryId: string, dishI
 
 /**
  * Upload a restaurant image (logo or background).
- * Logo:       ideal 1024x1024 (1:1 square), max 1024px, quality 0.8
- * Background: ideal 2048x2048 (device ratio), max 2048px, quality 0.6
+ * Logo:       ideal 1024x1024, PNG, path: restaurants/{rid}/logo_{uuid}.png
+ * Background: ideal 2048x2048, JPEG, path: restaurants/{rid}/background_{uuid}.jpg
  */
 export async function uploadRestaurantImage(
     file: File,
@@ -438,18 +455,20 @@ export async function uploadRestaurantImage(
     onProgress?: (p: number) => void
 ) {
     try {
-        console.log(`Starting restaurant ${type} upload for ${restaurantId}...`);
-        const processedBlob = await processImage(file, type === 'background' ? 2048 : 1024, type === 'background' ? 0.6 : 0.8);
-        const ext = "jpg";
-        const path = `restaurants/${restaurantId}/${type}.${ext}`;
+        const isLogo = type === 'logo';
+        const maxDim = isLogo ? 1024 : 2048;
+        const quality = isLogo ? 0.8 : 0.6;
+        const processedBlob = await processImage(file, maxDim, quality);
+
+        const uuid = generateUUID();
+        const ext = isLogo ? 'png' : 'jpg';
+        const contentType = isLogo ? 'image/png' : 'image/jpeg';
+        const path = `restaurants/${restaurantId}/${type}_${uuid}.${ext}`;
         const storageRef = ref(storage, path);
 
-        const url = await (async () => {
-            const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
-            console.log(`Upload ${type} complete!`);
-            onProgress?.(100);
-            return await getDownloadURL(result.ref);
-        })();
+        const result = await uploadBytes(storageRef, processedBlob, { contentType });
+        onProgress?.(100);
+        const url = await getDownloadURL(result.ref);
 
         return { url, path };
     } catch (err) {
@@ -460,59 +479,47 @@ export async function uploadRestaurantImage(
 
 /**
  * Upload a single dish image.
- * Ideal size: 2048 x 1536 (4:3 aspect ratio).
- * Path format matches iOS: dishes/{restaurantSlug}/{categorySlug}/{dishSlug}/{uuid}_{index}.jpg
+ * Ideal size: 2048 x 1536 (4:3). JPEG, 0.6 quality.
+ * Path: dishes/{restaurantId}/{categoryId}/{dishId}/{batchID}_{index}.jpg
  */
 export async function uploadDishImage(
     file: File,
     restaurantId: string,
     categoryId: string,
-    onProgress?: (p: number) => void,
-    slugs?: { restaurantName: string; categoryName: string; dishName: string; index: number }
+    dishId: string,
+    index: number,
+    batchId: string,
+    onProgress?: (p: number) => void
 ) {
-    // Process image: 2048px max, 0.6 quality (matches Swift — ideal 2048x1536 @ 4:3)
     const processedBlob = await processImage(file, 2048, 0.6);
 
-    // Build iOS-compatible path if names are provided, otherwise fall back to ID-based path
-    let path: string;
-    if (slugs) {
-        const rSlug = slugify(slugs.restaurantName);
-        const cSlug = slugify(slugs.categoryName);
-        const dSlug = slugify(slugs.dishName);
-        const uuid = crypto.randomUUID().toUpperCase();
-        path = `dishes/${rSlug}/${cSlug}/${dSlug}/${uuid}_${slugs.index}.jpg`;
-    } else {
-        const ts = Date.now();
-        path = `restaurants/${restaurantId}/categories/${categoryId}/dishes/${ts}.jpg`;
-    }
-
+    const path = `dishes/${restaurantId}/${categoryId}/${dishId}/${batchId}_${index}.jpg`;
     const storageRef = ref(storage, path);
 
-    const url = await (async () => {
-        const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
-        onProgress?.(100);
-        return await getDownloadURL(result.ref);
-    })();
+    const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
+    onProgress?.(100);
+    const url = await getDownloadURL(result.ref);
 
     return { url, path };
 }
 
 /**
  * Sequential upload for multiple dish images to ensure stable progress UI.
- * Mimics Swift's uploadJPEGs.
+ * Mimics Swift's uploadJPEGs. Uses a single batchID (UUID) for the whole batch.
  */
 export async function uploadSequentialDishImages(
     files: File[],
     restaurantId: string,
     categoryId: string,
-    onProgress?: (idx: number, p: number) => void,
-    slugs?: { restaurantName: string; categoryName: string; dishName: string }
+    dishId: string,
+    onProgress?: (idx: number, p: number) => void
 ) {
+    const batchId = generateUUID();
     const results: { url: string; path: string }[] = [];
     for (let i = 0; i < files.length; i++) {
-        const res = await uploadDishImage(files[i], restaurantId, categoryId, (p) => {
+        const res = await uploadDishImage(files[i], restaurantId, categoryId, dishId, i, batchId, (p) => {
             onProgress?.(i, p);
-        }, slugs ? { ...slugs, index: i } : undefined);
+        });
         results.push(res);
         onProgress?.(i, 100);
     }
@@ -521,7 +528,8 @@ export async function uploadSequentialDishImages(
 
 /**
  * Upload a category icon image.
- * Ideal size: 1384 x 820 (~1.69:1 aspect ratio). Max 1024px, quality 0.8.
+ * Ideal size: 1384 x 820 (~1.69:1). JPEG, 0.8 quality.
+ * Path: restaurants/{rid}/categories/{cid}/icon.jpg
  */
 export async function uploadCategoryImage(
     file: File,
@@ -529,18 +537,14 @@ export async function uploadCategoryImage(
     categoryId: string,
     onProgress?: (p: number) => void
 ) {
-    console.log(`Starting category image upload for restaurant ${restaurantId}, category ${categoryId}...`);
     const processedBlob = await processImage(file, 1024, 0.8);
 
-    const ext = "jpg";
-    const path = `restaurants/${restaurantId}/categories/${categoryId}/image.${ext}`;
+    const path = `restaurants/${restaurantId}/categories/${categoryId}/icon.jpg`;
     const storageRef = ref(storage, path);
 
-    const url = await (async () => {
-        const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
-        onProgress?.(100);
-        return await getDownloadURL(result.ref);
-    })();
+    const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
+    onProgress?.(100);
+    const url = await getDownloadURL(result.ref);
 
     return { url, path };
 }
@@ -690,11 +694,13 @@ export async function deleteUser(id: string) {
 
 /**
  * Upload a user background image.
- * Ideal size: 2048 x 2048 (or 1920x1080). Resized to max 2048px, 0.6 quality.
+ * Ideal size: 2048 x 2048 (or 1920x1080). JPEG, 0.6 quality.
+ * Path: users/{uid}/background_{uuid}.jpg
  */
 export async function uploadUserBackgroundImage(file: File, userId: string) {
     const processedBlob = await processImage(file, 2048, 0.6);
-    const path = `users/${userId}/background.jpg`;
+    const uuid = generateUUID();
+    const path = `users/${userId}/background_${uuid}.jpg`;
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
     const url = await getDownloadURL(storageRef);

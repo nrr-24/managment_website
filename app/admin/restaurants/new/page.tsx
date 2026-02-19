@@ -179,7 +179,7 @@ export default function RestaurantCreatePage() {
             {/* Logo — ideal 1024x1024 (1:1 square) */}
             <div className="space-y-1 mb-6">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Logo</label>
-                <p className="text-[11px] text-gray-400 px-4">Ideal: 1024 x 1024 px, square (1:1). Max 10 MB.</p>
+                <p className="text-[11px] text-gray-400 px-4">Ideal: 1024 x 1024 px. Max 10 MB.</p>
                 <Card className="p-8 flex flex-col items-center justify-center text-center rounded-3xl">
                     <div className="w-24 h-24 bg-green-50 text-green-800 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
                         {logoFile ? (

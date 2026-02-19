@@ -6,7 +6,7 @@ import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory } from "@/lib/data";
+import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
 
 export default function EditDishPage() {
@@ -38,15 +38,6 @@ export default function EditDishPage() {
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [fileName: string]: number }>({});
-
-    // Fetch restaurant & category names for iOS-compatible image paths
-    const [restaurantName, setRestaurantName] = useState("");
-    const [categoryName, setCategoryName] = useState("");
-
-    useEffect(() => {
-        getRestaurant(rid).then(r => { if (r) setRestaurantName(r.name); });
-        getCategory(rid, cid).then(c => { if (c) setCategoryName(c.name); });
-    }, [rid, cid]);
 
     useEffect(() => {
         getDish(rid, cid, did).then(d => {
@@ -113,10 +104,10 @@ export default function EditDishPage() {
             let finalPaths = [...existingImages.map(img => img.path)];
 
             if (newImageFiles.length > 0) {
-                const results = await uploadSequentialDishImages(newImageFiles, rid, cid, (idx, p) => {
+                const results = await uploadSequentialDishImages(newImageFiles, rid, cid, did, (idx, p) => {
                     const file = newImageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
-                }, { restaurantName, categoryName, dishName: name.trim() });
+                });
                 for (const res of results) {
                     finalUrls.push(res.url);
                     finalPaths.push(res.path);

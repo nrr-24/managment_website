@@ -1,25 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { createDish, uploadSequentialDishImages, getRestaurant, getCategory } from "@/lib/data";
+import { createDish, updateDish, uploadSequentialDishImages } from "@/lib/data";
 
 export default function NewDishPage() {
     const router = useRouter();
     const { rid, cid } = useParams<{ rid: string; cid: string }>();
     const { showToast, ToastComponent } = useToast();
-
-    // Fetch restaurant & category names for iOS-compatible image paths
-    const [restaurantName, setRestaurantName] = useState("");
-    const [categoryName, setCategoryName] = useState("");
-    useEffect(() => {
-        getRestaurant(rid).then(r => { if (r) setRestaurantName(r.name); });
-        getCategory(rid, cid).then(c => { if (c) setCategoryName(c.name); });
-    }, [rid, cid]);
 
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
@@ -47,20 +39,7 @@ export default function NewDishPage() {
         if (!name.trim()) return;
         setBusy(true);
         try {
-            const urls: string[] = [];
-            const paths: string[] = [];
-
-            if (imageFiles.length > 0) {
-                const results = await uploadSequentialDishImages(imageFiles, rid, cid, (idx, p) => {
-                    const file = imageFiles[idx];
-                    setUploadProgress(prev => ({ ...prev, [file.name]: p }));
-                }, { restaurantName, categoryName, dishName: name.trim() });
-                for (const res of results) {
-                    urls.push(res.url);
-                    paths.push(res.path);
-                }
-            }
-
+            // 1. Create the dish first to get its ID
             const dishData: any = {
                 name: name.trim(),
                 nameAr: nameAr.trim(),
@@ -68,8 +47,6 @@ export default function NewDishPage() {
                 descriptionAr: descAr.trim(),
                 price: parseFloat(price) || 0,
                 isActive,
-                imageUrls: urls,
-                imagePaths: paths,
                 options: optHeader ? {
                     header: optHeader,
                     headerAr: optHeaderAr,
@@ -80,7 +57,18 @@ export default function NewDishPage() {
                 allergens: allergens.filter(a => a.name.trim()).length > 0 ? allergens.filter(a => a.name.trim()) : undefined
             };
 
-            await createDish(rid, cid, dishData);
+            const dishId = await createDish(rid, cid, dishData);
+
+            // 2. Upload images using the dish ID for the correct storage path
+            if (imageFiles.length > 0) {
+                const results = await uploadSequentialDishImages(imageFiles, rid, cid, dishId, (idx, p) => {
+                    const file = imageFiles[idx];
+                    setUploadProgress(prev => ({ ...prev, [file.name]: p }));
+                });
+                const urls = results.map(r => r.url);
+                const paths = results.map(r => r.path);
+                await updateDish(rid, cid, dishId, { imageUrls: urls, imagePaths: paths } as any);
+            }
 
             showToast("Dish created successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${cid}`), 1000);

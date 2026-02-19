@@ -156,13 +156,12 @@ export async function getRestaurant(id: string): Promise<Restaurant | null> {
 export async function createRestaurant(data: Partial<Omit<Restaurant, "id">>) {
     const refCol = collection(db, "restaurants");
     const docRef = await addDoc(refCol, {
-        ...cleanData(data),
         name: data.name || "New Restaurant",
         nameAr: data.nameAr || "",
-        imagePath: "",
         layout: data.layout || "list",
         menuFont: data.menuFont || "system",
         themeColorHex: data.themeColorHex || "#00ffff",
+        ...cleanData(data),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });
@@ -222,12 +221,11 @@ export async function getCategory(restaurantId: string, categoryId: string): Pro
 export async function createCategory(restaurantId: string, data: Partial<Omit<Category, "id">>) {
     const colRef = collection(db, "restaurants", restaurantId, "categories");
     const docRef = await addDoc(colRef, {
-        ...cleanData(data),
         order: data.order ?? 0,
-        imagePath: "",
         isActive: data.isActive !== false,
         availabilityStart: data.availabilityStart || null,
         availabilityEnd: data.availabilityEnd || null,
+        ...cleanData(data),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });
@@ -313,9 +311,10 @@ export async function createDish(
 ) {
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
     const docRef = await addDoc(colRef, {
-        ...cleanData(data),
         price: data.price ?? null,
+        imageUrls: [],
         imagePaths: [],
+        ...cleanData(data),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });

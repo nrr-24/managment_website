@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { FontPicker } from "@/components/ui/FontPicker";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { FormSection, FormCard, FormField, FormRow, formInputClass, formInputRtlClass } from "@/components/ui/FormSection";
 import {
     createRestaurant,
     uploadRestaurantImage,
@@ -94,151 +94,155 @@ export default function RestaurantCreatePage() {
 
     return (
         <Page title="New Restaurant" actions={actions} leftAction={leftAction}>
-            {/* Restaurant */}
-            <div className="space-y-1 mb-8">
-                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant</label>
-                <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-2xl">
-                    <input
-                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Restaurant name"
-                    />
-                    <input
-                        className="w-full px-6 py-4 bg-transparent outline-none text-gray-900 text-right font-medium"
-                        value={nameAr}
-                        onChange={(e) => setNameAr(e.target.value)}
-                        placeholder="الاسم بالعربي"
-                        dir="rtl"
-                    />
-                </Card>
-            </div>
+            <div className="max-w-2xl mx-auto">
+                <h2 className="text-3xl font-bold px-1 mb-1">New Restaurant</h2>
+                <p className="text-sm text-gray-400 px-1 mb-8">Set up your restaurant profile and menu appearance.</p>
 
-            {/* Branding */}
-            <div className="space-y-1 mb-6">
-                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Branding</label>
-                <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-2xl">
-                    <div className="px-6 py-4 flex items-center justify-between">
-                        <span className="font-medium">Theme Color</span>
-                        <ColorPicker value={themeColor} onChange={setThemeColor} />
+                {/* ── Section 1: Restaurant Info ── */}
+                <FormSection title="Restaurant Info" description="The name your customers will see on the menu page.">
+                    <FormCard>
+                        <FormField label="Name (English)" required>
+                            <input
+                                className={formInputClass}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="e.g. Luma Restaurant"
+                            />
+                        </FormField>
+                        <FormField label="Name (Arabic)" hint="Shown when the customer switches to Arabic.">
+                            <input
+                                className={formInputRtlClass}
+                                value={nameAr}
+                                onChange={(e) => setNameAr(e.target.value)}
+                                placeholder="الاسم بالعربي"
+                                dir="rtl"
+                            />
+                        </FormField>
+                    </FormCard>
+                </FormSection>
+
+                {/* ── Section 2: Menu Appearance ── */}
+                <FormSection title="Menu Appearance" description="Customize how your public menu looks to customers.">
+                    <FormCard>
+                        <FormRow label="Theme Color" hint="Accent color used on category tabs and dish prices.">
+                            <ColorPicker value={themeColor} onChange={setThemeColor} />
+                        </FormRow>
+                    </FormCard>
+
+                    <div className="mt-3">
+                        <FormCard>
+                            <FormField label="Menu Layout" hint="Classic Scroll shows all categories on one page. Category Grid shows one category at a time.">
+                                <div className="flex bg-gray-100 rounded-xl p-1">
+                                    {[
+                                        { value: "list", label: "Classic Scroll" },
+                                        { value: "grid", label: "Category Grid" },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setLayout(opt.value)}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all no-min-tap ${
+                                                layout === opt.value
+                                                    ? "bg-white text-gray-900 shadow-sm"
+                                                    : "text-gray-500"
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </FormField>
+                            <FormField label="Dish Columns" hint="Number of columns in the dish grid on the public menu.">
+                                <div className="flex bg-gray-100 rounded-xl p-1">
+                                    {[1, 2, 3, 4].map((n) => (
+                                        <button
+                                            key={n}
+                                            onClick={() => setDishColumns(n)}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all no-min-tap ${
+                                                dishColumns === n
+                                                    ? "bg-white text-gray-900 shadow-sm"
+                                                    : "text-gray-500"
+                                            }`}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
+                                </div>
+                            </FormField>
+                            <FormField label="Menu Font" hint="Typography style for your customer-facing menu.">
+                                <FontPicker value={menuFont} onChange={setMenuFont} />
+                            </FormField>
+                        </FormCard>
                     </div>
-                </Card>
-            </div>
+                </FormSection>
 
-            {/* Layout */}
-            <div className="space-y-1 mb-6">
-                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Menu Layout</label>
-                <Card className="p-1.5 rounded-2xl">
-                    <div className="flex bg-gray-100 rounded-xl p-1">
-                        {[
-                            { value: "list", label: "Classic Scroll" },
-                            { value: "grid", label: "Category Grid" },
-                        ].map((opt) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => setLayout(opt.value)}
-                                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all ${
-                                    layout === opt.value
-                                        ? "bg-white text-gray-900 shadow-sm"
-                                        : "text-gray-500"
-                                }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
+                {/* ── Section 3: Images ── */}
+                <FormSection title="Images" description="Upload a logo and background for your menu's header area.">
+                    {/* Logo */}
+                    <div className="mb-4">
+                        <p className="text-[13px] font-medium text-gray-500 px-1 mb-2">Logo</p>
+                        <FormCard className="!divide-y-0">
+                            <div className="p-6 flex flex-col items-center text-center">
+                                <div className="w-20 h-20 bg-green-50 text-green-800 rounded-2xl flex items-center justify-center mb-3 overflow-hidden">
+                                    {logoFile ? (
+                                        <img src={URL.createObjectURL(logoFile)} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
+                                    )}
+                                </div>
+                                <p className="text-[12px] text-gray-400 mb-3">Square image, 1024×1024px recommended. Max 10 MB.</p>
+                                <div className="flex items-center gap-3">
+                                    <label className="px-4 py-2 bg-green-50 text-green-800 text-sm font-bold rounded-full cursor-pointer hover:bg-green-100 transition-colors">
+                                        {logoFile ? "Change" : "Upload Logo"}
+                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
+                                    </label>
+                                    {logoFile && (
+                                        <button
+                                            onClick={() => setLogoFile(null)}
+                                            className="px-4 py-2 text-red-500 text-sm font-bold rounded-full hover:bg-red-50 transition-colors"
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </FormCard>
                     </div>
-                </Card>
-            </div>
 
-            {/* Dish Columns */}
-            <div className="space-y-1 mb-6">
-                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Dish Columns</label>
-                <Card className="p-1.5 rounded-2xl">
-                    <div className="flex bg-gray-100 rounded-xl p-1">
-                        {[1, 2, 3, 4].map((n) => (
-                            <button
-                                key={n}
-                                onClick={() => setDishColumns(n)}
-                                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                                    dishColumns === n
-                                        ? "bg-white text-gray-900 shadow-sm"
-                                        : "text-gray-500"
-                                }`}
-                            >
-                                {n}
-                            </button>
-                        ))}
-                    </div>
-                </Card>
-            </div>
-
-            {/* Menu Font */}
-            <div className="space-y-1 mb-6">
-                <FontPicker value={menuFont} onChange={setMenuFont} />
-            </div>
-
-            {/* Logo — ideal 1024x1024 (1:1 square) */}
-            <div className="space-y-1 mb-6">
-                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Logo</label>
-                <p className="text-[11px] text-gray-400 px-4">Ideal: 1024 x 1024 px. Max 10 MB.</p>
-                <Card className="p-8 flex flex-col items-center justify-center text-center rounded-3xl">
-                    <div className="w-24 h-24 bg-green-50 text-green-800 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
-                        {logoFile ? (
-                            <img src={URL.createObjectURL(logoFile)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
-                        )}
-                    </div>
-                    <div className="px-4 flex items-center gap-3 mt-2">
-                        <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline">
-                            {logoFile ? "Change logo" : "Select logo"}
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
-                        </label>
-                        {logoFile && (
-                            <button
-                                onClick={() => setLogoFile(null)}
-                                className="text-red-500 text-sm font-bold hover:underline"
-                            >
-                                Remove
-                            </button>
-                        )}
-                    </div>
-                </Card>
-            </div>
-
-            {/* Restaurant background — ideal 2048x2048 or 1920x1080 */}
-            <div className="space-y-1 mb-10">
-                <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant Background</label>
-                <p className="text-[11px] text-gray-400 px-4">Ideal: 2048 x 2048 px or 1920 x 1080 px. Max 10 MB.</p>
-                <Card className="p-0 h-40 bg-gray-200 flex items-center justify-center rounded-3xl overflow-hidden relative">
-                    {bgFile ? (
-                        <>
-                            <img src={URL.createObjectURL(bgFile)} alt="" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
-                                <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer">
-                                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    {/* Background */}
+                    <div>
+                        <p className="text-[13px] font-medium text-gray-500 px-1 mb-2">Background Image</p>
+                        <div className="bg-white rounded-2xl border border-gray-200/60 h-40 flex items-center justify-center overflow-hidden relative">
+                            {bgFile ? (
+                                <>
+                                    <img src={URL.createObjectURL(bgFile)} alt="" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
+                                        <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer" aria-label="Change background">
+                                            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
+                                        </label>
+                                        <button
+                                            onClick={() => setBgFile(null)}
+                                            aria-label="Remove background image"
+                                            className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                                        >
+                                            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <svg className="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-12.5-5.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                                    <span className="text-sm font-semibold text-gray-400 mt-2">Upload Background</span>
+                                    <span className="text-[11px] text-gray-300 mt-1">2048×2048 or 1920×1080 recommended</span>
                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
                                 </label>
-                                <button
-                                    onClick={() => setBgFile(null)}
-                                    aria-label="Remove background image"
-                                    className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-                                >
-                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300/50 transition-colors">
-                            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-12.5-5.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
-                            <span className="text-sm font-bold text-gray-500 mt-2">Set background</span>
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] ?? null)} />
-                        </label>
-                    )}
-                </Card>
-            </div>
+                            )}
+                        </div>
+                    </div>
+                </FormSection>
 
-            <div className="h-20" />
+                <div className="h-20" />
+            </div>
         </Page>
     );
 }

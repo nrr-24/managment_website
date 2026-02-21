@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Page } from "@/components/ui/Page";
-import { Card } from "@/components/ui/Card";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createUserWithAuth, listRestaurants, Restaurant } from "@/lib/data";
+import { FormSection, FormCard, FormField, FormRow, formInputClass } from "@/components/ui/FormSection";
 
 export default function NewUserPage() {
     const router = useRouter();
@@ -87,94 +87,113 @@ export default function NewUserPage() {
 
     return (
         <Page title="Create User" showBack={true}>
-            <div className="max-w-xl mx-auto space-y-8 py-4 px-4">
-                <div>
+            <div className="max-w-xl mx-auto space-y-2 py-4 px-4">
+                <div className="mb-6">
                     <h1 className="text-3xl font-bold mb-1">Create User</h1>
                     <p className="text-gray-400 font-medium text-sm">Add a new user to the system.</p>
                 </div>
 
-                <div className="space-y-3">
-                    <input
-                        placeholder="Full Name"
-                        className="w-full h-14 px-6 rounded-2xl bg-white border border-gray-100 outline-none font-medium focus:border-green-800 transition-all"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                    />
-                    <input
-                        type="email"
-                        placeholder="Email Address"
-                        className="w-full h-14 px-6 rounded-2xl bg-white border border-gray-100 outline-none font-medium focus:border-green-800 transition-all"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                    />
-                    <input
-                        type="password"
-                        placeholder="Password (min 6 characters)"
-                        className="w-full h-14 px-6 rounded-2xl bg-white border border-gray-100 outline-none font-medium focus:border-green-800 transition-all"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                    />
-                </div>
+                {/* Section 1 — User Info */}
+                <FormSection title="User Info" description="Basic account details for this user.">
+                    <FormCard>
+                        <FormField label="Full Name" required>
+                            <input
+                                placeholder="John Doe"
+                                className={formInputClass}
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                            />
+                        </FormField>
+                        <FormField label="Email Address" required>
+                            <input
+                                type="email"
+                                placeholder="Email Address"
+                                className={formInputClass}
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                            />
+                        </FormField>
+                        <FormField label="Password" required hint="Minimum 6 characters">
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                className={formInputClass}
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                            />
+                        </FormField>
+                    </FormCard>
+                </FormSection>
 
-                <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Role</span>
-                    <div className="bg-gray-100 p-1 rounded-full flex gap-1">
-                        <button
-                            onClick={() => setRole("viewer")}
-                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "viewer" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
-                        >
-                            Viewer
-                        </button>
-                        <button
-                            onClick={() => setRole("manager")}
-                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "manager" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
-                        >
-                            Manager
-                        </button>
-                    </div>
-                </div>
+                {/* Section 2 — Role & Access */}
+                <FormSection title="Role & Access" description="Managers can access all restaurants and settings. Viewers only see their assigned restaurants.">
+                    <FormCard>
+                        <FormRow label="Role">
+                            <div className="bg-gray-100 p-1 rounded-full flex gap-1">
+                                <button
+                                    onClick={() => setRole("viewer")}
+                                    role="switch"
+                                    aria-checked={role === "viewer"}
+                                    className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "viewer" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
+                                >
+                                    Viewer
+                                </button>
+                                <button
+                                    onClick={() => setRole("manager")}
+                                    role="switch"
+                                    aria-checked={role === "manager"}
+                                    className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "manager" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
+                                >
+                                    Manager
+                                </button>
+                            </div>
+                        </FormRow>
+                    </FormCard>
 
-                {role === "viewer" && (
-                    <div className="space-y-3">
-                        <span className="font-bold text-gray-500 uppercase text-xs tracking-wider">Restaurant Access</span>
-                        <p className="text-xs text-gray-400">Select which restaurants this viewer can access.</p>
-                        <div className="space-y-2">
-                            {restaurants.map(r => {
-                                const selected = selectedRids.includes(r.id);
-                                return (
-                                    <div
-                                        key={r.id}
-                                        onClick={() => toggleRestaurant(r.id)}
-                                        className={`w-full h-14 px-6 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                                            selected
-                                                ? "bg-green-50 border-green-800"
-                                                : "bg-white border-gray-100 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        <span className="font-bold">{r.name}</span>
-                                        <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
-                                            selected ? 'border-green-800 bg-green-800' : 'border-gray-200'
-                                        }`}>
-                                            {selected && (
-                                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            )}
-                                        </div>
+                    {role === "viewer" && (
+                        <div className="mt-4">
+                            <FormCard>
+                                <FormField label="Restaurant Access" hint="Select at least one restaurant for this viewer">
+                                    <div className="space-y-2 mt-1">
+                                        {restaurants.map(r => {
+                                            const selected = selectedRids.includes(r.id);
+                                            return (
+                                                <div
+                                                    key={r.id}
+                                                    onClick={() => toggleRestaurant(r.id)}
+                                                    className={`w-full h-12 px-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                                                        selected
+                                                            ? "bg-green-50 border-green-800"
+                                                            : "bg-white border-gray-100 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    <span className="font-medium text-[15px]">{r.name}</span>
+                                                    <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
+                                                        selected ? 'border-green-800 bg-green-800' : 'border-gray-200'
+                                                    }`}>
+                                                        {selected && (
+                                                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {restaurants.length === 0 && (
+                                            <p className="text-xs text-gray-400 text-center py-4">No restaurants found.</p>
+                                        )}
                                     </div>
-                                );
-                            })}
-                            {restaurants.length === 0 && (
-                                <p className="text-xs text-gray-400 text-center py-4">No restaurants found.</p>
-                            )}
+                                </FormField>
+                            </FormCard>
                         </div>
-                    </div>
-                )}
+                    )}
+                </FormSection>
 
                 <button
                     disabled={busy || !name.trim() || !email.trim() || !password.trim()}
                     onClick={handleCreate}
-                    className="w-full h-14 rounded-2xl bg-green-800 hover:bg-green-900 font-bold text-white shadow-xl shadow-green-800/10 transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="px-5 py-3 bg-green-800 text-white font-bold rounded-2xl w-full hover:bg-green-900 shadow-xl shadow-green-800/10 transition-all active:scale-[0.98] disabled:opacity-50"
                 >
                     {busy ? "Creating..." : "Create User"}
                 </button>

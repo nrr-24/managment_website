@@ -1,12 +1,26 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { useRouter } from 'next/navigation';
+import { listRestaurants, listUsers } from '@/lib/data';
 
 export default function AdminPage() {
     const { signOut, user } = useAuth();
     const router = useRouter();
+    const [stats, setStats] = useState<{ restaurants: number; users: number } | null>(null);
+
+    useEffect(() => {
+        Promise.all([listRestaurants(), listUsers()])
+            .then(([restaurants, users]) => {
+                setStats({ restaurants: restaurants.length, users: users.length });
+            })
+            .catch(() => {
+                setStats({ restaurants: 0, users: 0 });
+            });
+    }, []);
 
     const handleSignOut = async () => {
         await signOut();
@@ -18,6 +32,7 @@ export default function AdminPage() {
             title: 'Restaurants',
             desc: 'Manage menus & settings',
             href: '/admin/restaurants',
+            stat: stats?.restaurants,
             icon: (
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
@@ -29,6 +44,7 @@ export default function AdminPage() {
             title: 'User Access',
             desc: 'Create & manage users',
             href: '/admin/users',
+            stat: stats?.users,
             icon: (
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -53,11 +69,31 @@ export default function AdminPage() {
         <div className="min-h-screen bg-[#f8f8fa] font-sans">
             <div className="container mx-auto px-4 py-12 max-w-lg">
                 {/* Header */}
-                <div className="text-center mb-10 fade-in-up">
+                <div className="text-center mb-8 fade-in-up">
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">Management</h1>
                     {user?.email && (
                         <p className="text-sm text-gray-400 font-medium">{user.email}</p>
                     )}
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.05s' }}>
+                    <div className="bg-white rounded-2xl border border-gray-200/60 p-4 text-center">
+                        {stats ? (
+                            <p className="text-3xl font-bold text-green-800">{stats.restaurants}</p>
+                        ) : (
+                            <Skeleton className="h-9 w-12 mx-auto rounded-lg" />
+                        )}
+                        <p className="text-xs text-gray-400 font-semibold mt-1 uppercase tracking-wider">Restaurants</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-gray-200/60 p-4 text-center">
+                        {stats ? (
+                            <p className="text-3xl font-bold text-blue-600">{stats.users}</p>
+                        ) : (
+                            <Skeleton className="h-9 w-12 mx-auto rounded-lg" />
+                        )}
+                        <p className="text-xs text-gray-400 font-semibold mt-1 uppercase tracking-wider">Users</p>
+                    </div>
                 </div>
 
                 {/* Menu Items */}
@@ -74,7 +110,12 @@ export default function AdminPage() {
                                         {item.icon}
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-[15px] text-gray-900">{item.title}</h3>
+                                        <h3 className="font-semibold text-[15px] text-gray-900">
+                                            {item.title}
+                                            {item.stat !== undefined && (
+                                                <span className="ml-2 text-xs text-gray-400 font-medium">({item.stat})</span>
+                                            )}
+                                        </h3>
                                         <p className="text-[13px] text-gray-400 font-medium">{item.desc}</p>
                                     </div>
                                 </div>

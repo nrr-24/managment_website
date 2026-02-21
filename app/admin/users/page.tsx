@@ -80,10 +80,26 @@ export default function UserListPage() {
                 {loading ? (
                     <UserListSkeleton />
                 ) : filteredUsers.length === 0 ? (
-                    <Card className="p-12 text-center text-gray-500 rounded-3xl">
-                        {users.length === 0
-                            ? "No users yet. Click + to create one."
-                            : "No results found."}
+                    <Card className="p-12 text-center rounded-3xl">
+                        {users.length === 0 ? (
+                            <div className="flex flex-col items-center">
+                                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+                                    <svg className="w-8 h-8 text-blue-300" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                    </svg>
+                                </div>
+                                <p className="font-semibold text-gray-900 mb-1">No users yet</p>
+                                <p className="text-sm text-gray-400 mb-4">Create your first team member to get started</p>
+                                <button
+                                    onClick={() => router.push('/admin/users/new')}
+                                    className="px-5 py-2.5 bg-green-800 text-white text-sm font-bold rounded-full hover:bg-green-900 active:scale-[0.97] transition-all"
+                                >
+                                    + Add User
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-gray-500">No results found.</p>
+                        )}
                     </Card>
                 ) : (
                     filteredUsers.map((u) => {

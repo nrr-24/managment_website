@@ -112,8 +112,25 @@ export default function CategoryManagePage() {
 
                 <div className="space-y-2">
                     {filteredDishes.length === 0 ? (
-                        <Card className="p-12 text-center text-gray-500 rounded-3xl">
-                            {searchTerm ? "No dishes match your search." : "No dishes found in this category. Click + to add your first dish."}
+                        <Card className="p-12 text-center rounded-3xl">
+                            {searchTerm ? (
+                                <p className="text-gray-500">No dishes match your search.</p>
+                            ) : (
+                                <div className="flex flex-col items-center">
+                                    <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-4">
+                                        <svg className="w-8 h-8 text-orange-300" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
+                                        </svg>
+                                    </div>
+                                    <p className="font-semibold text-gray-900 mb-1">No dishes yet</p>
+                                    <p className="text-sm text-gray-400 mb-4">Add your first dish to this category</p>
+                                    <Link href={`/admin/restaurants/${rid}/categories/${cid}/new`}>
+                                        <button className="px-5 py-2.5 bg-green-800 text-white text-sm font-bold rounded-full hover:bg-green-900 active:scale-[0.97] transition-all">
+                                            + Add Dish
+                                        </button>
+                                    </Link>
+                                </div>
+                            )}
                         </Card>
                     ) : (
                         filteredDishes.map((d) => (

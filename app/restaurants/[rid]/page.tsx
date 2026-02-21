@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getRestaurant, listCategories, listDishes, Restaurant, Category, Dish } from "@/lib/data";
 import { getFontConfig } from "@/components/ui/FontPicker";
@@ -76,6 +76,16 @@ export default function PublicMenuPage() {
         const tab = tabsRef.current.querySelector(`#tab-${activeCid}`);
         if (tab) tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }, [activeCid]);
+
+    // Escape key closes dish modal
+    useEffect(() => {
+        if (!selectedDish) return;
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setSelectedDish(null);
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [selectedDish]);
 
     const fontConfig = getFontConfig(restaurant?.menuFont || 'system');
     const themeColor = restaurant?.themeColorHex || '#ffffff';
@@ -171,7 +181,8 @@ export default function PublicMenuPage() {
                 {/* Back button */}
                 <button
                     onClick={() => router.back()}
-                    className="absolute top-5 left-5 z-10 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors border border-white/10"
+                    aria-label="Go back"
+                    className="absolute top-5 left-5 z-10 w-11 h-11 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors border border-white/10"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -182,7 +193,8 @@ export default function PublicMenuPage() {
                 <div className="absolute top-5 right-5 z-10 flex items-center gap-2">
                     <button
                         onClick={() => setShowSearch(!showSearch)}
-                        className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center transition-all border ${showSearch ? 'bg-white text-black border-white' : 'bg-black/40 text-white/70 hover:text-white border-white/10'}`}
+                        aria-label={showSearch ? "Close search" : "Search dishes"}
+                        className={`w-11 h-11 backdrop-blur-md rounded-full flex items-center justify-center transition-all border ${showSearch ? 'bg-white text-black border-white' : 'bg-black/40 text-white/70 hover:text-white border-white/10'}`}
                     >
                         <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -190,7 +202,8 @@ export default function PublicMenuPage() {
                     </button>
                     <button
                         onClick={() => setLang(isAr ? 'en' : 'ar')}
-                        className="h-10 px-4 bg-black/40 backdrop-blur-md rounded-full text-xs font-bold text-white/70 hover:text-white transition-all border border-white/10"
+                        aria-label={isAr ? "Switch to English" : "Switch to Arabic"}
+                        className="h-11 px-4 bg-black/40 backdrop-blur-md rounded-full text-xs font-bold text-white/70 hover:text-white transition-all border border-white/10"
                     >
                         {isAr ? 'EN' : 'AR'}
                     </button>
@@ -347,12 +360,14 @@ export default function PublicMenuPage() {
 
             {/* Dish Detail Modal */}
             {selectedDish && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={selectedDish.name}>
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedDish(null)} />
                     <div className="relative w-full max-w-lg bg-[#141414] border border-white/[0.06] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
                         {/* Close */}
                         <button
+                            autoFocus
                             onClick={() => setSelectedDish(null)}
+                            aria-label="Close dish details"
                             className="absolute top-4 right-4 z-10 w-9 h-9 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

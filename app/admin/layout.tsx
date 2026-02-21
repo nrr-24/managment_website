@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +16,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!user) r.replace("/login");
         else if (!isManager) r.replace("/not-authorized");
     }, [user, loading, isManager, r]);
+
+    // Close profile menu on Escape
+    const handleEscape = useCallback((e: KeyboardEvent) => {
+        if (e.key === "Escape") setShowProfileMenu(false);
+    }, []);
+
+    useEffect(() => {
+        if (showProfileMenu) {
+            window.addEventListener("keydown", handleEscape);
+            return () => window.removeEventListener("keydown", handleEscape);
+        }
+    }, [showProfileMenu, handleEscape]);
 
     if (loading || !user || !isManager) {
         return (
@@ -34,9 +46,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="min-h-screen bg-[#f8f8fa]">
-            {/* Top Nav */}
+            {/* Top Nav — hidden on mobile (Page toolbar handles navigation) */}
             {!isAdminHome && (
-                <nav className="sticky top-0 z-50 glass border-b border-gray-200/50">
+                <nav className="hidden sm:block sticky top-0 z-50 glass border-b border-gray-200/50">
                     <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
                         <div className="flex items-center gap-6">
                             <Link href="/admin" className="font-bold text-[15px] tracking-tight text-green-900 hover:opacity-70 transition-opacity">
@@ -49,7 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <Link
                                             key={item.href}
                                             href={item.href}
-                                            className={`px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all ${
+                                            className={`px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all no-min-tap ${
                                                 active
                                                     ? "bg-white text-gray-900 shadow-sm"
                                                     : "text-gray-400 hover:text-gray-600"
@@ -66,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <button
                                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                                 aria-label="Profile menu"
-                                className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all"
+                                className="w-9 h-9 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all"
                             >
                                 <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -75,11 +87,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {showProfileMenu && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
-                                    <div className="absolute right-0 top-full mt-1.5 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[200px] slide-down">
+                                    <div
+                                        role="menu"
+                                        className="absolute right-0 top-full mt-1.5 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[200px] slide-down"
+                                    >
                                         <div className="px-3.5 py-2.5 border-b border-gray-100">
                                             <p className="text-[12px] text-gray-400 font-medium truncate">{user.email}</p>
                                         </div>
                                         <button
+                                            role="menuitem"
                                             onClick={async () => {
                                                 setShowProfileMenu(false);
                                                 await logout();

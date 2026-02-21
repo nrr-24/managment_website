@@ -37,7 +37,19 @@ a, button, input, select, textarea {
   transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* Use :focus-visible for keyboard nav, hide outline on mouse clicks */
 input:focus, textarea:focus, select:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid #166534;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove focus-visible outline from inputs that have their own styling */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: none;
 }
 
@@ -180,6 +192,33 @@ input:focus, textarea:focus, select:focus {
 .press:active {
   transform: scale(0.97);
   opacity: 0.8;
+}
+
+/* ──── Reduced motion ──── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ──── No-scrollbar utility (for horizontal scrollers) ──── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ──── Min tap target on mobile ──── */
+@media (max-width: 640px) {
+  button, [role="button"], a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Exempt small inline elements */
+  .inline-btn, span > button, .no-min-tap {
+    min-height: unset;
+    min-width: unset;
+  }
 }
 
 /* ──── Selection color ──── */

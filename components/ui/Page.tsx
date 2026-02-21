@@ -18,14 +18,14 @@ export function Page({ title, children, actions, showBack = true, backPath, left
     return (
         <div className="min-h-screen bg-[#f8f8fa] font-sans antialiased text-gray-900">
             <div className="container mx-auto px-4 py-6 max-w-3xl">
-                {/* iOS-style sticky toolbar */}
-                <div className="flex items-center justify-between mb-6 sticky top-14 glass z-10 py-2.5 px-1 -mx-1 rounded-2xl">
+                {/* iOS-style sticky toolbar — top-0 on mobile (nav hidden), top-14 on desktop */}
+                <div className="flex items-center justify-between mb-6 sticky top-0 sm:top-14 glass z-10 py-2.5 px-1 -mx-1 rounded-2xl">
                     <div className="flex-1 flex text-left">
                         {leftAction ? leftAction : showBack && (
                             <button
                                 aria-label="Go back"
                                 onClick={() => backPath ? router.push(backPath) : router.back()}
-                                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all"
+                                className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all"
                             >
                                 <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -43,7 +43,7 @@ export function Page({ title, children, actions, showBack = true, backPath, left
                             <button
                                 aria-label="Go to dashboard"
                                 onClick={() => router.push('/admin')}
-                                className="p-1 text-gray-400 hover:text-green-800 active:scale-90 transition-all"
+                                className="p-1.5 text-gray-400 hover:text-green-800 active:scale-90 transition-all"
                             >
                                 <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />

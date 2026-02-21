@@ -4,11 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
+import { FormSection, FormCard, FormField, FormRow, formInputClass, formTextareaClass, formInputRtlClass } from "@/components/ui/FormSection";
 
 export default function EditDishPage() {
     const router = useRouter();
@@ -208,116 +208,244 @@ export default function EditDishPage() {
             <div className="space-y-6 max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold px-4">Edit Dish</h2>
 
-                <section className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Dish info</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
-                        <div className="px-6 py-4">
-                            <input placeholder="Name (English)" className="w-full bg-transparent outline-none text-lg" value={name} onChange={e => setName(e.target.value)} />
-                        </div>
-                        <div className="px-6 py-4 text-right">
-                            <input placeholder="Name (Arabic)" className="w-full bg-transparent outline-none text-lg text-right" value={nameAr} onChange={e => setNameAr(e.target.value)} dir="rtl" />
-                        </div>
-                        <div className="px-6 py-4">
-                            <textarea placeholder="Description (English)" className="w-full bg-transparent outline-none text-sm resize-none h-20" value={desc} onChange={e => setDesc(e.target.value)} />
-                        </div>
-                        <div className="px-6 py-4 text-right">
-                            <textarea placeholder="Description (Arabic)" className="w-full bg-transparent outline-none text-sm text-right resize-none h-20" value={descAr} onChange={e => setDescAr(e.target.value)} dir="rtl" />
-                        </div>
-                        <div className="px-6 py-4">
-                            <input placeholder="Price" type="number" step="0.001" className="w-full bg-transparent outline-none text-lg" value={price} onChange={e => setPrice(e.target.value)} />
-                        </div>
-                    </Card>
-                </section>
+                {/* Section 1 — Dish Info */}
+                <FormSection title="Dish Info" description="Basic details that appear on your menu card and detail view.">
+                    <FormCard>
+                        <FormField label="Name (English)" required>
+                            <input
+                                placeholder="e.g. Grilled Chicken"
+                                className={formInputClass}
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                            />
+                        </FormField>
+                        <FormField label="Name (Arabic)" hint="Shown when the customer switches to Arabic">
+                            <input
+                                placeholder="Name (Arabic)"
+                                className={formInputRtlClass}
+                                value={nameAr}
+                                onChange={e => setNameAr(e.target.value)}
+                                dir="rtl"
+                            />
+                        </FormField>
+                        <FormField label="Description (English)" hint="Brief description shown under the dish name">
+                            <textarea
+                                placeholder="Description (English)"
+                                className={`${formTextareaClass} h-20`}
+                                value={desc}
+                                onChange={e => setDesc(e.target.value)}
+                            />
+                        </FormField>
+                        <FormField label="Description (Arabic)">
+                            <textarea
+                                placeholder="Description (Arabic)"
+                                className={`${formTextareaClass} h-20 text-right`}
+                                value={descAr}
+                                onChange={e => setDescAr(e.target.value)}
+                                dir="rtl"
+                            />
+                        </FormField>
+                        <FormField label="Price" required hint="Price in KWD (e.g. 2.500)">
+                            <input
+                                placeholder="0.000"
+                                type="number"
+                                step="0.001"
+                                className={formInputClass}
+                                value={price}
+                                onChange={e => setPrice(e.target.value)}
+                            />
+                        </FormField>
+                    </FormCard>
+                </FormSection>
 
-                <section className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Options (Optional)</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
-                        <div className="px-6 py-4">
-                            <input placeholder="Header" className="w-full bg-transparent outline-none text-sm" value={optHeader} onChange={e => setOptHeader(e.target.value)} />
-                        </div>
-                        <div className="px-6 py-4 text-right">
-                            <input placeholder="Header Arabic" className="w-full bg-transparent outline-none text-sm text-right" value={optHeaderAr} onChange={e => setOptHeaderAr(e.target.value)} dir="rtl" />
-                        </div>
-                        <div className="px-6 py-4 flex items-center justify-between">
-                            <span className="font-medium text-sm">Required</span>
-                            <button onClick={() => setOptRequired(!optRequired)} className={`w-10 h-5 rounded-full transition-colors relative ${optRequired ? 'bg-green-600' : 'bg-gray-300'}`}>
-                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${optRequired ? 'left-5.5' : 'left-0.5'}`} />
-                            </button>
-                        </div>
-                        <div className="px-6 py-4">
-                            <input placeholder="Max Selection" type="number" className="w-full bg-transparent outline-none text-sm" value={optMax} onChange={e => setOptMax(e.target.value)} />
-                        </div>
-                        <div className="p-4 flex flex-col gap-2">
-                            {optItems.map((item, idx) => (
-                                <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
-                                    <input placeholder="Name" className="flex-1 bg-transparent text-xs" value={item.name} onChange={e => {
-                                        const newItems = [...optItems];
-                                        newItems[idx].name = e.target.value;
-                                        setOptItems(newItems);
-                                    }} />
-                                    <input placeholder="Arabic" className="flex-1 bg-transparent text-xs text-right" dir="rtl" value={item.nameAr} onChange={e => {
-                                        const newItems = [...optItems];
-                                        newItems[idx].nameAr = e.target.value;
-                                        setOptItems(newItems);
-                                    }} />
-                                    <input placeholder="Price" className="w-16 bg-transparent text-xs" type="number" step="0.01" value={item.price} onChange={e => {
-                                        const newItems = [...optItems];
-                                        newItems[idx].price = e.target.value;
-                                        setOptItems(newItems);
-                                    }} />
-                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} aria-label="Remove option" className="text-red-500 text-xs">&#x2715;</button>
-                                </div>
-                            ))}
+                {/* Section 2 — Options */}
+                <FormSection title="Options" description="Add selectable options like sizes, add-ons, or extras that customers can choose from.">
+                    <FormCard>
+                        <FormField label="Option Header (English)" hint="e.g. Choose your size, Select toppings">
+                            <input
+                                placeholder="Option Header (English)"
+                                className={formInputClass}
+                                value={optHeader}
+                                onChange={e => setOptHeader(e.target.value)}
+                            />
+                        </FormField>
+                        <FormField label="Option Header (Arabic)">
+                            <input
+                                placeholder="Option Header (Arabic)"
+                                className={formInputRtlClass}
+                                value={optHeaderAr}
+                                onChange={e => setOptHeaderAr(e.target.value)}
+                                dir="rtl"
+                            />
+                        </FormField>
+                        <FormRow label="Required" hint="Customer must pick at least one option">
                             <button
-                                onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
-                                aria-label="Add option"
-                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
+                                onClick={() => setOptRequired(!optRequired)}
+                                role="switch"
+                                aria-checked={optRequired}
+                                aria-label="Required selection"
+                                className={`w-12 h-7 rounded-full transition-colors relative ${optRequired ? 'bg-green-600' : 'bg-gray-300'}`}
                             >
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-all ${optRequired ? 'left-[22px]' : 'left-0.5'}`} />
                             </button>
-                        </div>
-                    </Card>
-                </section>
+                        </FormRow>
+                        <FormField label="Max Selection" hint="Leave empty for unlimited selections">
+                            <input
+                                placeholder="Max Selection"
+                                type="number"
+                                className={formInputClass}
+                                value={optMax}
+                                onChange={e => setOptMax(e.target.value)}
+                            />
+                        </FormField>
+                    </FormCard>
 
-                <section className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Allergens & Status</label>
-                    <Card className="p-0 overflow-hidden divide-y divide-gray-100 rounded-3xl">
-                        <div className="px-6 py-4 flex items-center justify-between">
-                            <span className="font-bold">Active</span>
-                            <button onClick={() => setIsActive(!isActive)} className={`w-12 h-6 rounded-full transition-colors relative ${isActive ? 'bg-green-600' : 'bg-gray-300'}`}>
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isActive ? 'left-7' : 'left-1'}`} />
-                            </button>
-                        </div>
-                        <div className="p-4 flex flex-col gap-2">
-                            {allergens.map((alg, idx) => (
-                                <div key={idx} className="flex gap-2 items-center bg-gray-50 p-2 rounded-xl">
-                                    <input placeholder="English" className="flex-1 bg-transparent text-xs" value={alg.name} onChange={e => {
-                                        const newAllergens = [...allergens];
-                                        newAllergens[idx].name = e.target.value;
-                                        setAllergens(newAllergens);
-                                    }} />
-                                    <input placeholder="Arabic" className="flex-1 bg-transparent text-xs text-right" dir="rtl" value={alg.nameAr} onChange={e => {
-                                        const newAllergens = [...allergens];
-                                        newAllergens[idx].nameAr = e.target.value;
-                                        setAllergens(newAllergens);
-                                    }} />
-                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} aria-label="Remove allergen" className="text-red-500 text-xs">&#x2715;</button>
+                    <div className="mt-3 space-y-3">
+                        {optItems.map((item, idx) => (
+                            <div key={idx} className="bg-white rounded-xl p-4 border border-gray-100">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-gray-400 mb-1">Name</label>
+                                            <input
+                                                placeholder="Name"
+                                                className={formInputClass}
+                                                value={item.name}
+                                                onChange={e => {
+                                                    const newItems = [...optItems];
+                                                    newItems[idx].name = e.target.value;
+                                                    setOptItems(newItems);
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-gray-400 mb-1">Arabic Name</label>
+                                            <input
+                                                placeholder="Arabic Name"
+                                                className={formInputRtlClass}
+                                                dir="rtl"
+                                                value={item.nameAr}
+                                                onChange={e => {
+                                                    const newItems = [...optItems];
+                                                    newItems[idx].nameAr = e.target.value;
+                                                    setOptItems(newItems);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))}
+                                        aria-label="Remove option"
+                                        className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center ml-3 hover:bg-red-100 transition-colors no-min-tap"
+                                    >
+                                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
                                 </div>
-                            ))}
-                            <button
-                                onClick={() => setAllergens([...allergens, { name: "", nameAr: "" }])}
-                                aria-label="Add allergen"
-                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
-                            >
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                            </button>
-                        </div>
-                    </Card>
-                </section>
+                                <div>
+                                    <label className="block text-[11px] font-medium text-gray-400 mb-1">Price</label>
+                                    <input
+                                        placeholder="0.000"
+                                        className={formInputClass}
+                                        type="number"
+                                        step="0.01"
+                                        value={item.price}
+                                        onChange={e => {
+                                            const newItems = [...optItems];
+                                            newItems[idx].price = e.target.value;
+                                            setOptItems(newItems);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
 
-                <section className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Images</label>
-                    <p className="text-[11px] text-gray-400 px-4">Ideal: 2048 x 1536 px (4:3 ratio). Max 6 images, 10 MB each.</p>
+                        <button
+                            onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
+                            aria-label="Add option"
+                            className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors"
+                        >
+                            + Add Option
+                        </button>
+                    </div>
+                </FormSection>
+
+                {/* Section 3 — Allergens */}
+                <FormSection title="Allergens" description="List any allergens so customers can make informed choices.">
+                    <div className="space-y-3">
+                        {allergens.map((alg, idx) => (
+                            <div key={idx} className="bg-white rounded-xl p-4 border border-gray-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-gray-400 mb-1">English</label>
+                                            <input
+                                                placeholder="Allergen name"
+                                                className={formInputClass}
+                                                value={alg.name}
+                                                onChange={e => {
+                                                    const newAllergens = [...allergens];
+                                                    newAllergens[idx].name = e.target.value;
+                                                    setAllergens(newAllergens);
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-gray-400 mb-1">Arabic</label>
+                                            <input
+                                                placeholder="Arabic name"
+                                                className={formInputRtlClass}
+                                                dir="rtl"
+                                                value={alg.nameAr}
+                                                onChange={e => {
+                                                    const newAllergens = [...allergens];
+                                                    newAllergens[idx].nameAr = e.target.value;
+                                                    setAllergens(newAllergens);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))}
+                                        aria-label="Remove allergen"
+                                        className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 transition-colors no-min-tap"
+                                    >
+                                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        <button
+                            onClick={() => setAllergens([...allergens, { name: "", nameAr: "" }])}
+                            aria-label="Add allergen"
+                            className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors"
+                        >
+                            + Add Allergen
+                        </button>
+                    </div>
+                </FormSection>
+
+                {/* Section 4 — Status */}
+                <FormSection title="Status" description="Control whether this dish appears on the public menu.">
+                    <FormCard>
+                        <FormRow label="Active" hint="Inactive dishes are hidden from customers">
+                            <button
+                                onClick={() => setIsActive(!isActive)}
+                                role="switch"
+                                aria-checked={isActive}
+                                aria-label="Dish active status"
+                                className={`w-12 h-7 rounded-full transition-colors relative ${isActive ? 'bg-green-600' : 'bg-gray-300'}`}
+                            >
+                                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-all ${isActive ? 'left-[22px]' : 'left-0.5'}`} />
+                            </button>
+                        </FormRow>
+                    </FormCard>
+                </FormSection>
+
+                {/* Section 5 — Photos */}
+                <FormSection title="Photos" description="Add up to 6 photos. The first image is used as the main photo on the menu card.">
+                    <p className="text-[12px] text-gray-400 px-1 mb-3">4:3 ratio recommended (2048x1536px). Max 10 MB each.</p>
+
                     <input
                         type="file"
                         id="dish-images-upload"
@@ -330,21 +458,21 @@ export default function EditDishPage() {
                         }}
                     />
 
-                    <div className="flex flex-wrap gap-2 px-4">
+                    <div className="flex flex-wrap gap-3 mb-3">
                         {existingImages.map((img, idx) => (
-                            <div key={`ex-${idx}`} className="relative w-20 h-20 group">
+                            <div key={`ex-${idx}`} className="relative w-24 h-24 group">
                                 <StorageImage path={img.path} alt="" className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100" />
                                 <button
                                     onClick={() => handleRemoveImage(idx, true)}
                                     aria-label="Remove image"
-                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md hover:bg-red-600 transition-colors"
+                                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shadow-sm hover:bg-red-100 transition-colors no-min-tap"
                                 >
-                                    &#x2715;
+                                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
                             </div>
                         ))}
                         {newImageFiles.map((file, idx) => (
-                            <div key={`new-${idx}`} className="relative w-20 h-20 group">
+                            <div key={`new-${idx}`} className="relative w-24 h-24 group">
                                 <img
                                     src={URL.createObjectURL(file)}
                                     alt="Preview"
@@ -353,9 +481,9 @@ export default function EditDishPage() {
                                 <button
                                     onClick={() => handleRemoveImage(idx, false)}
                                     aria-label="Remove image"
-                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md hover:bg-red-600 transition-colors"
+                                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shadow-sm hover:bg-red-100 transition-colors no-min-tap"
                                 >
-                                    &#x2715;
+                                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
                                 {uploadProgress[file.name] !== undefined && (
                                     <div className="absolute inset-x-0 bottom-0 bg-green-800 text-white text-center text-[8px] font-bold py-0.5 rounded-b-xl">
@@ -379,8 +507,8 @@ export default function EditDishPage() {
                             </div>
                         </Card>
                     )}
-                    <p className="text-xs text-gray-400 px-4 mt-2">{existingImages.length + newImageFiles.length}/6 images</p>
-                </section>
+                    <p className="text-xs text-gray-400 px-1 mt-2">{existingImages.length + newImageFiles.length}/6 images</p>
+                </FormSection>
 
                 <div className="h-20" />
             </div>

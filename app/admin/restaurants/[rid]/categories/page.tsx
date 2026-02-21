@@ -75,8 +75,21 @@ export default function CategoriesPage() {
         <Page title={`Categories (${cats.length})`} actions={actions} backPath={`/admin/restaurants/${rid}`} breadcrumbs={breadcrumbs}>
             <div className="space-y-2">
                 {cats.length === 0 ? (
-                    <Card className="p-12 text-center text-gray-500 rounded-3xl">
-                        No categories found. Click + to create your first one.
+                    <Card className="p-12 text-center rounded-3xl">
+                        <div className="flex flex-col items-center">
+                            <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-4">
+                                <svg className="w-8 h-8 text-green-300" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+                                </svg>
+                            </div>
+                            <p className="font-semibold text-gray-900 mb-1">No categories yet</p>
+                            <p className="text-sm text-gray-400 mb-4">Add your first menu category to get started</p>
+                            <Link href={`/admin/restaurants/${rid}/categories/new`}>
+                                <button className="px-5 py-2.5 bg-green-800 text-white text-sm font-bold rounded-full hover:bg-green-900 active:scale-[0.97] transition-all">
+                                    + Add Category
+                                </button>
+                            </Link>
+                        </div>
                     </Card>
                 ) : (
                     cats.map((c) => (

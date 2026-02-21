@@ -81,10 +81,25 @@ export default function RestaurantsPage() {
                 {loading ? (
                     <RestaurantListSkeleton />
                 ) : filteredList.length === 0 ? (
-                    <Card className="p-12 text-center text-gray-500 rounded-3xl">
-                        {list.length === 0
-                            ? "No restaurants found. Click + to create your first one."
-                            : "No results found."}
+                    <Card className="p-12 text-center rounded-3xl">
+                        {list.length === 0 ? (
+                            <div className="flex flex-col items-center">
+                                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-4">
+                                    <svg className="w-8 h-8 text-green-300" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
+                                    </svg>
+                                </div>
+                                <p className="font-semibold text-gray-900 mb-1">No restaurants yet</p>
+                                <p className="text-sm text-gray-400 mb-4">Get started by creating your first restaurant</p>
+                                <Link href="/admin/restaurants/new">
+                                    <button className="px-5 py-2.5 bg-green-800 text-white text-sm font-bold rounded-full hover:bg-green-900 active:scale-[0.97] transition-all">
+                                        + Create Restaurant
+                                    </button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <p className="text-gray-500">No results found.</p>
+                        )}
                     </Card>
                 ) : (
                     filteredList.map((res) => (

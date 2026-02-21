@@ -8,12 +8,23 @@ interface CardProps {
 }
 
 export function Card({ children, className = '', style, onClick }: CardProps) {
+    const baseClasses = `bg-white rounded-2xl border border-gray-200/60 p-6 ${className}`;
+
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                className={`${baseClasses} cursor-pointer active:scale-[0.99] transition-all text-left w-full`}
+                style={style}
+            >
+                {children}
+            </button>
+        );
+    }
+
     return (
-        <div
-            onClick={onClick}
-            className={`bg-white rounded-2xl border border-gray-200/60 p-6 ${onClick ? 'cursor-pointer active:scale-[0.99] transition-all' : ''} ${className}`}
-            style={style}
-        >
+        <div className={baseClasses} style={style}>
             {children}
         </div>
     );

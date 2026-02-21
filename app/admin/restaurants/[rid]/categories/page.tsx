@@ -8,11 +8,110 @@ import { Page } from "@/components/ui/Page";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { CategoryListSkeleton } from "@/components/ui/Skeleton";
 import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
     listCategories,
     Category,
     deleteCategory,
     getRestaurant,
+    reorderCategories,
 } from "@/lib/data";
+
+function SortableCategoryItem({
+    category,
+    rid,
+    onDelete,
+}: {
+    category: Category;
+    rid: string;
+    onDelete: (id: string, name: string) => void;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: category.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : undefined,
+        position: isDragging ? "relative" as const : undefined,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style}>
+            <Card className={`p-3 hover:bg-gray-50 transition-all rounded-2xl group border border-gray-100 ${isDragging ? "shadow-xl bg-white ring-2 ring-green-800/20" : ""}`}>
+                <div className="flex items-center justify-between">
+                    {/* Drag Handle */}
+                    <button
+                        {...attributes}
+                        {...listeners}
+                        className="p-2 -ml-1 mr-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none"
+                        aria-label="Drag to reorder"
+                    >
+                        <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+                        </svg>
+                    </button>
+
+                    <Link href={`/admin/restaurants/${rid}/categories/${category.id}`} className="flex-1 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+                            </svg>
+                        </div>
+                        <span className="font-bold text-blue-600">
+                            {category.name} {category.nameAr ? `(${category.nameAr})` : ''}
+                        </span>
+                    </Link>
+                    <div className="flex items-center gap-1">
+                        {/* Edit */}
+                        <Link href={`/admin/restaurants/${rid}/categories/${category.id}/edit`}>
+                            <button aria-label={`Edit ${category.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </button>
+                        </Link>
+                        {/* Delete */}
+                        <button
+                            onClick={() => onDelete(category.id, category.name)}
+                            aria-label={`Delete ${category.name}`}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                        {/* Chevron */}
+                        <svg className="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+}
 
 export default function CategoriesPage() {
     const { rid } = useParams<{ rid: string }>();
@@ -20,6 +119,15 @@ export default function CategoriesPage() {
     const [cats, setCats] = useState<Category[]>([]);
     const [loaded, setLoaded] = useState(false);
     const [restaurantName, setRestaurantName] = useState("");
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     async function refresh() {
         try {
@@ -46,6 +154,27 @@ export default function CategoriesPage() {
             await refresh();
         } catch {
             toast("Failed to delete category", "error");
+        }
+    }
+
+    async function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = cats.findIndex(c => c.id === active.id);
+        const newIndex = cats.findIndex(c => c.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        // Optimistic update
+        const newCats = arrayMove(cats, oldIndex, newIndex);
+        setCats(newCats);
+
+        // Persist to Firestore
+        try {
+            await reorderCategories(rid, newCats.map(c => c.id));
+        } catch {
+            toast("Failed to save order", "error");
+            await refresh(); // Revert on failure
         }
     }
 
@@ -92,46 +221,25 @@ export default function CategoriesPage() {
                         </div>
                     </Card>
                 ) : (
-                    cats.map((c) => (
-                        <Card key={c.id} className="p-3 hover:bg-gray-50 transition-all rounded-2xl group border border-gray-100">
-                            <div className="flex items-center justify-between">
-                                <Link href={`/admin/restaurants/${rid}/categories/${c.id}`} className="flex-1 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
-                                        </svg>
-                                    </div>
-                                    <span className="font-bold text-blue-600">
-                                        {c.name} {c.nameAr ? `(${c.nameAr})` : ''}
-                                    </span>
-                                </Link>
-                                <div className="flex items-center gap-1">
-                                    {/* Edit */}
-                                    <Link href={`/admin/restaurants/${rid}/categories/${c.id}/edit`}>
-                                        <button aria-label={`Edit ${c.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                            </svg>
-                                        </button>
-                                    </Link>
-                                    {/* Delete */}
-                                    <button
-                                        onClick={() => handleDeleteCategory(c.id, c.name)}
-                                        aria-label={`Delete ${c.name}`}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                    {/* Chevron */}
-                                    <svg className="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </Card>
-                    ))
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={cats.map(c => c.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {cats.map((c) => (
+                                <SortableCategoryItem
+                                    key={c.id}
+                                    category={c}
+                                    rid={rid}
+                                    onDelete={handleDeleteCategory}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
                 )}
             </div>
         </Page>

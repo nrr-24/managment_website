@@ -135,6 +135,7 @@ export type Category = {
     imagePath?: string;
     availabilityStart?: string;
     availabilityEnd?: string;
+    sortOrder?: number;
     createdAt?: any;
 };
 
@@ -161,6 +162,7 @@ export type Dish = {
     imagePaths?: string[];
     allergens?: DishAllergen[];
     isActive?: boolean;
+    sortOrder?: number;
     createdAt?: any;
 
     // Normalized options (web format)
@@ -366,7 +368,11 @@ export async function listCategories(restaurantId: string): Promise<Category[]> 
     const colRef = collection(db, "restaurants", restaurantId, "categories");
     const snap = await getDocs(colRef);
     const cats = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    // Sort by sortOrder (nil values go to end), then by createdAt as tiebreaker
     cats.sort((a, b) => {
+        const aOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
         const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
         const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
         return ta - tb;
@@ -382,11 +388,15 @@ export async function getCategory(restaurantId: string, categoryId: string): Pro
 
 export async function createCategory(restaurantId: string, data: Partial<Omit<Category, "id">>) {
     const colRef = collection(db, "restaurants", restaurantId, "categories");
+    // Set sortOrder to current count so new categories appear at the end
+    const existing = await getDocs(colRef);
+    const sortOrder = data.sortOrder ?? existing.size;
     const docRef = await addDoc(colRef, {
         isActive: data.isActive !== false,
         availabilityStart: data.availabilityStart || null,
         availabilityEnd: data.availabilityEnd || null,
         ...cleanData(data),
+        sortOrder,
         createdAt: serverTimestamp(),
     });
     return docRef.id;
@@ -431,13 +441,44 @@ export async function deleteCategory(restaurantId: string, categoryId: string) {
     await deleteStoragePaths([categoryIconPath]);
 }
 
+/**
+ * Reorder categories by writing sortOrder values via a batch write.
+ * Mimics Swift's reorderCategories — optimistic local update + Firestore batch.
+ * @param orderedIds — array of category IDs in the desired order
+ */
+export async function reorderCategories(restaurantId: string, orderedIds: string[]) {
+    const batch = writeBatch(db);
+    orderedIds.forEach((id, index) => {
+        const ref = doc(db, "restaurants", restaurantId, "categories", id);
+        batch.update(ref, { sortOrder: index });
+    });
+    await batch.commit();
+}
+
+/**
+ * Reorder dishes by writing sortOrder values via a batch write.
+ * Mimics Swift's reorderDishes — optimistic local update + Firestore batch.
+ * @param orderedIds — array of dish IDs in the desired order
+ */
+export async function reorderDishes(restaurantId: string, categoryId: string, orderedIds: string[]) {
+    const batch = writeBatch(db);
+    orderedIds.forEach((id, index) => {
+        const ref = doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", id);
+        batch.update(ref, { sortOrder: index });
+    });
+    await batch.commit();
+}
+
 // ---------- Dishes ----------
 export async function listDishes(restaurantId: string, categoryId: string): Promise<Dish[]> {
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
     const snap = await getDocs(colRef);
     const dishes = snap.docs.map((d) => normalizeDish({ id: d.id, ...(d.data() as any) }));
-    // Sort by createdAt if available, newest first (client-side to avoid missing field issues)
+    // Sort by sortOrder (nil values go to end), then by createdAt as tiebreaker
     dishes.sort((a, b) => {
+        const aOrder = (a as any).sortOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = (b as any).sortOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
         const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
         const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
         return tb - ta;
@@ -468,10 +509,14 @@ export async function createDish(
 ) {
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
     const firestoreData = toFirestoreDishFormat(cleanData(data));
+    // Set sortOrder to current count so new dishes appear at the end
+    const existing = await getDocs(colRef);
+    const sortOrder = (data as any).sortOrder ?? existing.size;
     const docRef = await addDoc(colRef, {
         price: firestoreData.price ?? 0,
         imagePaths: [],
         ...firestoreData,
+        sortOrder,
         createdAt: serverTimestamp(),
     });
     return docRef.id;

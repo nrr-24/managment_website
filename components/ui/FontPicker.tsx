@@ -117,7 +117,6 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
 
     return (
         <div ref={triggerRef}>
-            <label className="text-xs font-bold text-gray-400 px-4 uppercase block mb-1">Menu Font</label>
             <Card
                 onClick={() => setOpen(!open)}
                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-2xl group transition-all"

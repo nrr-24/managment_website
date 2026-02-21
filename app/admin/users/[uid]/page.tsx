@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, deleteImageByPath, listRestaurants, User, Restaurant } from "@/lib/data";
 
 export default function EditUserPage() {
     const router = useRouter();
     const { uid } = useParams<{ uid: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast, confirm } = useGlobalUI();
 
     const [user, setUser] = useState<User | null>(null);
     const [name, setName] = useState("");
@@ -23,6 +24,11 @@ export default function EditUserPage() {
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
+    // Dirty tracking for unsaved changes
+    const initialDataRef = useRef<string>("");
+    const currentData = JSON.stringify({ name, role, selectedRids });
+    useUnsavedChanges(loaded && currentData !== initialDataRef.current);
+
     useEffect(() => {
         Promise.all([getUser(uid), listRestaurants()]).then(([u, rests]) => {
             if (u) {
@@ -32,11 +38,16 @@ export default function EditUserPage() {
                 setRole(u.role || "viewer");
                 setBgPreview(u.backgroundImagePath || null);
                 setSelectedRids(u.restaurantIds || []);
+                initialDataRef.current = JSON.stringify({
+                    name: u.name || "",
+                    role: u.role || "viewer",
+                    selectedRids: u.restaurantIds || [],
+                });
             }
             setRestaurants(rests);
             setLoaded(true);
         }).catch(() => {
-            showToast("Failed to load user data", "error");
+            toast("Failed to load user data", "error");
             setLoaded(true);
         });
     }, [uid]);
@@ -54,7 +65,7 @@ export default function EditUserPage() {
         if (file) {
             setBgFile(file);
             setBgPreview(URL.createObjectURL(file));
-            showToast("Image selected");
+            toast("Image selected");
         }
     }
 
@@ -65,20 +76,20 @@ export default function EditUserPage() {
             }
             setBgFile(null);
             setBgPreview(null);
-            showToast("Background image removed");
+            toast("Background image removed");
         } catch (err) {
             console.error("Failed to remove background:", err);
-            showToast("Failed to remove background image", "error");
+            toast("Failed to remove background image", "error");
         }
     }
 
     async function handleSave() {
         if (!name.trim()) {
-            showToast("Name cannot be empty", "error");
+            toast("Name cannot be empty", "error");
             return;
         }
         if (role === "viewer" && selectedRids.length === 0) {
-            showToast("Viewers must have at least 1 restaurant assigned", "error");
+            toast("Viewers must have at least 1 restaurant assigned", "error");
             return;
         }
         setBusy(true);
@@ -92,32 +103,33 @@ export default function EditUserPage() {
             if (bgFile) {
                 const { url, path } = await uploadUserBackgroundImage(bgFile, uid);
                 updates.backgroundImagePath = path;
-                showToast("Image uploaded");
+                toast("Image uploaded");
             } else if (bgPreview === null && user?.backgroundImagePath) {
                 // User removed background image
                 updates.backgroundImagePath = null;
             }
 
             await updateUser(uid, updates);
-            showToast("User updated successfully!");
+            toast("User updated successfully!");
         } catch (err) {
             console.error(err);
-            showToast("Failed to update user", "error");
+            toast("Failed to update user", "error");
         } finally {
             setBusy(false);
         }
     }
 
     async function handleDelete() {
-        if (!confirm("Are you sure you want to delete this user?")) return;
+        const ok = await confirm({ title: "Delete User", message: "Are you sure you want to delete this user? This cannot be undone.", destructive: true });
+        if (!ok) return;
         setBusy(true);
         try {
             await deleteUser(uid);
-            showToast("User deleted");
+            toast("User deleted");
             setTimeout(() => router.push('/admin/users'), 1000);
         } catch (err) {
             console.error(err);
-            showToast("Failed to delete user", "error");
+            toast("Failed to delete user", "error");
             setBusy(false);
         }
     }
@@ -129,11 +141,16 @@ export default function EditUserPage() {
     ];
     const avatarColor = avatarColors[(name.charCodeAt(0) || 0) % avatarColors.length];
 
-    if (!loaded) return <Page title="Loading..."><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    const breadcrumbs = [
+        { label: "Users", href: "/admin/users" },
+        { label: name || "User" },
+    ];
+
+    if (!loaded) return <Page title="Loading..." breadcrumbs={breadcrumbs}><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
     if (!user) return <Page title="Not Found"><div className="text-center py-20 text-gray-400">User not found</div></Page>;
 
     return (
-        <Page title="Edit User" showBack={true}>
+        <Page title="Edit User" showBack={true} breadcrumbs={breadcrumbs}>
             <div className="max-w-xl mx-auto space-y-8 py-4 px-4">
                 {/* Avatar & Identity */}
                 <div className="flex flex-col items-center gap-3">
@@ -220,7 +237,7 @@ export default function EditUserPage() {
                     </div>
                 )}
 
-                {/* Background Image — ideal 2048x2048 or 1920x1080 */}
+                {/* Background Image -- ideal 2048x2048 or 1920x1080 */}
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Background Image</label>
                     <p className="text-[11px] text-gray-400">Ideal: 2048 x 2048 px or 1920 x 1080 px. Max 10 MB.</p>
@@ -231,6 +248,7 @@ export default function EditUserPage() {
                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
                                 <button
                                     onClick={() => document.getElementById('user-bg')?.click()}
+                                    aria-label="Change background image"
                                     className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                                 >
                                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,6 +257,7 @@ export default function EditUserPage() {
                                 </button>
                                 <button
                                     onClick={handleRemoveBg}
+                                    aria-label="Remove background image"
                                     className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                                 >
                                     <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,6 +289,7 @@ export default function EditUserPage() {
                     <button
                         disabled={busy}
                         onClick={handleDelete}
+                        aria-label="Delete user"
                         className="w-full h-14 rounded-2xl bg-white border border-red-100 text-red-500 font-bold transition-all flex items-center justify-center gap-2 hover:bg-red-50 active:scale-[0.98]"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -277,7 +297,6 @@ export default function EditUserPage() {
                     </button>
                 </div>
             </div>
-            {ToastComponent}
         </Page>
     );
 }

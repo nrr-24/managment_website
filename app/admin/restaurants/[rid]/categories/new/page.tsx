@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
-import { useToast } from "@/components/ui/Toast";
-import { createCategory } from "@/lib/data";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { createCategory, getRestaurant } from "@/lib/data";
 
 export default function NewCategoryPage() {
     const router = useRouter();
     const { rid } = useParams<{ rid: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast } = useGlobalUI();
 
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
@@ -21,10 +22,19 @@ export default function NewCategoryPage() {
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [progress, setProgress] = useState<number | null>(null);
+    const [restaurantName, setRestaurantName] = useState("");
 
     // Icon handling
     const [iconFile, setIconFile] = useState<File | null>(null);
     const [iconPreview, setIconPreview] = useState<string | null>(null);
+
+    useUnsavedChanges(name.trim().length > 0);
+
+    useEffect(() => {
+        getRestaurant(rid).then(r => {
+            if (r) setRestaurantName(r.name || "");
+        });
+    }, [rid]);
 
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -55,11 +65,11 @@ export default function NewCategoryPage() {
                 await updateCategory(rid, categoryId, { imagePath: path });
             }
 
-            showToast("Category created successfully!");
+            toast("Category created successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories`), 1000);
         } catch (err: any) {
             console.error(err);
-            showToast(err.message || "Failed to create category", "error");
+            toast(err.message || "Failed to create category", "error");
             setBusy(false);
         }
     }
@@ -83,8 +93,15 @@ export default function NewCategoryPage() {
         </button>
     );
 
+    const breadcrumbs = [
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
+        { label: "Categories", href: `/admin/restaurants/${rid}/categories` },
+        { label: "New" },
+    ];
+
     return (
-        <Page title="New Category" actions={actions} leftAction={leftAction}>
+        <Page title="New Category" actions={actions} leftAction={leftAction} breadcrumbs={breadcrumbs}>
             <div className="space-y-6 max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold px-4">New Category</h2>
 
@@ -156,6 +173,7 @@ export default function NewCategoryPage() {
                         {iconFile && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setIconFile(null); setIconPreview(null); }}
+                                aria-label="Remove icon"
                                 className="text-red-500 text-sm font-bold pr-2"
                             >
                                 Remove
@@ -208,7 +226,6 @@ export default function NewCategoryPage() {
 
                 <div className="h-20" />
             </div>
-            {ToastComponent}
         </Page>
     );
 }

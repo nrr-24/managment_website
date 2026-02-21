@@ -5,20 +5,23 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
 import { StorageImage } from "@/components/ui/StorageImage";
+import { DishListSkeleton } from "@/components/ui/Skeleton";
 import {
     Dish,
     deleteDish,
     getCategory,
+    getRestaurant,
     listDishes,
 } from "@/lib/data";
 
 export default function CategoryManagePage() {
     const { rid, cid } = useParams<{ rid: string; cid: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast, confirm } = useGlobalUI();
 
     const [catName, setCatName] = useState("");
+    const [restaurantName, setRestaurantName] = useState("");
     const [dishes, setDishes] = useState<Dish[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [loaded, setLoaded] = useState(false);
@@ -31,7 +34,7 @@ export default function CategoryManagePage() {
             }
             setDishes(await listDishes(rid, cid));
         } catch {
-            showToast("Failed to load dishes", "error");
+            toast("Failed to load dishes", "error");
         }
         setLoaded(true);
     }
@@ -43,32 +46,36 @@ export default function CategoryManagePage() {
     );
 
     useEffect(() => {
+        getRestaurant(rid).then(r => {
+            if (r) setRestaurantName(r.name || "");
+        });
         refresh();
     }, [rid, cid]);
 
     async function handleDeleteDish(dish: Dish) {
-        if (!confirm(`Delete dish "${dish.name}"?`)) return;
+        const ok = await confirm({ title: "Delete Dish", message: `Delete dish "${dish.name}"? This cannot be undone.`, destructive: true });
+        if (!ok) return;
         try {
             // deleteDish now handles image cleanup internally (cascading delete)
             await deleteDish(rid, cid, dish.id);
-            showToast("Dish deleted");
+            toast("Dish deleted");
             await refresh();
         } catch {
-            showToast("Failed to delete dish", "error");
+            toast("Failed to delete dish", "error");
         }
     }
 
     const actions = (
         <div className="flex items-center gap-2">
             <Link href={`/admin/restaurants/${rid}/categories/${cid}/edit`}>
-                <button className="w-8 h-8 flex items-center justify-center bg-green-50 text-green-800 rounded-full hover:bg-green-100 transition-colors">
+                <button aria-label="Edit category" className="w-8 h-8 flex items-center justify-center bg-green-50 text-green-800 rounded-full hover:bg-green-100 transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                 </button>
             </Link>
             <Link href={`/admin/restaurants/${rid}/categories/${cid}/new`}>
-                <button className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                <button aria-label="Add new dish" className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                     <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
@@ -77,10 +84,21 @@ export default function CategoryManagePage() {
         </div>
     );
 
-    if (!loaded) return <Page title="Loading..." backPath={`/admin/restaurants/${rid}/categories`}><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    const breadcrumbs = [
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
+        { label: "Categories", href: `/admin/restaurants/${rid}/categories` },
+        { label: catName || "Category" },
+    ];
+
+    if (!loaded) return (
+        <Page title="Loading..." backPath={`/admin/restaurants/${rid}/categories`} breadcrumbs={breadcrumbs}>
+            <DishListSkeleton />
+        </Page>
+    );
 
     return (
-        <Page title={catName || cid} actions={actions} backPath={`/admin/restaurants/${rid}/categories`}>
+        <Page title={`${catName || cid} (${filteredDishes.length})`} actions={actions} backPath={`/admin/restaurants/${rid}/categories`} breadcrumbs={breadcrumbs}>
             <div className="space-y-4">
                 <div className="relative px-2">
                     <input
@@ -121,7 +139,7 @@ export default function CategoryManagePage() {
                                     <div className="flex items-center gap-1">
                                         {/* Edit */}
                                         <Link href={`/admin/restaurants/${rid}/categories/${cid}/${d.id}/edit`}>
-                                            <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                                            <button aria-label={`Edit ${d.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                 </svg>
@@ -133,6 +151,7 @@ export default function CategoryManagePage() {
                                                 e.preventDefault();
                                                 handleDeleteDish(d);
                                             }}
+                                            aria-label={`Delete ${d.name}`}
                                             className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +169,6 @@ export default function CategoryManagePage() {
                     )}
                 </div>
             </div>
-            {ToastComponent}
         </Page>
     );
 }

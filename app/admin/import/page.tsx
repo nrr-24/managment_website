@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth";
 import {
     parseImportJSON,
@@ -16,7 +16,7 @@ import {
 type Phase = "upload" | "preview" | "importing" | "done";
 
 export default function ImportPage() {
-    const { showToast, ToastComponent } = useToast();
+    const { toast } = useGlobalUI();
     const { user } = useAuth();
 
     const [phase, setPhase] = useState<Phase>("upload");
@@ -36,7 +36,7 @@ export default function ImportPage() {
     function handleParseAndPreview(text?: string) {
         const source = text ?? jsonText;
         if (!source.trim()) {
-            showToast("Please paste or upload JSON data first", "error");
+            toast("Please paste or upload JSON data first", "error");
             return;
         }
 
@@ -57,7 +57,7 @@ export default function ImportPage() {
             setPhase("preview");
         } catch (err: any) {
             setErrorMessage(err.message || "Failed to parse JSON");
-            showToast("Invalid JSON format", "error");
+            toast("Invalid JSON format", "error");
         }
     }
 
@@ -69,7 +69,7 @@ export default function ImportPage() {
             const content = ev.target?.result as string;
             setJsonText(content);
             setFileName(file.name);
-            showToast(`Loaded ${file.name}`);
+            toast(`Loaded ${file.name}`);
             // Auto-parse on file load
             handleParseAndPreview(content);
         };
@@ -104,11 +104,11 @@ export default function ImportPage() {
                 `Done! ${result.categoryCount} categories, ${result.dishCount} dishes imported.`
             );
             setPhase("done");
-            showToast("Import completed successfully!");
+            toast("Import completed successfully!");
         } catch (err: any) {
             setErrorMessage(err.message || "Import failed");
             setPhase("preview");
-            showToast("Import failed", "error");
+            toast("Import failed", "error");
         }
     }
 
@@ -177,7 +177,7 @@ export default function ImportPage() {
         >
             <div className="space-y-6 max-w-2xl mx-auto">
 
-                {/* ─── PHASE: Upload ─── */}
+                {/* --- PHASE: Upload --- */}
                 {phase === "upload" && (
                     <>
                         {/* Intro */}
@@ -256,7 +256,7 @@ export default function ImportPage() {
                     </>
                 )}
 
-                {/* ─── PHASE: Preview ─── */}
+                {/* --- PHASE: Preview --- */}
                 {phase === "preview" && summary && (
                     <>
                         {/* Summary Card */}
@@ -304,7 +304,7 @@ export default function ImportPage() {
                                 </div>
                                 <div className="space-y-1">
                                     {summary.warnings.map((w, i) => (
-                                        <p key={i} className="text-xs text-yellow-700 font-medium">• {w}</p>
+                                        <p key={i} className="text-xs text-yellow-700 font-medium">{w}</p>
                                     ))}
                                 </div>
                             </Card>
@@ -357,7 +357,7 @@ export default function ImportPage() {
                     </>
                 )}
 
-                {/* ─── PHASE: Importing ─── */}
+                {/* --- PHASE: Importing --- */}
                 {phase === "importing" && (
                     <div className="py-12 flex flex-col items-center gap-6">
                         {/* Animated spinner */}
@@ -404,7 +404,7 @@ export default function ImportPage() {
                     </div>
                 )}
 
-                {/* ─── PHASE: Done ─── */}
+                {/* --- PHASE: Done --- */}
                 {phase === "done" && (
                     <div className="py-12 flex flex-col items-center gap-6">
                         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
@@ -428,7 +428,6 @@ export default function ImportPage() {
 
                 <div className="h-20" />
             </div>
-            {ToastComponent}
         </Page>
     );
 }

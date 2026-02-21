@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { Breadcrumbs } from './Breadcrumbs';
 
 interface PageProps {
     title: string;
@@ -8,9 +9,10 @@ interface PageProps {
     showBack?: boolean;
     backPath?: string;
     leftAction?: React.ReactNode;
+    breadcrumbs?: { label: string; href?: string }[];
 }
 
-export function Page({ title, children, actions, showBack = true, backPath, leftAction }: PageProps) {
+export function Page({ title, children, actions, showBack = true, backPath, leftAction, breadcrumbs }: PageProps) {
     const router = useRouter();
 
     return (
@@ -21,6 +23,7 @@ export function Page({ title, children, actions, showBack = true, backPath, left
                     <div className="flex-1 flex text-left">
                         {leftAction ? leftAction : showBack && (
                             <button
+                                aria-label="Go back"
                                 onClick={() => backPath ? router.push(backPath) : router.back()}
                                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all"
                             >
@@ -38,6 +41,7 @@ export function Page({ title, children, actions, showBack = true, backPath, left
                     <div className="flex-1 flex justify-end">
                         <div className="flex items-center gap-1.5 bg-white/80 px-2.5 py-1.5 rounded-full border border-gray-200/60 shadow-sm">
                             <button
+                                aria-label="Go to dashboard"
                                 onClick={() => router.push('/admin')}
                                 className="p-1 text-gray-400 hover:text-green-800 active:scale-90 transition-all"
                             >
@@ -49,6 +53,9 @@ export function Page({ title, children, actions, showBack = true, backPath, left
                         </div>
                     </div>
                 </div>
+
+                {/* Breadcrumbs */}
+                {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
 
                 {/* Content with stagger animation */}
                 <div className="space-y-5 stagger-children">

@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useToast } from "@/components/ui/Toast";
-import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath } from "@/lib/data";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
 
 export default function EditDishPage() {
     const router = useRouter();
     const { rid, cid, did } = useParams<{ rid: string; cid: string; did: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast, confirm } = useGlobalUI();
 
     const [dish, setDish] = useState<Dish | null>(null);
     const [name, setName] = useState("");
@@ -21,6 +22,8 @@ export default function EditDishPage() {
     const [descAr, setDescAr] = useState("");
     const [price, setPrice] = useState("");
     const [isActive, setIsActive] = useState(true);
+    const [restaurantName, setRestaurantName] = useState("");
+    const [catName, setCatName] = useState("");
 
     // Options
     const [optHeader, setOptHeader] = useState("");
@@ -39,7 +42,18 @@ export default function EditDishPage() {
     const [loaded, setLoaded] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [fileName: string]: number }>({});
 
+    // Dirty tracking for unsaved changes
+    const initialDataRef = useRef<string>("");
+    const currentData = JSON.stringify({ name, nameAr, desc, descAr, price, isActive, optHeader, optHeaderAr, optRequired, optMax, optItems, allergens });
+    useUnsavedChanges(loaded && currentData !== initialDataRef.current);
+
     useEffect(() => {
+        getRestaurant(rid).then(r => {
+            if (r) setRestaurantName(r.name || "");
+        });
+        getCategory(rid, cid).then(c => {
+            if (c) setCatName(c.name || "");
+        });
         getDish(rid, cid, did).then(d => {
             if (d) {
                 setDish(d);
@@ -69,6 +83,26 @@ export default function EditDishPage() {
                 const paths = d.imagePaths || [];
                 const images = paths.map(p => ({ url: "", path: p }));
                 setExistingImages(images);
+
+                initialDataRef.current = JSON.stringify({
+                    name: d.name || "",
+                    nameAr: d.nameAr || "",
+                    desc: d.description || "",
+                    descAr: d.descriptionAr || "",
+                    price: d.price?.toString() || "",
+                    isActive: d.isActive !== false,
+                    optHeader: d.options?.header || "",
+                    optHeaderAr: d.options?.headerAr || "",
+                    optRequired: d.options?.required || false,
+                    optMax: d.options?.maxSelection?.toString() || "",
+                    optItems: d.options?.items?.map(i => ({
+                        id: i.id,
+                        name: i.name || "",
+                        nameAr: i.nameAr || "",
+                        price: i.price?.toString() || ""
+                    })) || [],
+                    allergens: d.allergens?.map(a => ({ id: a.id, name: a.name || "", nameAr: a.nameAr || "" })) || [],
+                });
             }
             setLoaded(true);
         });
@@ -99,7 +133,7 @@ export default function EditDishPage() {
             let finalPaths = [...existingImages.map(img => img.path)];
 
             if (newImageFiles.length > 0) {
-                const results = await uploadSequentialDishImages(newImageFiles, rid, cid, did, (idx, p) => {
+                const results = await uploadSequentialDishImages(newImageFiles, rid, cid, name.trim(), (idx, p) => {
                     const file = newImageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
                 });
@@ -111,11 +145,11 @@ export default function EditDishPage() {
             updates.imagePaths = finalPaths;
 
             await updateDish(rid, cid, did, updates);
-            showToast("Dish updated successfully!");
+            toast("Dish updated successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${cid}`), 1000);
         } catch (err) {
             console.error("Save dish failed:", err);
-            showToast("Failed to update dish. Please check your connection.", "error");
+            toast("Failed to update dish. Please check your connection.", "error");
         } finally {
             setBusy(false);
             setUploadProgress({});
@@ -125,13 +159,14 @@ export default function EditDishPage() {
     async function handleRemoveImage(idx: number, isExisting: boolean) {
         if (isExisting) {
             const img = existingImages[idx];
-            if (confirm("Permanently delete this image from storage?")) {
+            const ok = await confirm({ title: "Delete Image", message: "Permanently delete this image from storage?", destructive: true });
+            if (ok) {
                 try {
                     await deleteImageByPath(img.path);
                     setExistingImages(prev => prev.filter((_, i) => i !== idx));
                 } catch (err) {
                     console.error("Failed to delete image:", err);
-                    showToast("Failed to delete image", "error");
+                    toast("Failed to delete image", "error");
                 }
             }
         } else {
@@ -158,11 +193,18 @@ export default function EditDishPage() {
         </button>
     );
 
-    if (!loaded) return <Page title="Loading..."><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    const breadcrumbs = [
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
+        { label: catName || "Category", href: `/admin/restaurants/${rid}/categories/${cid}` },
+        { label: name || "Edit Dish" },
+    ];
+
+    if (!loaded) return <Page title="Loading..." breadcrumbs={breadcrumbs}><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
     if (!dish) return <Page title="Not Found"><div className="text-center py-20 text-gray-400">Dish not found</div></Page>;
 
     return (
-        <Page title="Edit Dish" actions={actions} leftAction={leftAction} backPath={`/admin/restaurants/${rid}/categories/${cid}`}>
+        <Page title="Edit Dish" actions={actions} leftAction={leftAction} backPath={`/admin/restaurants/${rid}/categories/${cid}`} breadcrumbs={breadcrumbs}>
             <div className="space-y-6 max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold px-4">Edit Dish</h2>
 
@@ -223,12 +265,13 @@ export default function EditDishPage() {
                                         newItems[idx].price = e.target.value;
                                         setOptItems(newItems);
                                     }} />
-                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
+                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} aria-label="Remove option" className="text-red-500 text-xs">&#x2715;</button>
                                 </div>
                             ))}
                             <button
                                 onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
-                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end"
+                                aria-label="Add option"
+                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                             </button>
@@ -258,11 +301,12 @@ export default function EditDishPage() {
                                         newAllergens[idx].nameAr = e.target.value;
                                         setAllergens(newAllergens);
                                     }} />
-                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
+                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} aria-label="Remove allergen" className="text-red-500 text-xs">&#x2715;</button>
                                 </div>
                             ))}
                             <button
                                 onClick={() => setAllergens([...allergens, { name: "", nameAr: "" }])}
+                                aria-label="Add allergen"
                                 className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -271,39 +315,9 @@ export default function EditDishPage() {
                     </Card>
                 </section>
 
-                <section className="space-y-4">
+                <section className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 px-4 uppercase tracking-wider">Images</label>
                     <p className="text-[11px] text-gray-400 px-4">Ideal: 2048 x 1536 px (4:3 ratio). Max 6 images, 10 MB each.</p>
-                    <div className="flex flex-wrap gap-3 px-4">
-                        {existingImages.map((img, idx) => (
-                            <div key={`ex-${idx}`} className="relative w-24 h-24 group">
-                                <StorageImage path={img.path || img.url} className="w-full h-full object-cover rounded-2xl border" />
-                                <button onClick={() => handleRemoveImage(idx, true)} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg transform group-hover:scale-110 transition-transform">✕</button>
-                            </div>
-                        ))}
-                        {newImageFiles.map((file, idx) => (
-                            <div key={`new-${idx}`} className="relative w-24 h-24 group">
-                                <img src={URL.createObjectURL(file)} className="w-full h-full object-cover rounded-2xl border opacity-60" />
-                                <button onClick={() => handleRemoveImage(idx, false)} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg transform group-hover:scale-110 transition-transform">✕</button>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 rounded-2xl">
-                                    <p className="text-[10px] font-bold text-white uppercase bg-black/50 px-1 rounded mb-1">New</p>
-                                    {uploadProgress[file.name] !== undefined && (
-                                        <p className="text-[10px] font-bold text-white bg-green-800 px-1 rounded">{Math.round(uploadProgress[file.name])}%</p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-
-                        {(existingImages.length + newImageFiles.length) < 6 && (
-                            <button
-                                onClick={() => document.getElementById('dish-images-upload')?.click()}
-                                className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-green-500 hover:text-green-500 transition-all"
-                            >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                                <span className="text-[10px] font-bold">Add</span>
-                            </button>
-                        )}
-                    </div>
                     <input
                         type="file"
                         id="dish-images-upload"
@@ -315,11 +329,61 @@ export default function EditDishPage() {
                             setNewImageFiles(prev => [...prev, ...files]);
                         }}
                     />
+
+                    <div className="flex flex-wrap gap-2 px-4">
+                        {existingImages.map((img, idx) => (
+                            <div key={`ex-${idx}`} className="relative w-20 h-20 group">
+                                <StorageImage path={img.path} alt="" className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100" />
+                                <button
+                                    onClick={() => handleRemoveImage(idx, true)}
+                                    aria-label="Remove image"
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md hover:bg-red-600 transition-colors"
+                                >
+                                    &#x2715;
+                                </button>
+                            </div>
+                        ))}
+                        {newImageFiles.map((file, idx) => (
+                            <div key={`new-${idx}`} className="relative w-20 h-20 group">
+                                <img
+                                    src={URL.createObjectURL(file)}
+                                    alt="Preview"
+                                    className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100"
+                                />
+                                <button
+                                    onClick={() => handleRemoveImage(idx, false)}
+                                    aria-label="Remove image"
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md hover:bg-red-600 transition-colors"
+                                >
+                                    &#x2715;
+                                </button>
+                                {uploadProgress[file.name] !== undefined && (
+                                    <div className="absolute inset-x-0 bottom-0 bg-green-800 text-white text-center text-[8px] font-bold py-0.5 rounded-b-xl">
+                                        {Math.round(uploadProgress[file.name])}%
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {(existingImages.length + newImageFiles.length) < 6 && (
+                        <Card
+                            onClick={() => document.getElementById('dish-images-upload')?.click()}
+                            className="p-4 flex items-center justify-between rounded-3xl cursor-pointer hover:bg-gray-50 active:scale-[0.99] transition-all"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                </div>
+                                <span className="text-green-800 font-bold">Add more images</span>
+                            </div>
+                        </Card>
+                    )}
+                    <p className="text-xs text-gray-400 px-4 mt-2">{existingImages.length + newImageFiles.length}/6 images</p>
                 </section>
 
                 <div className="h-20" />
             </div>
-            {ToastComponent}
         </Page>
     );
 }

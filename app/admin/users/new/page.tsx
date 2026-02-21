@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createUserWithAuth, listRestaurants, Restaurant } from "@/lib/data";
 
 export default function NewUserPage() {
     const router = useRouter();
-    const { showToast, ToastComponent } = useToast();
+    const { toast } = useGlobalUI();
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -19,9 +20,11 @@ export default function NewUserPage() {
     const [selectedRids, setSelectedRids] = useState<string[]>([]);
     const [busy, setBusy] = useState(false);
 
+    useUnsavedChanges(name.trim().length > 0);
+
     useEffect(() => {
         listRestaurants().then(setRestaurants).catch(() => {
-            showToast("Failed to load restaurants", "error");
+            toast("Failed to load restaurants", "error");
         });
     }, []);
 
@@ -35,23 +38,23 @@ export default function NewUserPage() {
 
     async function handleCreate() {
         if (!name.trim()) {
-            showToast("Please enter a name", "error");
+            toast("Please enter a name", "error");
             return;
         }
         if (!email.trim()) {
-            showToast("Please enter an email", "error");
+            toast("Please enter an email", "error");
             return;
         }
         if (!password.trim()) {
-            showToast("Please enter a password", "error");
+            toast("Please enter a password", "error");
             return;
         }
         if (password.length < 6) {
-            showToast("Password must be at least 6 characters", "error");
+            toast("Password must be at least 6 characters", "error");
             return;
         }
         if (role === "viewer" && selectedRids.length === 0) {
-            showToast("Viewers must have at least 1 restaurant assigned", "error");
+            toast("Viewers must have at least 1 restaurant assigned", "error");
             return;
         }
         setBusy(true);
@@ -63,19 +66,19 @@ export default function NewUserPage() {
                 role,
                 restaurantIds: role === "viewer" ? selectedRids : [],
             });
-            showToast("User created successfully!");
+            toast("User created successfully!");
             setTimeout(() => router.push('/admin/users'), 1000);
         } catch (err: any) {
             console.error(err);
             const msg = err.message || "";
             if (msg.includes("email-already-in-use")) {
-                showToast("This email is already in use", "error");
+                toast("This email is already in use", "error");
             } else if (msg.includes("weak-password")) {
-                showToast("Password is too weak (min 6 chars)", "error");
+                toast("Password is too weak (min 6 chars)", "error");
             } else if (msg.includes("invalid-email")) {
-                showToast("Invalid email address", "error");
+                toast("Invalid email address", "error");
             } else {
-                showToast(msg || "Failed to create user", "error");
+                toast(msg || "Failed to create user", "error");
             }
         } finally {
             setBusy(false);
@@ -176,7 +179,6 @@ export default function NewUserPage() {
                     {busy ? "Creating..." : "Create User"}
                 </button>
             </div>
-            {ToastComponent}
         </Page>
     );
 }

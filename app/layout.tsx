@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { GlobalUIProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
   title: "Menu Admin",
@@ -10,9 +11,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="antialiased" style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif" }}>
+      <head>
+        <meta name="theme-color" content="#f8f8fa" />
+      </head>
+      <body className="antialiased" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
         <AuthProvider>
-          {children}
+          <GlobalUIProvider>
+            {children}
+          </GlobalUIProvider>
         </AuthProvider>
       </body>
     </html>

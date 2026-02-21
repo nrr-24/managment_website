@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useToast } from "@/components/ui/Toast";
-import { createDish, updateDish, uploadSequentialDishImages } from "@/lib/data";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { createDish, updateDish, uploadSequentialDishImages, getRestaurant, getCategory } from "@/lib/data";
 
 export default function NewDishPage() {
     const router = useRouter();
     const { rid, cid } = useParams<{ rid: string; cid: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast } = useGlobalUI();
 
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
@@ -19,6 +20,8 @@ export default function NewDishPage() {
     const [descAr, setDescAr] = useState("");
     const [price, setPrice] = useState("");
     const [isActive, setIsActive] = useState(true);
+    const [restaurantName, setRestaurantName] = useState("");
+    const [catName, setCatName] = useState("");
 
     // Options
     const [optHeader, setOptHeader] = useState("");
@@ -34,6 +37,17 @@ export default function NewDishPage() {
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [busy, setBusy] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [fileName: string]: number }>({});
+
+    useUnsavedChanges(name.trim().length > 0);
+
+    useEffect(() => {
+        getRestaurant(rid).then(r => {
+            if (r) setRestaurantName(r.name || "");
+        });
+        getCategory(rid, cid).then(c => {
+            if (c) setCatName(c.name || "");
+        });
+    }, [rid, cid]);
 
     async function handleCreate() {
         if (!name.trim()) return;
@@ -59,9 +73,9 @@ export default function NewDishPage() {
 
             const dishId = await createDish(rid, cid, dishData);
 
-            // 2. Upload images using the dish ID for the correct storage path
+            // 2. Upload images using the dish name for the correct storage path
             if (imageFiles.length > 0) {
-                const results = await uploadSequentialDishImages(imageFiles, rid, cid, dishId, (idx, p) => {
+                const results = await uploadSequentialDishImages(imageFiles, rid, cid, name.trim(), (idx, p) => {
                     const file = imageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
                 });
@@ -69,11 +83,11 @@ export default function NewDishPage() {
                 await updateDish(rid, cid, dishId, { imagePaths: paths } as any);
             }
 
-            showToast("Dish created successfully!");
+            toast("Dish created successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${cid}`), 1000);
         } catch (err: any) {
             console.error(err);
-            showToast(err.message || "Failed to create dish", "error");
+            toast(err.message || "Failed to create dish", "error");
             setBusy(false);
         }
     }
@@ -97,8 +111,15 @@ export default function NewDishPage() {
         </button>
     );
 
+    const breadcrumbs = [
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
+        { label: catName || "Category", href: `/admin/restaurants/${rid}/categories/${cid}` },
+        { label: "New Dish" },
+    ];
+
     return (
-        <Page title="New Dish" actions={actions} leftAction={leftAction}>
+        <Page title="New Dish" actions={actions} leftAction={leftAction} breadcrumbs={breadcrumbs}>
             <div className="space-y-6 max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold px-4">New Dish</h2>
 
@@ -159,11 +180,12 @@ export default function NewDishPage() {
                                         newItems[idx].price = e.target.value;
                                         setOptItems(newItems);
                                     }} />
-                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
+                                    <button onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))} aria-label="Remove option" className="text-red-500 text-xs">&#x2715;</button>
                                 </div>
                             ))}
                             <button
                                 onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
+                                aria-label="Add option"
                                 className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -194,11 +216,12 @@ export default function NewDishPage() {
                                         newAllergens[idx].nameAr = e.target.value;
                                         setAllergens(newAllergens);
                                     }} />
-                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 text-xs">✕</button>
+                                    <button onClick={() => setAllergens(prev => prev.filter((_, i) => i !== idx))} aria-label="Remove allergen" className="text-red-500 text-xs">&#x2715;</button>
                                 </div>
                             ))}
                             <button
                                 onClick={() => setAllergens([...allergens, { name: "", nameAr: "" }])}
+                                aria-label="Add allergen"
                                 className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center self-end hover:bg-gray-200 transition-colors"
                             >
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -236,9 +259,10 @@ export default function NewDishPage() {
                                     />
                                     <button
                                         onClick={() => setImageFiles(prev => prev.filter((_, i) => i !== idx))}
+                                        aria-label="Remove image"
                                         className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md hover:bg-red-600 transition-colors"
                                     >
-                                        ✕
+                                        &#x2715;
                                     </button>
                                     {uploadProgress[file.name] !== undefined && (
                                         <div className="absolute inset-x-0 bottom-0 bg-green-800 text-white text-center text-[8px] font-bold py-0.5 rounded-b-xl">
@@ -268,7 +292,6 @@ export default function NewDishPage() {
 
                 <div className="h-20" />
             </div>
-            {ToastComponent}
         </Page>
     );
 }

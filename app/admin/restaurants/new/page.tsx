@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
 import { ColorPicker } from "@/components/ui/ColorPicker";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
 import { FontPicker } from "@/components/ui/FontPicker";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
     createRestaurant,
     uploadRestaurantImage,
@@ -14,7 +15,7 @@ import {
 
 export default function RestaurantCreatePage() {
     const router = useRouter();
-    const { showToast, ToastComponent } = useToast();
+    const { toast } = useGlobalUI();
 
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
@@ -27,9 +28,11 @@ export default function RestaurantCreatePage() {
 
     const [creating, setCreating] = useState(false);
 
+    useUnsavedChanges(name.trim().length > 0);
+
     async function handleCreate() {
         if (!name.trim()) {
-            showToast("Please enter a restaurant name", "error");
+            toast("Please enter a restaurant name", "error");
             return;
         }
         setCreating(true);
@@ -60,11 +63,11 @@ export default function RestaurantCreatePage() {
                 await updateRestaurant(rid, updates);
             }
 
-            showToast("Restaurant created!");
+            toast("Restaurant created!");
             router.push(`/admin/restaurants/${rid}`);
         } catch (err) {
             console.error("Failed to create restaurant:", err);
-            showToast("Failed to create restaurant", "error");
+            toast("Failed to create restaurant", "error");
         } finally {
             setCreating(false);
         }
@@ -218,6 +221,7 @@ export default function RestaurantCreatePage() {
                                 </label>
                                 <button
                                     onClick={() => setBgFile(null)}
+                                    aria-label="Remove background image"
                                     className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                                 >
                                     <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -235,7 +239,6 @@ export default function RestaurantCreatePage() {
             </div>
 
             <div className="h-20" />
-            {ToastComponent}
         </Page>
     );
 }

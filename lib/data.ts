@@ -42,7 +42,7 @@ function cleanData(data: any): any {
  *  Restaurant Logo   │ 1024 x 1024      │ PNG    │ 1024    │ 0.8     │ restaurants/{rid}/logo_{uuid}.png
  *  Restaurant BG     │ 2048 x 2048      │ JPEG   │ 2048    │ 0.6     │ restaurants/{rid}/background_{uuid}.jpg
  *  Category Icon     │ 1384 x 820       │ JPEG   │ 1024    │ 0.8     │ restaurants/{rid}/categories/{cid}/icon.jpg
- *  Dish Photo        │ 2048 x 1536      │ JPEG   │ 2048    │ 0.6     │ dishes/{rid}/{cid}/{did}/{batchID}_{index}.jpg
+ *  Dish Photo        │ 2048 x 1536      │ JPEG   │ 2048    │ 0.6     │ dishes/{rid}/{cid}/{dishName}_{batchID}_{index}.jpg
  *  User Background   │ 2048 x 2048      │ JPEG   │ 2048    │ 0.6     │ users/{uid}/background_{uuid}.jpg
  *  ──────────────────┴──────────────────┴────────┴─────────┴─────────┴─────────────────────────────────────────────
  *  Constraints: Max 10 MB per image, max 6 dish photos per dish.
@@ -542,20 +542,20 @@ export async function uploadRestaurantImage(
 /**
  * Upload a single dish image.
  * Ideal size: 2048 x 1536 (4:3). JPEG, 0.6 quality.
- * Path: dishes/{restaurantId}/{categoryId}/{dishId}/{batchID}_{index}.jpg
+ * Path: dishes/{restaurantId}/{categoryId}/{dishName}_{batchID}_{index}.jpg
  */
 export async function uploadDishImage(
     file: File,
     restaurantId: string,
     categoryId: string,
-    dishId: string,
+    dishName: string,
     index: number,
     batchId: string,
     onProgress?: (p: number) => void
 ) {
     const processedBlob = await processImage(file, 2048, 0.6);
 
-    const path = `dishes/${restaurantId}/${categoryId}/${dishId}/${batchId}_${index}.jpg`;
+    const path = `dishes/${restaurantId}/${categoryId}/${dishName}_${batchId}_${index}.jpg`;
     const storageRef = ref(storage, path);
 
     const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
@@ -573,13 +573,13 @@ export async function uploadSequentialDishImages(
     files: File[],
     restaurantId: string,
     categoryId: string,
-    dishId: string,
+    dishName: string,
     onProgress?: (idx: number, p: number) => void
 ) {
     const batchId = generateUUID();
     const results: { url: string; path: string }[] = [];
     for (let i = 0; i < files.length; i++) {
-        const res = await uploadDishImage(files[i], restaurantId, categoryId, dishId, i, batchId, (p) => {
+        const res = await uploadDishImage(files[i], restaurantId, categoryId, dishName, i, batchId, (p) => {
             onProgress?.(i, p);
         });
         results.push(res);

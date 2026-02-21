@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -19,13 +19,15 @@ import {
     deleteRestaurant,
     deleteImageByPath,
 } from "@/lib/data";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
 import { StorageImage } from "@/components/ui/StorageImage";
+import { FormSkeleton } from "@/components/ui/Skeleton";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
 export default function RestaurantManagePage() {
     const { rid } = useParams<{ rid: string }>();
     const router = useRouter();
-    const { showToast, ToastComponent } = useToast();
+    const { toast, confirm } = useGlobalUI();
 
     // Restaurant data
     const [name, setName] = useState("");
@@ -43,6 +45,11 @@ export default function RestaurantManagePage() {
     const [saving, setSaving] = useState(false);
 
     const [cats, setCats] = useState<Category[]>([]);
+
+    // Dirty tracking for unsaved changes
+    const initialDataRef = useRef<string>("");
+    const currentData = JSON.stringify({ name, nameAr, themeColor, layout, dishColumns, menuFont });
+    useUnsavedChanges(loaded && currentData !== initialDataRef.current);
 
     // Local Previews
     const [logoPreview, setLogoPreview] = useState("");
@@ -80,6 +87,14 @@ export default function RestaurantManagePage() {
             setMenuFont(r.menuFont || "system");
             setLogoPath(r.imagePath || "");
             setBgPath(r.backgroundImagePath || "");
+            initialDataRef.current = JSON.stringify({
+                name: r.name || "",
+                nameAr: r.nameAr || "",
+                themeColor: r.themeColorHex || "#007aff",
+                layout: r.layout || "list",
+                dishColumns: r.dishColumns || 2,
+                menuFont: r.menuFont || "system",
+            });
         }
         setCats(await listCategories(rid));
         setLoaded(true);
@@ -111,7 +126,7 @@ export default function RestaurantManagePage() {
                     updates.imagePath = result.path;
                 } catch (err) {
                     console.error("Logo upload failed:", err);
-                    showToast("Logo upload failed, but settings will still save", "error");
+                    toast("Logo upload failed, but settings will still save", "error");
                 }
             }
 
@@ -124,7 +139,7 @@ export default function RestaurantManagePage() {
                     updates.backgroundImagePath = result.path;
                 } catch (err) {
                     console.error("Background upload failed:", err);
-                    showToast("Background upload failed, but settings will still save", "error");
+                    toast("Background upload failed, but settings will still save", "error");
                 }
             }
 
@@ -135,10 +150,10 @@ export default function RestaurantManagePage() {
             setBgFile(null);
 
             await refresh();
-            showToast("Settings saved successfully!");
+            toast("Settings saved successfully!");
         } catch (err) {
             console.error("Save failed:", err);
-            showToast("Failed to save changes. Please check your connection.", "error");
+            toast("Failed to save changes. Please check your connection.", "error");
         } finally {
             setSaving(false);
             setUploadProgress({});
@@ -146,28 +161,30 @@ export default function RestaurantManagePage() {
     }
 
     async function handleDeleteCategory(id: string, catName: string) {
-        if (!confirm(`Delete category "${catName}" and all its dishes?`)) return;
+        const ok = await confirm({ title: "Delete Category", message: `Delete category "${catName}" and all its dishes?`, destructive: true });
+        if (!ok) return;
         try {
             await deleteCategory(rid, id);
-            showToast("Category deleted");
+            toast("Category deleted");
             await refresh();
         } catch {
-            showToast("Failed to delete category", "error");
+            toast("Failed to delete category", "error");
         }
     }
 
     const [deleting, setDeleting] = useState(false);
 
     async function handleDeleteRestaurant() {
-        if (!confirm(`Delete "${name}" and all its categories, dishes, and images? This cannot be undone.`)) return;
+        const ok = await confirm({ title: "Delete Restaurant", message: `Delete "${name}" and all its categories, dishes, and images? This cannot be undone.`, destructive: true });
+        if (!ok) return;
         setDeleting(true);
         try {
             await deleteRestaurant(rid);
-            showToast("Restaurant deleted");
+            toast("Restaurant deleted");
             setTimeout(() => router.push('/admin/restaurants'), 1000);
         } catch (err) {
             console.error("Delete restaurant failed:", err);
-            showToast("Failed to delete restaurant", "error");
+            toast("Failed to delete restaurant", "error");
             setDeleting(false);
         }
     }
@@ -180,7 +197,7 @@ export default function RestaurantManagePage() {
         setLogoFile(null);
         setLogoPreview("");
         await updateRestaurant(rid, { imagePath: "" });
-        showToast("Logo removed");
+        toast("Logo removed");
     }
 
     async function handleRemoveBg() {
@@ -191,21 +208,25 @@ export default function RestaurantManagePage() {
         setBgFile(null);
         setBgPreview("");
         await updateRestaurant(rid, { backgroundImagePath: "" });
-        showToast("Background removed");
+        toast("Background removed");
     }
 
     const actions = (
         <Link href={`/admin/restaurants/${rid}/categories`}>
-            <button className="text-green-800 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
+            <button aria-label="Edit menu" className="text-green-800 font-bold text-xs bg-green-50 px-3 py-1 rounded-full flex items-center gap-1 hover:bg-green-100 transition-colors">
                 Edit Menu <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
             </button>
         </Link>
     );
 
-    if (!loaded) return <Page title="Loading..." backPath="/"><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    if (!loaded) return (
+        <Page title="Loading..." backPath="/" breadcrumbs={[{label: "Restaurants", href: "/admin/restaurants"}, {label: "Loading..."}]}>
+            <FormSkeleton />
+        </Page>
+    );
 
     return (
-        <Page title={name || rid} actions={actions} backPath="/">
+        <Page title={name || rid} actions={actions} backPath="/" breadcrumbs={[{label: "Restaurants", href: "/admin/restaurants"}, {label: name || "Restaurant"}]}>
             {/* Restaurant Details */}
             <div className="space-y-1 mb-8">
                 <label className="text-xs font-bold text-gray-400 px-4 uppercase">Restaurant Details</label>
@@ -321,6 +342,7 @@ export default function RestaurantManagePage() {
                     {(logoPreview || logoPath || logoFile) && (
                         <button
                             onClick={handleRemoveLogo}
+                            aria-label="Remove logo"
                             className="text-red-500 text-sm font-bold hover:underline"
                         >
                             Remove
@@ -344,6 +366,7 @@ export default function RestaurantManagePage() {
                                 </label>
                                 <button
                                     onClick={handleRemoveBg}
+                                    aria-label="Remove background image"
                                     className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                                 >
                                     <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -360,6 +383,7 @@ export default function RestaurantManagePage() {
                                 </label>
                                 <button
                                     onClick={handleRemoveBg}
+                                    aria-label="Remove background image"
                                     className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                                 >
                                     <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -417,12 +441,13 @@ export default function RestaurantManagePage() {
                                 </Link>
                                 <div className="flex items-center gap-1">
                                     <Link href={`/admin/restaurants/${rid}/categories/${c.id}/edit`}>
-                                        <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
+                                        <button aria-label={`Edit ${c.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                         </button>
                                     </Link>
                                     <button
                                         onClick={() => handleDeleteCategory(c.id, c.name)}
+                                        aria-label={`Delete ${c.name}`}
                                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -439,6 +464,7 @@ export default function RestaurantManagePage() {
                     <button
                         onClick={handleDeleteRestaurant}
                         disabled={deleting}
+                        aria-label="Delete restaurant"
                         className="w-full px-6 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold disabled:opacity-50"
                     >
                         {deleting ? (
@@ -452,7 +478,6 @@ export default function RestaurantManagePage() {
                     </button>
                 </Card>
             </div>
-            {ToastComponent}
         </Page>
     );
 }

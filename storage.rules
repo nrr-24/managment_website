@@ -19,8 +19,8 @@ service firebase.storage {
       allow write: if isManager();
     }
 
-    // Dish images: dishes/{rID}/{cID}/{dishID}/{batchID}_{index}.jpg
-    match /dishes/{restaurantId}/{categoryId}/{dishId}/{fileName} {
+    // Dish images: dishes/{rID}/{cID}/{dishName}_{batchID}_{index}.jpg
+    match /dishes/{restaurantId}/{categoryId}/{fileName} {
       allow read: if true;
       allow write: if isManager();
     }

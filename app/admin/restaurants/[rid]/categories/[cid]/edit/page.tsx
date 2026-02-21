@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { StorageImage } from "@/components/ui/StorageImage";
-import { useToast } from "@/components/ui/Toast";
-import { getCategory, updateCategory, uploadCategoryImage, deleteImageByPath, Category } from "@/lib/data";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { getCategory, getRestaurant, updateCategory, uploadCategoryImage, deleteImageByPath, Category } from "@/lib/data";
 
 export default function EditCategoryPage() {
     const router = useRouter();
     const { rid, cid } = useParams<{ rid: string; cid: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast } = useGlobalUI();
 
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
@@ -25,8 +26,17 @@ export default function EditCategoryPage() {
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [progress, setProgress] = useState<number | null>(null);
+    const [restaurantName, setRestaurantName] = useState("");
+
+    // Dirty tracking for unsaved changes
+    const initialDataRef = useRef<string>("");
+    const currentData = JSON.stringify({ name, nameAr, isActive, limitAvailability, startTime, endTime });
+    useUnsavedChanges(loaded && currentData !== initialDataRef.current);
 
     useEffect(() => {
+        getRestaurant(rid).then(r => {
+            if (r) setRestaurantName(r.name || "");
+        });
         getCategory(rid, cid).then(cat => {
             if (cat) {
                 setName(cat.name || "");
@@ -38,6 +48,14 @@ export default function EditCategoryPage() {
                     setStartTime(cat.availabilityStart);
                     setEndTime(cat.availabilityEnd || "17:00");
                 }
+                initialDataRef.current = JSON.stringify({
+                    name: cat.name || "",
+                    nameAr: cat.nameAr || "",
+                    isActive: cat.isActive !== false,
+                    limitAvailability: !!cat.availabilityStart,
+                    startTime: cat.availabilityStart || "09:00",
+                    endTime: cat.availabilityEnd || "17:00",
+                });
             }
             setLoaded(true);
         });
@@ -60,10 +78,10 @@ export default function EditCategoryPage() {
             setIconFile(null);
             setIconPreview(null);
             await updateCategory(rid, cid, { imagePath: "" });
-            showToast("Icon removed");
+            toast("Icon removed");
         } catch (err) {
             console.error("Failed to remove icon:", err);
-            showToast("Failed to remove icon", "error");
+            toast("Failed to remove icon", "error");
         }
     }
 
@@ -87,7 +105,7 @@ export default function EditCategoryPage() {
                     updates.imagePath = path;
                 } catch (err) {
                     console.error("Category icon upload failed:", err);
-                    showToast("Icon upload failed, but name will be updated", "error");
+                    toast("Icon upload failed, but name will be updated", "error");
                 }
             }
 
@@ -97,11 +115,11 @@ export default function EditCategoryPage() {
             setIconFile(null);
             setIconPreview(null);
 
-            showToast("Category updated successfully!");
+            toast("Category updated successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories`), 1000);
         } catch (err) {
             console.error("Save category failed:", err);
-            showToast("Failed to update category. Please check your connection.", "error");
+            toast("Failed to update category. Please check your connection.", "error");
         } finally {
             setBusy(false);
             setProgress(null);
@@ -127,10 +145,17 @@ export default function EditCategoryPage() {
         </button>
     );
 
-    if (!loaded) return <Page title="Loading..."><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    const breadcrumbs = [
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
+        { label: "Categories", href: `/admin/restaurants/${rid}/categories` },
+        { label: name || "Edit" },
+    ];
+
+    if (!loaded) return <Page title="Loading..." breadcrumbs={breadcrumbs}><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
 
     return (
-        <Page title="Edit Category" actions={actions} leftAction={leftAction} backPath={`/admin/restaurants/${rid}/categories`}>
+        <Page title="Edit Category" actions={actions} leftAction={leftAction} backPath={`/admin/restaurants/${rid}/categories`} breadcrumbs={breadcrumbs}>
             <div className="space-y-6 max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold px-4">Edit Category</h2>
 
@@ -206,6 +231,7 @@ export default function EditCategoryPage() {
                         {(iconPath || iconFile) && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleRemoveIcon(); }}
+                                aria-label="Remove icon"
                                 className="text-red-500 text-sm font-bold pr-2 hover:underline"
                             >
                                 Remove
@@ -253,7 +279,6 @@ export default function EditCategoryPage() {
 
                 <div className="h-20" />
             </div>
-            {ToastComponent}
         </Page>
     );
 }

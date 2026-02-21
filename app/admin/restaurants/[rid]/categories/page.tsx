@@ -5,46 +5,53 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { CategoryListSkeleton } from "@/components/ui/Skeleton";
 import {
     listCategories,
     Category,
     deleteCategory,
+    getRestaurant,
 } from "@/lib/data";
 
 export default function CategoriesPage() {
     const { rid } = useParams<{ rid: string }>();
-    const { showToast, ToastComponent } = useToast();
+    const { toast, confirm } = useGlobalUI();
     const [cats, setCats] = useState<Category[]>([]);
     const [loaded, setLoaded] = useState(false);
+    const [restaurantName, setRestaurantName] = useState("");
 
     async function refresh() {
         try {
             setCats(await listCategories(rid));
         } catch {
-            showToast("Failed to load categories", "error");
+            toast("Failed to load categories", "error");
         }
         setLoaded(true);
     }
 
     useEffect(() => {
+        getRestaurant(rid).then(r => {
+            if (r) setRestaurantName(r.name || "");
+        });
         refresh();
     }, [rid]);
 
     async function handleDeleteCategory(id: string, catName: string) {
-        if (!confirm(`Delete category "${catName}"?`)) return;
+        const ok = await confirm({ title: "Delete Category", message: `Delete category "${catName}" and all its dishes?`, destructive: true });
+        if (!ok) return;
         try {
             await deleteCategory(rid, id);
-            showToast("Category deleted");
+            toast("Category deleted");
             await refresh();
         } catch {
-            showToast("Failed to delete category", "error");
+            toast("Failed to delete category", "error");
         }
     }
 
     const actions = (
         <Link href={`/admin/restaurants/${rid}/categories/new`}>
-            <button className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+            <button aria-label="Add new category" className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                 <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
@@ -52,10 +59,20 @@ export default function CategoriesPage() {
         </Link>
     );
 
-    if (!loaded) return <Page title="Loading..." backPath={`/admin/restaurants/${rid}`}><div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" /></div></Page>;
+    const breadcrumbs = [
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
+        { label: "Categories" },
+    ];
+
+    if (!loaded) return (
+        <Page title="Loading..." backPath={`/admin/restaurants/${rid}`} breadcrumbs={breadcrumbs}>
+            <CategoryListSkeleton />
+        </Page>
+    );
 
     return (
-        <Page title="Categories" actions={actions} backPath={`/admin/restaurants/${rid}`}>
+        <Page title={`Categories (${cats.length})`} actions={actions} backPath={`/admin/restaurants/${rid}`} breadcrumbs={breadcrumbs}>
             <div className="space-y-2">
                 {cats.length === 0 ? (
                     <Card className="p-12 text-center text-gray-500 rounded-3xl">
@@ -78,7 +95,7 @@ export default function CategoriesPage() {
                                 <div className="flex items-center gap-1">
                                     {/* Edit */}
                                     <Link href={`/admin/restaurants/${rid}/categories/${c.id}/edit`}>
-                                        <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                                        <button aria-label={`Edit ${c.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                             </svg>
@@ -87,6 +104,7 @@ export default function CategoriesPage() {
                                     {/* Delete */}
                                     <button
                                         onClick={() => handleDeleteCategory(c.id, c.name)}
+                                        aria-label={`Delete ${c.name}`}
                                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,7 +121,6 @@ export default function CategoriesPage() {
                     ))
                 )}
             </div>
-            {ToastComponent}
         </Page>
     );
 }

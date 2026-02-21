@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
 import { StorageImage } from "@/components/ui/StorageImage";
-import { useToast } from "@/components/ui/Toast";
+import { useGlobalUI } from "@/components/ui/Toast";
+import { RestaurantListSkeleton } from "@/components/ui/Skeleton";
 import { deleteRestaurant, listRestaurants, Restaurant } from "@/lib/data";
 
 export default function RestaurantsPage() {
-    const { showToast, ToastComponent } = useToast();
+    const { toast, confirm } = useGlobalUI();
     const [list, setList] = useState<Restaurant[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -18,7 +19,7 @@ export default function RestaurantsPage() {
         try {
             setList(await listRestaurants());
         } catch {
-            showToast("Failed to load restaurants", "error");
+            toast("Failed to load restaurants", "error");
         } finally {
             setLoading(false);
         }
@@ -31,15 +32,16 @@ export default function RestaurantsPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     async function handleDelete(id: string, name: string) {
-        if (!confirm(`Delete restaurant "${name}" and all its data? This cannot be undone.`)) return;
+        const ok = await confirm({ title: "Delete Restaurant", message: `Delete "${name}" and all its data? This cannot be undone.`, destructive: true });
+        if (!ok) return;
         setDeletingId(id);
         try {
             await deleteRestaurant(id);
-            showToast("Restaurant deleted");
+            toast("Restaurant deleted");
             await refresh();
         } catch (err) {
             console.error("Delete restaurant failed:", err);
-            showToast("Failed to delete restaurant", "error");
+            toast("Failed to delete restaurant", "error");
         } finally {
             setDeletingId(null);
         }
@@ -61,7 +63,7 @@ export default function RestaurantsPage() {
     );
 
     return (
-        <Page title="Restaurants" actions={actions}>
+        <Page title={`Restaurants (${filteredList.length})`} actions={actions}>
             {/* Search */}
             <div className="relative">
                 <input
@@ -77,9 +79,7 @@ export default function RestaurantsPage() {
 
             <div className="space-y-2">
                 {loading ? (
-                    <div className="py-20 flex justify-center">
-                        <div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" />
-                    </div>
+                    <RestaurantListSkeleton />
                 ) : filteredList.length === 0 ? (
                     <Card className="p-12 text-center text-gray-500 rounded-3xl">
                         {list.length === 0
@@ -129,7 +129,6 @@ export default function RestaurantsPage() {
                     ))
                 )}
             </div>
-            {ToastComponent}
         </Page>
     );
 }

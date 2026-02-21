@@ -36,8 +36,6 @@ export default function RestaurantManagePage() {
     const [menuFont, setMenuFont] = useState("system");
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [bgFile, setBgFile] = useState<File | null>(null);
-    const [logoUrl, setLogoUrl] = useState("");
-    const [bgUrl, setBgUrl] = useState("");
     const [logoPath, setLogoPath] = useState("");
     const [bgPath, setBgPath] = useState("");
 
@@ -80,9 +78,7 @@ export default function RestaurantManagePage() {
             setLayout(r.layout || "list");
             setDishColumns(r.dishColumns || 2);
             setMenuFont(r.menuFont || "system");
-            setLogoUrl(r.logo || "");
-            setBgUrl(r.backgroundImage || "");
-            setLogoPath(r.imagePath || r.logoPath || "");
+            setLogoPath(r.imagePath || "");
             setBgPath(r.backgroundImagePath || "");
         }
         setCats(await listCategories(rid));
@@ -112,10 +108,7 @@ export default function RestaurantManagePage() {
                     const result = await uploadRestaurantImage(logoFile, rid, "logo", (p) => {
                         setUploadProgress(prev => ({ ...prev, logo: p }));
                     });
-                    updates.logo = result.url;
-                    updates.logoPath = result.path;
                     updates.imagePath = result.path;
-                    setLogoUrl(result.url);
                 } catch (err) {
                     console.error("Logo upload failed:", err);
                     showToast("Logo upload failed, but settings will still save", "error");
@@ -128,9 +121,7 @@ export default function RestaurantManagePage() {
                     const result = await uploadRestaurantImage(bgFile, rid, "background", (p) => {
                         setUploadProgress(prev => ({ ...prev, background: p }));
                     });
-                    updates.backgroundImage = result.url;
                     updates.backgroundImagePath = result.path;
-                    setBgUrl(result.url);
                 } catch (err) {
                     console.error("Background upload failed:", err);
                     showToast("Background upload failed, but settings will still save", "error");
@@ -185,11 +176,10 @@ export default function RestaurantManagePage() {
         if (logoPath) {
             await deleteImageByPath(logoPath);
         }
-        setLogoUrl("");
         setLogoPath("");
         setLogoFile(null);
         setLogoPreview("");
-        await updateRestaurant(rid, { logo: "", logoPath: "", imagePath: "" } as any);
+        await updateRestaurant(rid, { imagePath: "" });
         showToast("Logo removed");
     }
 
@@ -197,11 +187,10 @@ export default function RestaurantManagePage() {
         if (bgPath) {
             await deleteImageByPath(bgPath);
         }
-        setBgUrl("");
         setBgPath("");
         setBgFile(null);
         setBgPreview("");
-        await updateRestaurant(rid, { backgroundImage: "", backgroundImagePath: "" } as any);
+        await updateRestaurant(rid, { backgroundImagePath: "" });
         showToast("Background removed");
     }
 
@@ -305,8 +294,8 @@ export default function RestaurantManagePage() {
                     <div className="w-24 h-24 bg-green-50 text-green-800 rounded-3xl flex items-center justify-center mb-4 overflow-hidden">
                         {logoPreview ? (
                             <img src={logoPreview} alt="" className="w-full h-full object-cover" />
-                        ) : (logoPath || logoUrl) ? (
-                            <StorageImage path={logoPath || logoUrl} alt="" className="w-full h-full object-cover" />
+                        ) : logoPath ? (
+                            <StorageImage path={logoPath} alt="" className="w-full h-full object-cover" />
                         ) : (
                             <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                         )}
@@ -326,10 +315,10 @@ export default function RestaurantManagePage() {
                 </Card>
                 <div className="px-4 flex items-center gap-3 mt-2">
                     <label className="text-green-800 text-sm font-bold cursor-pointer hover:underline">
-                        {(logoPreview || logoUrl || logoPath) ? "Change logo" : "Select logo"}
+                        {(logoPreview || logoPath) ? "Change logo" : "Select logo"}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
                     </label>
-                    {(logoPreview || logoUrl || logoPath || logoFile) && (
+                    {(logoPreview || logoPath || logoFile) && (
                         <button
                             onClick={handleRemoveLogo}
                             className="text-red-500 text-sm font-bold hover:underline"
@@ -361,9 +350,9 @@ export default function RestaurantManagePage() {
                                 </button>
                             </div>
                         </>
-                    ) : (bgPath || bgUrl) ? (
+                    ) : bgPath ? (
                         <>
-                            <StorageImage path={bgPath || bgUrl} alt="" className="w-full h-full object-cover" />
+                            <StorageImage path={bgPath} alt="" className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
                                 <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer">
                                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>

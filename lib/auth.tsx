@@ -7,7 +7,8 @@ import {
     signOut as firebaseSignOut,
     onAuthStateChanged,
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 interface AuthContextType {
     user: User | null;
@@ -23,10 +24,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isManager, setIsManager] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setUser(user);
+            if (user) {
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    setIsManager(userDoc.exists() && userDoc.data()?.role === 'manager');
+                } catch {
+                    setIsManager(false);
+                }
+            } else {
+                setIsManager(false);
+            }
             setLoading(false);
         });
 
@@ -40,9 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signOut = async () => {
         await firebaseSignOut(auth);
     };
-
-    // For admin layout compatibility - all authenticated users are managers for now
-    const isManager = !!user;
 
     return (
         <AuthContext.Provider value={{ user, loading, isManager, signIn, signOut, logout: signOut }}>

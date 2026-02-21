@@ -16,7 +16,6 @@ export default function EditCategoryPage() {
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
     const [isActive, setIsActive] = useState(true);
-    const [iconUrl, setIconUrl] = useState<string | null>(null);
     const [iconPath, setIconPath] = useState<string | null>(null);
     const [iconFile, setIconFile] = useState<File | null>(null);
     const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -33,7 +32,6 @@ export default function EditCategoryPage() {
                 setName(cat.name || "");
                 setNameAr(cat.nameAr || "");
                 setIsActive(cat.isActive !== false);
-                setIconUrl(cat.imageUrl || null);
                 setIconPath(cat.imagePath || null);
                 if (cat.availabilityStart) {
                     setLimitAvailability(true);
@@ -58,11 +56,10 @@ export default function EditCategoryPage() {
             if (iconPath) {
                 await deleteImageByPath(iconPath);
             }
-            setIconUrl(null);
             setIconPath(null);
             setIconFile(null);
             setIconPreview(null);
-            await updateCategory(rid, cid, { imageUrl: "", imagePath: "" } as any);
+            await updateCategory(rid, cid, { imagePath: "" });
             showToast("Icon removed");
         } catch (err) {
             console.error("Failed to remove icon:", err);
@@ -87,9 +84,7 @@ export default function EditCategoryPage() {
                     const { url, path } = await uploadCategoryImage(iconFile, rid, cid, (p) => {
                         setProgress(p);
                     });
-                    updates.imageUrl = url;
                     updates.imagePath = path;
-                    setIconUrl(url);
                 } catch (err) {
                     console.error("Category icon upload failed:", err);
                     showToast("Icon upload failed, but name will be updated", "error");
@@ -189,8 +184,8 @@ export default function EditCategoryPage() {
                             <div className="w-12 h-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center overflow-hidden">
                                 {iconPreview ? (
                                     <img src={iconPreview} alt="" className="w-full h-full object-cover" />
-                                ) : (iconPath || iconUrl) ? (
-                                    <StorageImage path={(iconPath || iconUrl) ?? undefined} alt="" className="w-full h-full object-cover" />
+                                ) : iconPath ? (
+                                    <StorageImage path={iconPath} alt="" className="w-full h-full object-cover" />
                                 ) : (
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
@@ -199,7 +194,7 @@ export default function EditCategoryPage() {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-green-800 font-bold">
-                                    {iconUrl || iconFile ? "Change icon" : "Select icon"}
+                                    {iconPath || iconFile ? "Change icon" : "Select icon"}
                                 </span>
                                 {progress !== null && (
                                     <span className="text-[10px] font-bold text-green-500 uppercase tracking-wider">
@@ -208,7 +203,7 @@ export default function EditCategoryPage() {
                                 )}
                             </div>
                         </div>
-                        {(iconUrl || iconPath || iconFile) && (
+                        {(iconPath || iconFile) && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleRemoveIcon(); }}
                                 className="text-red-500 text-sm font-bold pr-2 hover:underline"

@@ -48,13 +48,11 @@ export default function RestaurantCreatePage() {
 
             if (logoFile) {
                 const result = await uploadRestaurantImage(logoFile, rid, "logo");
-                updates.logo = result.url;
-                updates.logoPath = result.path;
+                updates.imagePath = result.path;
             }
 
             if (bgFile) {
                 const result = await uploadRestaurantImage(bgFile, rid, "background");
-                updates.backgroundImage = result.url;
                 updates.backgroundImagePath = result.path;
             }
 

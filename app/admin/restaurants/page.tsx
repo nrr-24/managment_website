@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Page } from "@/components/ui/Page";
+import { StorageImage } from "@/components/ui/StorageImage";
 import { useToast } from "@/components/ui/Toast";
 import { deleteRestaurant, listRestaurants, Restaurant } from "@/lib/data";
 
@@ -91,8 +92,8 @@ export default function RestaurantsPage() {
                             <div className="flex items-center justify-between gap-3">
                                 <Link href={`/admin/restaurants/${res.id}`} className="flex-1 flex items-center gap-3">
                                     <div className="w-11 h-11 bg-green-50 text-green-800 rounded-xl flex items-center justify-center overflow-hidden">
-                                        {res.logo ? (
-                                            <img src={res.logo} alt="" className="w-full h-full object-cover" />
+                                        {res.imagePath ? (
+                                            <StorageImage path={res.imagePath} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />

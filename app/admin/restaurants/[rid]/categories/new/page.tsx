@@ -52,7 +52,7 @@ export default function NewCategoryPage() {
                 const { url, path } = await uploadCategoryImage(iconFile, rid, categoryId, (p) => {
                     setProgress(p);
                 });
-                await updateCategory(rid, categoryId, { imageUrl: url, imagePath: path });
+                await updateCategory(rid, categoryId, { imagePath: path });
             }
 
             showToast("Category created successfully!");

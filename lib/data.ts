@@ -118,29 +118,24 @@ export type Restaurant = {
     id: string;
     name: string;
     nameAr?: string;
-    logo?: string;
-    logoPath?: string;
-    backgroundImage?: string;
-    backgroundImagePath?: string;
     imagePath?: string;
     themeColorHex?: string;
+    backgroundImagePath?: string;
+    menuFont?: string;
     layout?: string;
     dishColumns?: number;
-    menuFont?: string;
     createdAt?: any;
-    updatedAt?: any;
 };
 
 export type Category = {
     id: string;
     name: string;
     nameAr?: string;
-    order?: number;
+    isActive: boolean;
     imagePath?: string;
-    imageUrl?: string;
-    isActive?: boolean;
     availabilityStart?: string;
     availabilityEnd?: string;
+    createdAt?: any;
 };
 
 export type DishAllergen = {
@@ -160,14 +155,13 @@ export type Dish = {
     id: string;
     name: string;
     nameAr?: string;
-    description?: string;
+    price: number;
+    description: string;
     descriptionAr?: string;
-    price?: number;
     imagePaths?: string[];
     allergens?: DishAllergen[];
     isActive?: boolean;
     createdAt?: any;
-    updatedAt?: any;
 
     // Normalized options (web format)
     options?: {
@@ -330,16 +324,12 @@ export async function createRestaurant(data: Partial<Omit<Restaurant, "id">>) {
         themeColorHex: data.themeColorHex || "#00ffff",
         ...cleanData(data),
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
     });
     return docRef.id;
 }
 
 export async function updateRestaurant(id: string, data: Partial<Omit<Restaurant, "id">>) {
-    await updateDoc(doc(db, "restaurants", id), {
-        ...cleanData(data),
-        updatedAt: serverTimestamp()
-    });
+    await updateDoc(doc(db, "restaurants", id), cleanData(data));
 }
 
 /**
@@ -351,7 +341,7 @@ export async function updateRestaurant(id: string, data: Partial<Omit<Restaurant
 export async function deleteRestaurant(id: string) {
     // 1. Capture restaurant image paths before deletion
     const restDoc = await getDoc(doc(db, "restaurants", id));
-    const logoPath = restDoc.exists() ? (restDoc.data()?.logoPath || restDoc.data()?.imagePath) : null;
+    const logoPath = restDoc.exists() ? restDoc.data()?.imagePath : null;
     const bgPath = restDoc.exists() ? restDoc.data()?.backgroundImagePath : null;
 
     // 2. Cascade delete all categories (each category cascades to its dishes)
@@ -376,7 +366,12 @@ export async function listCategories(restaurantId: string): Promise<Category[]> 
     const colRef = collection(db, "restaurants", restaurantId, "categories");
     const snap = await getDocs(colRef);
     const cats = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-    return cats.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    cats.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
+        const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
+        return ta - tb;
+    });
+    return cats;
 }
 
 export async function getCategory(restaurantId: string, categoryId: string): Promise<Category | null> {
@@ -388,13 +383,11 @@ export async function getCategory(restaurantId: string, categoryId: string): Pro
 export async function createCategory(restaurantId: string, data: Partial<Omit<Category, "id">>) {
     const colRef = collection(db, "restaurants", restaurantId, "categories");
     const docRef = await addDoc(colRef, {
-        order: data.order ?? 0,
         isActive: data.isActive !== false,
         availabilityStart: data.availabilityStart || null,
         availabilityEnd: data.availabilityEnd || null,
         ...cleanData(data),
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
     });
     return docRef.id;
 }
@@ -404,10 +397,7 @@ export async function updateCategory(
     categoryId: string,
     data: Partial<Omit<Category, "id">>
 ) {
-    await updateDoc(doc(db, "restaurants", restaurantId, "categories", categoryId), {
-        ...cleanData(data),
-        updatedAt: serverTimestamp(),
-    });
+    await updateDoc(doc(db, "restaurants", restaurantId, "categories", categoryId), cleanData(data));
 }
 
 /**
@@ -479,11 +469,10 @@ export async function createDish(
     const colRef = collection(db, "restaurants", restaurantId, "categories", categoryId, "dishes");
     const firestoreData = toFirestoreDishFormat(cleanData(data));
     const docRef = await addDoc(colRef, {
-        price: firestoreData.price ?? null,
+        price: firestoreData.price ?? 0,
         imagePaths: [],
         ...firestoreData,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
     });
     return docRef.id;
 }
@@ -495,10 +484,7 @@ export async function updateDish(
     data: Partial<Omit<Dish, "id">>
 ) {
     const firestoreData = toFirestoreDishFormat(cleanData(data));
-    await updateDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId), {
-        ...firestoreData,
-        updatedAt: serverTimestamp(),
-    });
+    await updateDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId), firestoreData);
 }
 
 /**
@@ -671,7 +657,6 @@ export type User = {
     restaurantIds?: string[];
     backgroundImagePath?: string;
     createdAt?: any;
-    updatedAt?: any;
 };
 
 // ---------- Users ----------
@@ -728,7 +713,6 @@ export async function createUserWithAuth(
         ...cleanData(profile),
         id: uid,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
     });
 
     return uid;
@@ -740,16 +724,12 @@ export async function createUser(data: Omit<User, "id">) {
     const docRef = await addDoc(colRef, {
         ...cleanData(data),
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
     });
     return docRef.id;
 }
 
 export async function updateUser(id: string, data: Partial<Omit<User, "id">>) {
-    await updateDoc(doc(db, "users", id), {
-        ...cleanData(data),
-        updatedAt: serverTimestamp(),
-    });
+    await updateDoc(doc(db, "users", id), cleanData(data));
 }
 
 /**

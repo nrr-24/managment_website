@@ -4,13 +4,31 @@ service firebase.storage {
 
     function isManager() {
       return request.auth != null
-        && firestore.exists(/databases/(default)/documents/managers/$(request.auth.uid))
-        && firestore.get(/databases/(default)/documents/managers/$(request.auth.uid)).data.active == true;
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "manager";
     }
 
-    match /restaurants/{restaurantId}/categories/{categoryId}/dishes/{allPaths=**} {
+    // Restaurant logos and backgrounds: restaurants/{rID}/logo_{uuid}.png, background_{uuid}.jpg
+    match /restaurants/{restaurantId}/{fileName} {
       allow read: if true;
       allow write: if isManager();
+    }
+
+    // Category icons: restaurants/{rID}/categories/{cID}/icon.jpg
+    match /restaurants/{restaurantId}/categories/{categoryId}/{fileName} {
+      allow read: if true;
+      allow write: if isManager();
+    }
+
+    // Dish images: dishes/{rID}/{cID}/{dishID}/{batchID}_{index}.jpg
+    match /dishes/{restaurantId}/{categoryId}/{dishId}/{fileName} {
+      allow read: if true;
+      allow write: if isManager();
+    }
+
+    // User backgrounds: users/{uid}/background_{uuid}.jpg
+    match /users/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // deny everything else by default

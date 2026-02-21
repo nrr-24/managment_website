@@ -155,10 +155,10 @@ export default function PublicMenuPage() {
 
             {/* Hero Section */}
             <div className="relative h-64 overflow-hidden">
-                {(restaurant.backgroundImagePath || restaurant.backgroundImage || restaurant.imagePath) ? (
+                {restaurant.backgroundImagePath ? (
                     <>
                         <StorageImage
-                            path={restaurant.backgroundImagePath || restaurant.backgroundImage || restaurant.imagePath}
+                            path={restaurant.backgroundImagePath}
                             alt=""
                             className="w-full h-full object-cover"
                         />
@@ -199,10 +199,10 @@ export default function PublicMenuPage() {
                 {/* Restaurant Info - overlapping hero bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 pb-0">
                     <div className="flex items-end gap-4">
-                        {(restaurant.logoPath || restaurant.logo) && (
+                        {restaurant.imagePath && (
                             <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#0a0a0a] shadow-xl bg-[#1a1a1a] flex-shrink-0 translate-y-4">
                                 <StorageImage
-                                    path={restaurant.logoPath || restaurant.logo}
+                                    path={restaurant.imagePath}
                                     alt={restaurant.name}
                                     className="w-full h-full object-cover"
                                 />
@@ -267,9 +267,9 @@ export default function PublicMenuPage() {
                                 }`}
                                 style={isActive ? { backgroundColor: themeColor } : undefined}
                             >
-                                {(cat.imagePath || cat.imageUrl) && (
+                                {cat.imagePath && (
                                     <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
-                                        <StorageImage path={cat.imagePath || cat.imageUrl} alt="" className="w-full h-full object-cover" />
+                                        <StorageImage path={cat.imagePath} alt="" className="w-full h-full object-cover" />
                                     </div>
                                 )}
                                 {isAr ? (cat.nameAr || cat.name) : cat.name}

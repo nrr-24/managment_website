@@ -1,5 +1,6 @@
 import {
     addDoc,
+    arrayRemove,
     arrayUnion,
     collection,
     deleteDoc,
@@ -356,10 +357,25 @@ export async function deleteRestaurant(id: string) {
         }
     }
 
-    // 3. Delete the restaurant document
+    // 3. Remove restaurant ID from all users' restaurantIds arrays
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        for (const userDoc of usersSnap.docs) {
+            const restaurantIds: string[] = userDoc.data()?.restaurantIds || [];
+            if (restaurantIds.includes(id)) {
+                await updateDoc(doc(db, "users", userDoc.id), {
+                    restaurantIds: arrayRemove(id),
+                });
+            }
+        }
+    } catch (err) {
+        console.warn("Failed to clean up user restaurantIds, continuing:", err);
+    }
+
+    // 4. Delete the restaurant document
     await deleteDoc(doc(db, "restaurants", id));
 
-    // 4. Delete restaurant-level storage assets (logo, background)
+    // 5. Delete restaurant-level storage assets (logo, background)
     await deleteStoragePaths([logoPath, bgPath]);
 }
 

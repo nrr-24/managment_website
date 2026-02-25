@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ref, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
+import { ImageLightbox } from "./ImageLightbox";
 
 // In-memory cache to avoid redundant Firebase calls for the same path
 const urlCache = new Map<string, string>();
@@ -10,6 +11,8 @@ const urlCache = new Map<string, string>();
 interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     path?: string;
     fallbackIcon?: React.ReactNode;
+    /** When true, clicking the image opens a full-screen lightbox */
+    lightbox?: boolean;
 }
 
 /**
@@ -43,11 +46,13 @@ export function StorageImage({
     className,
     alt = "",
     fallbackIcon,
+    lightbox = false,
     ...props
 }: StorageImageProps) {
     const [url, setUrl] = useState<string | null>(path ? urlCache.get(path) || null : null);
     const [loading, setLoading] = useState(path ? !urlCache.has(path) : false);
     const [error, setError] = useState(false);
+    const [showLightbox, setShowLightbox] = useState(false);
 
     useEffect(() => {
         if (!path) {
@@ -134,5 +139,20 @@ export function StorageImage({
 
     if (!url) return null;
 
-    return <img src={url} alt={alt} className={className} {...props} />;
+    const { onClick: _onClick, ...restProps } = props;
+
+    return (
+        <>
+            <img
+                src={url}
+                alt={alt}
+                className={`${className || ""}${lightbox ? " cursor-zoom-in" : ""}`}
+                onClick={lightbox ? (e) => { e.stopPropagation(); setShowLightbox(true); } : _onClick}
+                {...restProps}
+            />
+            {lightbox && showLightbox && (
+                <ImageLightbox src={url} alt={alt} onClose={() => setShowLightbox(false)} />
+            )}
+        </>
+    );
 }

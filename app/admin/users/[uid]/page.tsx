@@ -7,6 +7,7 @@ import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, deleteImageByPath, listRestaurants, User, Restaurant } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { FormSection, FormCard, FormField, FormRow, formInputClass } from "@/components/ui/FormSection";
 
 export default function EditUserPage() {
@@ -24,6 +25,7 @@ export default function EditUserPage() {
     const [selectedRids, setSelectedRids] = useState<string[]>([]);
     const [bgFile, setBgFile] = useState<File | null>(null);
     const [bgPreview, setBgPreview] = useState<string | null>(null);
+    const [previewLightbox, setPreviewLightbox] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
@@ -281,7 +283,7 @@ export default function EditUserPage() {
                         <FormField label="Background Image" hint="Ideal: 2048x2048px or 1920x1080px. Max 10 MB.">
                             {bgPreview ? (
                                 <div className="relative w-full h-40 rounded-xl overflow-hidden mt-1">
-                                    <img src={bgPreview} alt="Background" className="w-full h-full object-cover" />
+                                    <img src={bgPreview} alt="Background" className="w-full h-full object-cover cursor-zoom-in" onClick={() => setPreviewLightbox(bgPreview)} />
                                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
                                         <button
                                             onClick={() => document.getElementById('user-bg')?.click()}
@@ -348,6 +350,10 @@ export default function EditUserPage() {
                     </FormSection>
                 )}
             </div>
+
+            {previewLightbox && (
+                <ImageLightbox src={previewLightbox} alt="Preview" onClose={() => setPreviewLightbox(null)} />
+            )}
         </Page>
     );
 }

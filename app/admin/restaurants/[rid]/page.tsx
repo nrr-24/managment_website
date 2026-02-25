@@ -38,6 +38,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { StorageImage } from "@/components/ui/StorageImage";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { FormSkeleton } from "@/components/ui/Skeleton";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { FormSection, FormCard, FormField, FormRow, formInputClass, formInputRtlClass } from "@/components/ui/FormSection";
@@ -153,6 +154,7 @@ export default function RestaurantManagePage() {
     // Local Previews
     const [logoPreview, setLogoPreview] = useState("");
     const [bgPreview, setBgPreview] = useState("");
+    const [previewLightbox, setPreviewLightbox] = useState<string | null>(null);
     const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
     useEffect(() => {
@@ -439,9 +441,9 @@ export default function RestaurantManagePage() {
                             <div className="p-6 flex flex-col items-center text-center">
                                 <div className="w-20 h-20 bg-green-50 text-green-800 rounded-2xl flex items-center justify-center mb-3 overflow-hidden">
                                     {logoPreview ? (
-                                        <img src={logoPreview} alt="" className="w-full h-full object-cover" />
+                                        <img src={logoPreview} alt="" className="w-full h-full object-cover cursor-zoom-in" onClick={() => setPreviewLightbox(logoPreview)} />
                                     ) : logoPath ? (
-                                        <StorageImage path={logoPath} alt="" className="w-full h-full object-cover" />
+                                        <StorageImage path={logoPath} alt="" className="w-full h-full object-cover" lightbox />
                                     ) : (
                                         <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                                     )}
@@ -482,7 +484,7 @@ export default function RestaurantManagePage() {
                         <div className="bg-white rounded-2xl border border-gray-200/60 h-40 flex items-center justify-center overflow-hidden relative">
                             {bgPreview ? (
                                 <>
-                                    <img src={bgPreview} alt="" className="w-full h-full object-cover" />
+                                    <img src={bgPreview} alt="" className="w-full h-full object-cover cursor-zoom-in" onClick={() => setPreviewLightbox(bgPreview)} />
                                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
                                         <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer" aria-label="Change background">
                                             <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -499,7 +501,7 @@ export default function RestaurantManagePage() {
                                 </>
                             ) : bgPath ? (
                                 <>
-                                    <StorageImage path={bgPath} alt="" className="w-full h-full object-cover" />
+                                    <StorageImage path={bgPath} alt="" className="w-full h-full object-cover" lightbox />
                                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-3">
                                         <label className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors cursor-pointer" aria-label="Change background">
                                             <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -617,6 +619,10 @@ export default function RestaurantManagePage() {
 
                 <div className="h-20" />
             </div>
+
+            {previewLightbox && (
+                <ImageLightbox src={previewLightbox} alt="Preview" onClose={() => setPreviewLightbox(null)} />
+            )}
         </Page>
     );
 }

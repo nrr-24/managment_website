@@ -8,6 +8,7 @@ import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { FormSection, FormCard, FormField, FormRow, formInputClass, formTextareaClass, formInputRtlClass } from "@/components/ui/FormSection";
 
 export default function EditDishPage() {
@@ -38,6 +39,7 @@ export default function EditDishPage() {
     // Images
     const [existingImages, setExistingImages] = useState<{ url: string, path: string }[]>([]);
     const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+    const [previewLightbox, setPreviewLightbox] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [fileName: string]: number }>({});
@@ -461,7 +463,7 @@ export default function EditDishPage() {
                     <div className="flex flex-wrap gap-3 mb-3">
                         {existingImages.map((img, idx) => (
                             <div key={`ex-${idx}`} className="relative w-24 h-24 group">
-                                <StorageImage path={img.path} alt="" className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100" />
+                                <StorageImage path={img.path} alt="" className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100" lightbox />
                                 <button
                                     onClick={() => handleRemoveImage(idx, true)}
                                     aria-label="Remove image"
@@ -476,7 +478,8 @@ export default function EditDishPage() {
                                 <img
                                     src={URL.createObjectURL(file)}
                                     alt="Preview"
-                                    className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100"
+                                    className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100 cursor-zoom-in"
+                                    onClick={() => setPreviewLightbox(URL.createObjectURL(file))}
                                 />
                                 <button
                                     onClick={() => handleRemoveImage(idx, false)}
@@ -512,6 +515,10 @@ export default function EditDishPage() {
 
                 <div className="h-20" />
             </div>
+
+            {previewLightbox && (
+                <ImageLightbox src={previewLightbox} alt="Preview" onClose={() => setPreviewLightbox(null)} />
+            )}
         </Page>
     );
 }

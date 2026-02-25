@@ -6,16 +6,19 @@ import { Page } from "@/components/ui/Page";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createUserWithAuth, listRestaurants, Restaurant } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
 import { FormSection, FormCard, FormField, FormRow, formInputClass } from "@/components/ui/FormSection";
 
 export default function NewUserPage() {
     const router = useRouter();
     const { toast } = useGlobalUI();
+    const { isAdmin } = useAuth();
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [role, setRole] = useState<"manager" | "viewer">("viewer");
+    const [role, setRole] = useState<"admin" | "manager" | "viewer">("viewer");
+    const [canDeleteToggle, setCanDeleteToggle] = useState(false);
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
     const [selectedRids, setSelectedRids] = useState<string[]>([]);
     const [busy, setBusy] = useState(false);
@@ -65,6 +68,7 @@ export default function NewUserPage() {
                 password: password,
                 role,
                 restaurantIds: role === "viewer" ? selectedRids : [],
+                canDelete: isAdmin ? canDeleteToggle : false,
             });
             toast("User created successfully!");
             setTimeout(() => router.push('/admin/users'), 1000);
@@ -126,7 +130,7 @@ export default function NewUserPage() {
                 </FormSection>
 
                 {/* Section 2 — Role & Access */}
-                <FormSection title="Role & Access" description="Managers can access all restaurants and settings. Viewers only see their assigned restaurants.">
+                <FormSection title="Role & Access" description="Admins have full control including user management. Managers can access all restaurants. Viewers only see their assigned restaurants.">
                     <FormCard>
                         <FormRow label="Role">
                             <div className="bg-gray-100 p-1 rounded-full flex gap-1">
@@ -146,8 +150,30 @@ export default function NewUserPage() {
                                 >
                                     Manager
                                 </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => setRole("admin")}
+                                        role="switch"
+                                        aria-checked={role === "admin"}
+                                        className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "admin" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
+                                    >
+                                        Admin
+                                    </button>
+                                )}
                             </div>
                         </FormRow>
+                        {isAdmin && (
+                            <FormRow label="Can Delete">
+                                <button
+                                    onClick={() => setCanDeleteToggle(!canDeleteToggle)}
+                                    role="switch"
+                                    aria-checked={canDeleteToggle}
+                                    className={`w-11 h-6 rounded-full transition-all relative ${canDeleteToggle ? 'bg-green-800' : 'bg-gray-200'}`}
+                                >
+                                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm absolute top-0.5 transition-all ${canDeleteToggle ? 'left-[22px]' : 'left-0.5'}`} />
+                                </button>
+                            </FormRow>
+                        )}
                     </FormCard>
 
                     {role === "viewer" && (

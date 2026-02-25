@@ -714,7 +714,7 @@ export type User = {
     id: string;
     name: string;
     email: string;
-    role: "manager" | "viewer";
+    role: "admin" | "manager" | "viewer";
     restaurantIds?: string[];
     backgroundImagePath?: string;
     canDelete?: boolean;

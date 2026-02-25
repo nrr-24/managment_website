@@ -13,12 +13,13 @@ export default function EditUserPage() {
     const router = useRouter();
     const { uid } = useParams<{ uid: string }>();
     const { toast, confirm } = useGlobalUI();
-    const { canDelete } = useAuth();
+    const { isAdmin, canDelete } = useAuth();
 
     const [user, setUser] = useState<User | null>(null);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState<"manager" | "viewer">("viewer");
+    const [role, setRole] = useState<"admin" | "manager" | "viewer">("viewer");
+    const [canDeleteToggle, setCanDeleteToggle] = useState(false);
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
     const [selectedRids, setSelectedRids] = useState<string[]>([]);
     const [bgFile, setBgFile] = useState<File | null>(null);
@@ -28,7 +29,7 @@ export default function EditUserPage() {
 
     // Dirty tracking for unsaved changes
     const initialDataRef = useRef<string>("");
-    const currentData = JSON.stringify({ name, role, selectedRids });
+    const currentData = JSON.stringify({ name, role, selectedRids, canDeleteToggle });
     useUnsavedChanges(loaded && currentData !== initialDataRef.current);
 
     useEffect(() => {
@@ -38,12 +39,14 @@ export default function EditUserPage() {
                 setName(u.name || "");
                 setEmail(u.email || "");
                 setRole(u.role || "viewer");
+                setCanDeleteToggle(u.canDelete === true);
                 setBgPreview(u.backgroundImagePath || null);
                 setSelectedRids(u.restaurantIds || []);
                 initialDataRef.current = JSON.stringify({
                     name: u.name || "",
                     role: u.role || "viewer",
                     selectedRids: u.restaurantIds || [],
+                    canDeleteToggle: u.canDelete === true,
                 });
             }
             setRestaurants(rests);
@@ -100,6 +103,7 @@ export default function EditUserPage() {
                 name: name.trim(),
                 role,
                 restaurantIds: role === "viewer" ? selectedRids : [],
+                canDelete: isAdmin ? canDeleteToggle : undefined,
             };
 
             if (bgFile) {
@@ -136,12 +140,12 @@ export default function EditUserPage() {
         }
     }
 
-    // Random color based on user initial
+    // Avatar color: orange for admin, purple for manager, random for others
     const avatarColors = [
         "bg-purple-500", "bg-pink-500", "bg-blue-500", "bg-green-500",
         "bg-orange-500", "bg-red-500", "bg-indigo-500", "bg-teal-500"
     ];
-    const avatarColor = avatarColors[(name.charCodeAt(0) || 0) % avatarColors.length];
+    const avatarColor = role === "admin" ? "bg-orange-500" : role === "manager" ? "bg-purple-500" : avatarColors[(name.charCodeAt(0) || 0) % avatarColors.length];
 
     const breadcrumbs = [
         { label: "Users", href: "/admin/users" },
@@ -187,7 +191,7 @@ export default function EditUserPage() {
                 </FormSection>
 
                 {/* Section 2 — Role & Access */}
-                <FormSection title="Role & Access" description="Managers can access all restaurants and settings. Viewers only see their assigned restaurants.">
+                <FormSection title="Role & Access" description="Admins have full control including user management. Managers can access all restaurants. Viewers only see their assigned restaurants.">
                     <FormCard>
                         <FormRow label="Role">
                             <div className="bg-gray-100 p-1 rounded-full flex gap-1">
@@ -207,8 +211,30 @@ export default function EditUserPage() {
                                 >
                                     Manager
                                 </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => setRole("admin")}
+                                        role="switch"
+                                        aria-checked={role === "admin"}
+                                        className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${role === "admin" ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}
+                                    >
+                                        Admin
+                                    </button>
+                                )}
                             </div>
                         </FormRow>
+                        {isAdmin && (
+                            <FormRow label="Can Delete">
+                                <button
+                                    onClick={() => setCanDeleteToggle(!canDeleteToggle)}
+                                    role="switch"
+                                    aria-checked={canDeleteToggle}
+                                    className={`w-11 h-6 rounded-full transition-all relative ${canDeleteToggle ? 'bg-green-800' : 'bg-gray-200'}`}
+                                >
+                                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm absolute top-0.5 transition-all ${canDeleteToggle ? 'left-[22px]' : 'left-0.5'}`} />
+                                </button>
+                            </FormRow>
+                        )}
                     </FormCard>
 
                     {role === "viewer" && (

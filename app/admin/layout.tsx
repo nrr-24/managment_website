@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    const { user, loading, isManager, logout } = useAuth();
+    const { user, loading, hasManagerAccess, logout } = useAuth();
     const r = useRouter();
     const path = usePathname();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -14,8 +14,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         if (loading) return;
         if (!user) r.replace("/login");
-        else if (!isManager) r.replace("/not-authorized");
-    }, [user, loading, isManager, r]);
+        else if (!hasManagerAccess) r.replace("/not-authorized");
+    }, [user, loading, hasManagerAccess, r]);
 
     // Close profile menu on Escape
     const handleEscape = useCallback((e: KeyboardEvent) => {
@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
     }, [showProfileMenu, handleEscape]);
 
-    if (loading || !user || !isManager) {
+    if (loading || !user || !hasManagerAccess) {
         return (
             <div className="min-h-screen bg-[#f8f8fa] flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-gray-200 border-t-green-800 rounded-full animate-spin" />

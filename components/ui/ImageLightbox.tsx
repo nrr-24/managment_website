@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface ImageLightboxProps {
     src: string;
@@ -10,6 +11,8 @@ interface ImageLightboxProps {
 
 /**
  * Full-screen image lightbox overlay.
+ * Rendered via portal to document.body so it's always centered
+ * regardless of parent transforms or scroll position.
  * Click backdrop or X button to close. Press Escape to close.
  */
 export function ImageLightbox({ src, alt = "", onClose }: ImageLightboxProps) {
@@ -26,19 +29,22 @@ export function ImageLightbox({ src, alt = "", onClose }: ImageLightboxProps) {
         };
     }, [handleEsc]);
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}
             onClick={onClose}
         >
+            {/* Backdrop */}
+            <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)" }} />
+
             {/* Close button */}
             <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 40, height: 40, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 aria-label="Close"
             >
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
 
@@ -46,9 +52,10 @@ export function ImageLightbox({ src, alt = "", onClose }: ImageLightboxProps) {
             <img
                 src={src}
                 alt={alt}
-                className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                style={{ position: "relative", maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 8, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
                 onClick={(e) => e.stopPropagation()}
             />
-        </div>
+        </div>,
+        document.body
     );
 }

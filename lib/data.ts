@@ -125,6 +125,7 @@ export type Restaurant = {
     menuFont?: string;
     layout?: string;
     dishColumns?: number;
+    cardImageOrientation?: "landscape" | "portrait";
     createdAt?: any;
 };
 

@@ -126,6 +126,7 @@ export default function RestaurantManagePage() {
     const [themeColor, setThemeColor] = useState("#007aff");
     const [layout, setLayout] = useState("list");
     const [dishColumns, setDishColumns] = useState(2);
+    const [cardImageOrientation, setCardImageOrientation] = useState<"landscape" | "portrait">("landscape");
     const [menuFont, setMenuFont] = useState("system");
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [bgFile, setBgFile] = useState<File | null>(null);
@@ -148,7 +149,7 @@ export default function RestaurantManagePage() {
 
     // Dirty tracking for unsaved changes
     const initialDataRef = useRef<string>("");
-    const currentData = JSON.stringify({ name, nameAr, themeColor, layout, dishColumns, menuFont });
+    const currentData = JSON.stringify({ name, nameAr, themeColor, layout, dishColumns, cardImageOrientation, menuFont });
     useUnsavedChanges(loaded && currentData !== initialDataRef.current);
 
     // Local Previews
@@ -185,6 +186,7 @@ export default function RestaurantManagePage() {
             setThemeColor(r.themeColorHex || "#007aff");
             setLayout(r.layout || "list");
             setDishColumns(r.dishColumns || 2);
+            setCardImageOrientation(r.cardImageOrientation || "landscape");
             setMenuFont(r.menuFont || "system");
             setLogoPath(r.imagePath || "");
             setBgPath(r.backgroundImagePath || "");
@@ -194,6 +196,7 @@ export default function RestaurantManagePage() {
                 themeColor: r.themeColorHex || "#007aff",
                 layout: r.layout || "list",
                 dishColumns: r.dishColumns || 2,
+                cardImageOrientation: r.cardImageOrientation || "landscape",
                 menuFont: r.menuFont || "system",
             });
         }
@@ -215,6 +218,7 @@ export default function RestaurantManagePage() {
                 themeColorHex: themeColor,
                 layout,
                 dishColumns,
+                cardImageOrientation,
                 menuFont,
             };
 
@@ -421,6 +425,35 @@ export default function RestaurantManagePage() {
                                             }`}
                                         >
                                             {n}
+                                        </button>
+                                    ))}
+                                </div>
+                            </FormField>
+                            <FormField label="Card Image Shape" hint="Landscape (3:2) for wide images. Portrait (2:3) for tall images like drinks and juices.">
+                                <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+                                    {([
+                                        { value: "landscape" as const, label: "Landscape", icon: (
+                                            <svg className="w-5 h-3.5 mr-1.5" viewBox="0 0 20 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="1" y="1" width="18" height="12" rx="2" />
+                                            </svg>
+                                        )},
+                                        { value: "portrait" as const, label: "Portrait", icon: (
+                                            <svg className="w-3.5 h-5 mr-1.5" viewBox="0 0 14 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="1" y="1" width="12" height="18" rx="2" />
+                                            </svg>
+                                        )},
+                                    ]).map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setCardImageOrientation(opt.value)}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all no-min-tap flex items-center justify-center ${
+                                                cardImageOrientation === opt.value
+                                                    ? "bg-white text-gray-900 shadow-sm"
+                                                    : "text-gray-500"
+                                            }`}
+                                        >
+                                            {opt.icon}
+                                            {opt.label}
                                         </button>
                                     ))}
                                 </div>

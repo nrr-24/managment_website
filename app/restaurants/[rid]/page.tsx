@@ -91,6 +91,8 @@ export default function PublicMenuPage() {
     const themeColor = restaurant?.themeColorHex || '#ffffff';
     const cols = restaurant?.dishColumns || 2;
     const gridClass = cols === 1 ? 'grid-cols-1' : cols === 3 ? 'grid-cols-3' : cols === 4 ? 'grid-cols-4' : 'grid-cols-2';
+    const isPortrait = restaurant?.cardImageOrientation === 'portrait';
+    const imageAspect = isPortrait ? 'aspect-[2/3]' : 'aspect-[3/2]';
 
     if (loading) return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -127,7 +129,7 @@ export default function PublicMenuPage() {
             className="group cursor-pointer"
         >
             <div className={`${size === "compact" ? "rounded-2xl" : "rounded-3xl"} overflow-hidden bg-[#1a1a1a] border border-white/[0.04] hover:border-white/10 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50`}>
-                <div className={`${size === "compact" ? "aspect-[4/3]" : "aspect-square"} bg-[#111] relative overflow-hidden`}>
+                <div className={`${size === "compact" ? imageAspect : imageAspect} bg-[#111] relative overflow-hidden`}>
                     {dish.imagePaths?.[0] ? (
                         <StorageImage
                             path={dish.imagePaths[0]}

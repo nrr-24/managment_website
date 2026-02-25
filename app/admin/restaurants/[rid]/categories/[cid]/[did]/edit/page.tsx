@@ -24,6 +24,7 @@ export default function EditDishPage() {
     const [price, setPrice] = useState("");
     const [isActive, setIsActive] = useState(true);
     const [restaurantName, setRestaurantName] = useState("");
+    const [cardImageOrientation, setCardImageOrientation] = useState<"landscape" | "portrait">("landscape");
     const [catName, setCatName] = useState("");
 
     // Options
@@ -51,7 +52,10 @@ export default function EditDishPage() {
 
     useEffect(() => {
         getRestaurant(rid).then(r => {
-            if (r) setRestaurantName(r.name || "");
+            if (r) {
+                setRestaurantName(r.name || "");
+                setCardImageOrientation(r.cardImageOrientation || "landscape");
+            }
         });
         getCategory(rid, cid).then(c => {
             if (c) setCatName(c.name || "");
@@ -446,7 +450,12 @@ export default function EditDishPage() {
 
                 {/* Section 5 — Photos */}
                 <FormSection title="Photos" description="Add up to 6 photos. The first image is used as the main photo on the menu card.">
-                    <p className="text-[12px] text-gray-400 px-1 mb-3">4:3 ratio recommended (2048x1536px). Max 10 MB each.</p>
+                    <p className="text-[12px] text-gray-400 px-1 mb-3">
+                        {cardImageOrientation === "portrait"
+                            ? "2:3 portrait ratio recommended (1024×1536px). Max 10 MB each."
+                            : "3:2 landscape ratio recommended (1536×1024px). Max 10 MB each."
+                        }
+                    </p>
 
                     <input
                         type="file"

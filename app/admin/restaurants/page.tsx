@@ -7,10 +7,12 @@ import { Page } from "@/components/ui/Page";
 import { StorageImage } from "@/components/ui/StorageImage";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { RestaurantListSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/lib/auth";
 import { deleteRestaurant, listRestaurants, Restaurant } from "@/lib/data";
 
 export default function RestaurantsPage() {
     const { toast, confirm } = useGlobalUI();
+    const { canDelete } = useAuth();
     const [list, setList] = useState<Restaurant[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -121,20 +123,22 @@ export default function RestaurantsPage() {
                                     </div>
                                 </Link>
                                 <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => handleDelete(res.id, res.name)}
-                                        disabled={deletingId === res.id}
-                                        aria-label={`Delete ${res.name}`}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {deletingId === res.id ? (
-                                            <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
-                                        ) : (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                    {canDelete && (
+                                        <button
+                                            onClick={() => handleDelete(res.id, res.name)}
+                                            disabled={deletingId === res.id}
+                                            aria-label={`Delete ${res.name}`}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            {deletingId === res.id ? (
+                                                <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    )}
                                     <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                                     </svg>

@@ -8,6 +8,7 @@ import { Page } from "@/components/ui/Page";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { StorageImage } from "@/components/ui/StorageImage";
 import { DishListSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/lib/auth";
 import {
     DndContext,
     closestCenter,
@@ -38,11 +39,13 @@ function SortableDishItem({
     dish,
     rid,
     cid,
+    canDelete,
     onDelete,
 }: {
     dish: Dish;
     rid: string;
     cid: string;
+    canDelete: boolean;
     onDelete: (dish: Dish) => void;
 }) {
     const {
@@ -104,18 +107,20 @@ function SortableDishItem({
                             </button>
                         </Link>
                         {/* Delete */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                onDelete(dish);
-                            }}
-                            aria-label={`Delete ${dish.name}`}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
+                        {canDelete && (
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    onDelete(dish);
+                                }}
+                                aria-label={`Delete ${dish.name}`}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        )}
                         {/* Chevron */}
                         <svg className="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -130,6 +135,7 @@ function SortableDishItem({
 export default function CategoryManagePage() {
     const { rid, cid } = useParams<{ rid: string; cid: string }>();
     const { toast, confirm } = useGlobalUI();
+    const { canDelete } = useAuth();
 
     const [catName, setCatName] = useState("");
     const [restaurantName, setRestaurantName] = useState("");
@@ -305,15 +311,17 @@ export default function CategoryManagePage() {
                                                 </svg>
                                             </button>
                                         </Link>
-                                        <button
-                                            onClick={(e) => { e.preventDefault(); handleDeleteDish(d); }}
-                                            aria-label={`Delete ${d.name}`}
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+                                        {canDelete && (
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); handleDeleteDish(d); }}
+                                                aria-label={`Delete ${d.name}`}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        )}
                                         <svg className="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                                         </svg>
@@ -337,6 +345,7 @@ export default function CategoryManagePage() {
                                         dish={d}
                                         rid={rid}
                                         cid={cid}
+                                        canDelete={canDelete}
                                         onDelete={handleDeleteDish}
                                     />
                                 ))}

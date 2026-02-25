@@ -717,6 +717,7 @@ export type User = {
     role: "manager" | "viewer";
     restaurantIds?: string[];
     backgroundImagePath?: string;
+    canDelete?: boolean;
     createdAt?: any;
 };
 

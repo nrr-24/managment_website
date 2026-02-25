@@ -6,12 +6,14 @@ import { Page } from "@/components/ui/Page";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { getUser, updateUser, deleteUser, uploadUserBackgroundImage, deleteImageByPath, listRestaurants, User, Restaurant } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
 import { FormSection, FormCard, FormField, FormRow, formInputClass } from "@/components/ui/FormSection";
 
 export default function EditUserPage() {
     const router = useRouter();
     const { uid } = useParams<{ uid: string }>();
     const { toast, confirm } = useGlobalUI();
+    const { canDelete } = useAuth();
 
     const [user, setUser] = useState<User | null>(null);
     const [name, setName] = useState("");
@@ -298,25 +300,27 @@ export default function EditUserPage() {
                 </button>
 
                 {/* Section 4 — Danger Zone */}
-                <FormSection title="Danger Zone" description="Irreversible actions. Please be careful.">
-                    <div className="bg-red-50/50 border border-red-100 rounded-2xl overflow-hidden">
-                        <div className="px-5 py-4 flex items-center justify-between">
-                            <div>
-                                <span className="text-[15px] font-medium text-red-700">Delete User</span>
-                                <p className="text-[12px] text-red-400 mt-0.5">This action cannot be undone. All data will be permanently removed.</p>
+                {canDelete && (
+                    <FormSection title="Danger Zone" description="Irreversible actions. Please be careful.">
+                        <div className="bg-red-50/50 border border-red-100 rounded-2xl overflow-hidden">
+                            <div className="px-5 py-4 flex items-center justify-between">
+                                <div>
+                                    <span className="text-[15px] font-medium text-red-700">Delete User</span>
+                                    <p className="text-[12px] text-red-400 mt-0.5">This action cannot be undone. All data will be permanently removed.</p>
+                                </div>
+                                <button
+                                    disabled={busy}
+                                    onClick={handleDelete}
+                                    aria-label="Delete user"
+                                    className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 shrink-0"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Delete
+                                </button>
                             </div>
-                            <button
-                                disabled={busy}
-                                onClick={handleDelete}
-                                aria-label="Delete user"
-                                className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 shrink-0"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                Delete
-                            </button>
                         </div>
-                    </div>
-                </FormSection>
+                    </FormSection>
+                )}
             </div>
         </Page>
     );

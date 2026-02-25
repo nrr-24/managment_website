@@ -14,6 +14,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     isManager: boolean;
+    canDelete: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
     logout: () => Promise<void>;
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [isManager, setIsManager] = useState(false);
+    const [canDelete, setCanDelete] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -32,12 +34,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (user) {
                 try {
                     const userDoc = await getDoc(doc(db, 'users', user.uid));
-                    setIsManager(userDoc.exists() && userDoc.data()?.role === 'manager');
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        setIsManager(data?.role === 'manager');
+                        setCanDelete(data?.canDelete === true);
+                    } else {
+                        setIsManager(false);
+                        setCanDelete(false);
+                    }
                 } catch {
                     setIsManager(false);
+                    setCanDelete(false);
                 }
             } else {
                 setIsManager(false);
+                setCanDelete(false);
             }
             setLoading(false);
         });
@@ -54,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, isManager, signIn, signOut, logout: signOut }}>
+        <AuthContext.Provider value={{ user, loading, isManager, canDelete, signIn, signOut, logout: signOut }}>
             {children}
         </AuthContext.Provider>
     );

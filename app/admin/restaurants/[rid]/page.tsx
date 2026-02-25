@@ -19,6 +19,7 @@ import {
     reorderCategories,
 } from "@/lib/data";
 import { useGlobalUI } from "@/components/ui/Toast";
+import { useAuth } from "@/lib/auth";
 import {
     DndContext,
     closestCenter,
@@ -44,12 +45,12 @@ import { FormSection, FormCard, FormField, FormRow, formInputClass, formInputRtl
 function SortableCategoryCard({
     category,
     rid,
-    onEdit,
+    canDelete,
     onDelete,
 }: {
     category: Category;
     rid: string;
-    onEdit: (id: string) => void;
+    canDelete: boolean;
     onDelete: (id: string, name: string) => void;
 }) {
     const {
@@ -96,13 +97,15 @@ function SortableCategoryCard({
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
                         </Link>
-                        <button
-                            onClick={() => onDelete(category.id, category.name)}
-                            aria-label={`Delete ${category.name}`}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
+                        {canDelete && (
+                            <button
+                                onClick={() => onDelete(category.id, category.name)}
+                                aria-label={`Delete ${category.name}`}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        )}
                     </div>
                 </div>
             </Card>
@@ -114,6 +117,7 @@ export default function RestaurantManagePage() {
     const { rid } = useParams<{ rid: string }>();
     const router = useRouter();
     const { toast, confirm } = useGlobalUI();
+    const { canDelete } = useAuth();
 
     // Restaurant data
     const [name, setName] = useState("");
@@ -569,7 +573,7 @@ export default function RestaurantManagePage() {
                                                 key={c.id}
                                                 category={c}
                                                 rid={rid}
-                                                onEdit={(id) => {}}
+                                                canDelete={canDelete}
                                                 onDelete={handleDeleteCategory}
                                             />
                                         ))}
@@ -586,28 +590,30 @@ export default function RestaurantManagePage() {
                 </FormSection>
 
                 {/* ── Section 5: Danger Zone ── */}
-                <FormSection title="Danger Zone" description="Irreversible actions. Please be careful.">
-                    <div className="bg-red-50/50 rounded-2xl border border-red-100 overflow-hidden">
-                        <button
-                            onClick={handleDeleteRestaurant}
-                            disabled={deleting}
-                            aria-label="Delete restaurant"
-                            className="w-full px-5 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold disabled:opacity-50"
-                        >
-                            {deleting ? (
-                                <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
-                            ) : (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            )}
-                            <div className="text-left">
-                                <span className="block">{deleting ? "Deleting..." : "Delete Restaurant"}</span>
-                                <span className="text-[12px] font-normal text-red-400">Remove this restaurant and all its data permanently.</span>
-                            </div>
-                        </button>
-                    </div>
-                </FormSection>
+                {canDelete && (
+                    <FormSection title="Danger Zone" description="Irreversible actions. Please be careful.">
+                        <div className="bg-red-50/50 rounded-2xl border border-red-100 overflow-hidden">
+                            <button
+                                onClick={handleDeleteRestaurant}
+                                disabled={deleting}
+                                aria-label="Delete restaurant"
+                                className="w-full px-5 py-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors font-bold disabled:opacity-50"
+                            >
+                                {deleting ? (
+                                    <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+                                ) : (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                )}
+                                <div className="text-left">
+                                    <span className="block">{deleting ? "Deleting..." : "Delete Restaurant"}</span>
+                                    <span className="text-[12px] font-normal text-red-400">Remove this restaurant and all its data permanently.</span>
+                                </div>
+                            </button>
+                        </div>
+                    </FormSection>
+                )}
 
                 <div className="h-20" />
             </div>

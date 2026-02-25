@@ -11,7 +11,7 @@ import { listUsers, deleteUser, User } from "@/lib/data";
 
 export default function UserListPage() {
     const router = useRouter();
-    const { user: currentAuthUser } = useAuth();
+    const { user: currentAuthUser, canDelete: canDeletePermission } = useAuth();
     const { toast, confirm } = useGlobalUI();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -151,8 +151,8 @@ export default function UserListPage() {
                                             {u.role}
                                         </span>
 
-                                        {/* Delete button - only for non-current users */}
-                                        {!isCurrent && (
+                                        {/* Delete button - only for non-current users with canDelete permission */}
+                                        {!isCurrent && canDeletePermission && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

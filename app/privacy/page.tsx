@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "Privacy Policy – Dining Menu",
+    title: "Privacy Policy – GreenHills Menu App",
 };
 
 export default function PrivacyPolicyPage() {
@@ -13,7 +13,7 @@ export default function PrivacyPolicyPage() {
                     <section>
                         <h2 className="text-lg font-semibold text-gray-900 mb-2">Introduction</h2>
                         <p>
-                            Dining Menu (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) is a restaurant menu management application.
+                            GreenHills Menu App (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) is a restaurant menu management application.
                             This Privacy Policy explains how we collect, use, and protect your information when you use our iOS app and web platform.
                         </p>
                     </section>
@@ -105,7 +105,7 @@ export default function PrivacyPolicyPage() {
                 </div>
 
                 <div className="mt-16 pt-8 border-t border-gray-100 text-center text-xs text-gray-300">
-                    Dining Menu
+                    GreenHills Menu App
                 </div>
             </div>
         </div>

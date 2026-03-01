@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase-admin';
+import { getAdminAuth } from '@/lib/firebase-admin';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
@@ -9,7 +11,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
         }
 
-        await adminAuth.deleteUser(uid);
+        await getAdminAuth().deleteUser(uid);
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

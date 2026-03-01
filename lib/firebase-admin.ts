@@ -1,18 +1,21 @@
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 
-let adminApp: App;
+let _adminAuth: Auth | null = null;
 
-if (getApps().length === 0) {
-    adminApp = initializeApp({
-        credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-    });
-} else {
-    adminApp = getApps()[0];
+export function getAdminAuth(): Auth {
+    if (_adminAuth) return _adminAuth;
+
+    const app: App = getApps().length === 0
+        ? initializeApp({
+            credential: cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            }),
+        })
+        : getApps()[0];
+
+    _adminAuth = getAuth(app);
+    return _adminAuth;
 }
-
-export const adminAuth = getAuth(adminApp);

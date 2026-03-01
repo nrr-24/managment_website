@@ -82,8 +82,9 @@ export default function PrivacyPolicyPage() {
                     <section>
                         <h2 className="text-lg font-semibold text-gray-900 mb-2">Children&apos;s Privacy</h2>
                         <p>
-                            Our app is not intended for use by children under the age of 13.
-                            We do not knowingly collect personal information from children.
+                            Our app is rated 4+ and is suitable for all ages. It does not contain any objectionable content.
+                            We do not knowingly collect personal information from children under 4 years of age.
+                            The app is a menu management tool and does not target children as its primary audience.
                         </p>
                     </section>
 

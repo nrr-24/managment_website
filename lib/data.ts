@@ -796,13 +796,24 @@ export async function updateUser(id: string, data: Partial<Omit<User, "id">>) {
 }
 
 /**
- * Delete a user: captures background image path, deletes Firestore doc,
- * then deletes storage images. Mimics Swift's deleteUser.
+ * Delete a user: removes Firebase Auth account, Firestore doc,
+ * and storage images. Mimics Swift's deleteUser.
  */
 export async function deleteUser(id: string) {
     // Capture the background image path before deletion
     const userDoc = await getDoc(doc(db, "users", id));
     const bgPath = userDoc.exists() ? userDoc.data()?.backgroundImagePath : null;
+
+    // Delete the Firebase Auth account via API route (requires Admin SDK)
+    const res = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: id }),
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete auth user');
+    }
 
     // Delete the Firestore document
     await deleteDoc(doc(db, "users", id));

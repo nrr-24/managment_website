@@ -33,6 +33,7 @@ import {
     getRestaurant,
     listDishes,
     reorderDishes,
+    updateDish,
 } from "@/lib/data";
 
 function SortableDishItem({
@@ -41,12 +42,14 @@ function SortableDishItem({
     cid,
     canDelete,
     onDelete,
+    onToggleActive,
 }: {
     dish: Dish;
     rid: string;
     cid: string;
     canDelete: boolean;
     onDelete: (dish: Dish) => void;
+    onToggleActive: (dish: Dish) => void;
 }) {
     const {
         attributes,
@@ -80,7 +83,7 @@ function SortableDishItem({
                         </svg>
                     </button>
 
-                    <Link href={`/admin/restaurants/${rid}/categories/${cid}/${dish.id}/edit`} className="flex-1 flex items-center gap-3">
+                    <Link href={`/admin/restaurants/${rid}/categories/${cid}/${dish.id}/edit`} className={`flex-1 flex items-center gap-3 ${dish.isActive === false ? 'opacity-40' : ''}`}>
                         <div className="w-10 h-10 bg-green-50 text-green-700 rounded-full flex items-center justify-center overflow-hidden">
                             {dish.imagePaths?.[0] ? (
                                 <StorageImage path={dish.imagePaths[0]} alt="" className="w-full h-full object-cover" />
@@ -98,6 +101,14 @@ function SortableDishItem({
                         </div>
                     </Link>
                     <div className="flex items-center gap-1">
+                        {/* Active Toggle */}
+                        <button
+                            onClick={(e) => { e.preventDefault(); onToggleActive(dish); }}
+                            aria-label={`${dish.isActive !== false ? "Deactivate" : "Activate"} ${dish.name}`}
+                            className={`w-8 h-[18px] rounded-full transition-all relative shrink-0 ${dish.isActive !== false ? 'bg-green-800' : 'bg-gray-200'}`}
+                        >
+                            <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-sm absolute top-[2px] transition-all ${dish.isActive !== false ? 'left-[16px]' : 'left-[2px]'}`} />
+                        </button>
                         {/* Edit */}
                         <Link href={`/admin/restaurants/${rid}/categories/${cid}/${dish.id}/edit`}>
                             <button aria-label={`Edit ${dish.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
@@ -180,6 +191,18 @@ export default function CategoryManagePage() {
         });
         refresh();
     }, [rid, cid]);
+
+    async function handleToggleActive(dish: Dish) {
+        const newActive = dish.isActive === false ? true : false;
+        // Optimistic update
+        setDishes(prev => prev.map(d => d.id === dish.id ? { ...d, isActive: newActive } : d));
+        try {
+            await updateDish(rid, cid, dish.id, { isActive: newActive });
+        } catch {
+            toast("Failed to update dish status", "error");
+            await refresh();
+        }
+    }
 
     async function handleDeleteDish(dish: Dish) {
         const ok = await confirm({ title: "Delete Dish", message: `Delete dish "${dish.name}"? This cannot be undone.`, destructive: true });
@@ -286,7 +309,7 @@ export default function CategoryManagePage() {
                         filteredDishes.map((d) => (
                             <Card key={d.id} className="p-3 hover:bg-gray-50 transition-all rounded-2xl group border border-gray-100">
                                 <div className="flex items-center justify-between">
-                                    <Link href={`/admin/restaurants/${rid}/categories/${cid}/${d.id}/edit`} className="flex-1 flex items-center gap-3">
+                                    <Link href={`/admin/restaurants/${rid}/categories/${cid}/${d.id}/edit`} className={`flex-1 flex items-center gap-3 ${d.isActive === false ? 'opacity-40' : ''}`}>
                                         <div className="w-10 h-10 bg-green-50 text-green-700 rounded-full flex items-center justify-center overflow-hidden">
                                             {d.imagePaths?.[0] ? (
                                                 <StorageImage path={d.imagePaths[0]} alt="" className="w-full h-full object-cover" />
@@ -304,6 +327,14 @@ export default function CategoryManagePage() {
                                         </div>
                                     </Link>
                                     <div className="flex items-center gap-1">
+                                        {/* Active Toggle */}
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); handleToggleActive(d); }}
+                                            aria-label={`${d.isActive !== false ? "Deactivate" : "Activate"} ${d.name}`}
+                                            className={`w-8 h-[18px] rounded-full transition-all relative shrink-0 ${d.isActive !== false ? 'bg-green-800' : 'bg-gray-200'}`}
+                                        >
+                                            <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-sm absolute top-[2px] transition-all ${d.isActive !== false ? 'left-[16px]' : 'left-[2px]'}`} />
+                                        </button>
                                         <Link href={`/admin/restaurants/${rid}/categories/${cid}/${d.id}/edit`}>
                                             <button aria-label={`Edit ${d.name}`} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,6 +378,7 @@ export default function CategoryManagePage() {
                                         cid={cid}
                                         canDelete={canDelete}
                                         onDelete={handleDeleteDish}
+                                        onToggleActive={handleToggleActive}
                                     />
                                 ))}
                             </SortableContext>

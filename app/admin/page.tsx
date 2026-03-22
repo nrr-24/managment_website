@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { listRestaurants, listUsers } from '@/lib/data';
 
 export default function AdminPage() {
-    const { signOut, user } = useAuth();
+    const { signOut, user, isAdmin } = useAuth();
     const router = useRouter();
     const [stats, setStats] = useState<{ restaurants: number; users: number } | null>(null);
 
@@ -40,29 +40,31 @@ export default function AdminPage() {
             ),
             color: 'bg-green-50 text-green-700',
         },
-        {
-            title: 'User Access',
-            desc: 'Create & manage users',
-            href: '/admin/users',
-            stat: stats?.users,
-            icon: (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-            ),
-            color: 'bg-blue-50 text-blue-600',
-        },
-        {
-            title: 'Import Data',
-            desc: 'Upload menu from JSON',
-            href: '/admin/import',
-            icon: (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                </svg>
-            ),
-            color: 'bg-orange-50 text-orange-600',
-        }
+        ...(isAdmin ? [
+            {
+                title: 'User Access',
+                desc: 'Create & manage users',
+                href: '/admin/users',
+                stat: stats?.users,
+                icon: (
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                ),
+                color: 'bg-blue-50 text-blue-600',
+            },
+            {
+                title: 'Import Data',
+                desc: 'Upload menu from JSON',
+                href: '/admin/import',
+                icon: (
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                    </svg>
+                ),
+                color: 'bg-orange-50 text-orange-600',
+            },
+        ] : []),
     ];
 
     return (
@@ -77,7 +79,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.05s' }}>
+                <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-3 mb-8 fade-in-up`} style={{ animationDelay: '0.05s' }}>
                     <div className="bg-white rounded-2xl border border-gray-200/60 p-4 text-center">
                         {stats ? (
                             <p className="text-3xl font-bold text-green-800">{stats.restaurants}</p>
@@ -86,14 +88,16 @@ export default function AdminPage() {
                         )}
                         <p className="text-xs text-gray-400 font-semibold mt-1 uppercase tracking-wider">Restaurants</p>
                     </div>
-                    <div className="bg-white rounded-2xl border border-gray-200/60 p-4 text-center">
-                        {stats ? (
-                            <p className="text-3xl font-bold text-blue-600">{stats.users}</p>
-                        ) : (
-                            <Skeleton className="h-9 w-12 mx-auto rounded-lg" />
-                        )}
-                        <p className="text-xs text-gray-400 font-semibold mt-1 uppercase tracking-wider">Users</p>
-                    </div>
+                    {isAdmin && (
+                        <div className="bg-white rounded-2xl border border-gray-200/60 p-4 text-center">
+                            {stats ? (
+                                <p className="text-3xl font-bold text-blue-600">{stats.users}</p>
+                            ) : (
+                                <Skeleton className="h-9 w-12 mx-auto rounded-lg" />
+                            )}
+                            <p className="text-xs text-gray-400 font-semibold mt-1 uppercase tracking-wider">Users</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Menu Items */}

@@ -17,6 +17,7 @@ interface AuthContextType {
     isManager: boolean;
     hasManagerAccess: boolean;
     canDelete: boolean;
+    restaurantIds: string[];
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
     logout: () => Promise<void>;
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isManager, setIsManager] = useState(false);
     const [hasManagerAccess, setHasManagerAccess] = useState(false);
     const [canDelete, setCanDelete] = useState(false);
+    const [restaurantIds, setRestaurantIds] = useState<string[]>([]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -45,23 +47,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setIsManager(role === 'manager');
                         setHasManagerAccess(role === 'admin' || role === 'manager');
                         setCanDelete(data?.canDelete === true);
+                        setRestaurantIds(data?.restaurantIds || []);
                     } else {
                         setIsAdmin(false);
                         setIsManager(false);
                         setHasManagerAccess(false);
                         setCanDelete(false);
+                        setRestaurantIds([]);
                     }
                 } catch {
                     setIsAdmin(false);
                     setIsManager(false);
                     setHasManagerAccess(false);
                     setCanDelete(false);
+                    setRestaurantIds([]);
                 }
             } else {
                 setIsAdmin(false);
                 setIsManager(false);
                 setHasManagerAccess(false);
                 setCanDelete(false);
+                setRestaurantIds([]);
             }
             setLoading(false);
         });
@@ -78,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAdmin, isManager, hasManagerAccess, canDelete, signIn, signOut, logout: signOut }}>
+        <AuthContext.Provider value={{ user, loading, isAdmin, isManager, hasManagerAccess, canDelete, restaurantIds, signIn, signOut, logout: signOut }}>
             {children}
         </AuthContext.Provider>
     );

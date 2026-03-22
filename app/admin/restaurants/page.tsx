@@ -12,14 +12,18 @@ import { deleteRestaurant, listRestaurants, Restaurant } from "@/lib/data";
 
 export default function RestaurantsPage() {
     const { toast, confirm } = useGlobalUI();
-    const { canDelete } = useAuth();
+    const { canDelete, isAdmin, isManager, restaurantIds } = useAuth();
     const [list, setList] = useState<Restaurant[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
     async function refresh() {
         try {
-            setList(await listRestaurants());
+            let restaurants = await listRestaurants();
+            if (!isAdmin) {
+                restaurants = restaurants.filter(r => restaurantIds.includes(r.id));
+            }
+            setList(restaurants);
         } catch {
             toast("Failed to load restaurants", "error");
         } finally {
@@ -54,7 +58,7 @@ export default function RestaurantsPage() {
         (r.nameAr && r.nameAr.includes(searchTerm))
     );
 
-    const actions = (
+    const actions = isAdmin ? (
         <Link href="/admin/restaurants/new">
             <button aria-label="Add new restaurant" className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                 <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +66,7 @@ export default function RestaurantsPage() {
                 </svg>
             </button>
         </Link>
-    );
+    ) : null;
 
     return (
         <Page title={`Restaurants (${filteredList.length})`} actions={actions}>
@@ -92,12 +96,14 @@ export default function RestaurantsPage() {
                                     </svg>
                                 </div>
                                 <p className="font-semibold text-gray-900 mb-1">No restaurants yet</p>
-                                <p className="text-sm text-gray-400 mb-4">Get started by creating your first restaurant</p>
-                                <Link href="/admin/restaurants/new">
-                                    <button className="px-5 py-2.5 bg-green-800 text-white text-sm font-bold rounded-full hover:bg-green-900 active:scale-[0.97] transition-all">
-                                        + Create Restaurant
-                                    </button>
-                                </Link>
+                                <p className="text-sm text-gray-400 mb-4">{isAdmin ? "Get started by creating your first restaurant" : "No restaurants have been assigned to you"}</p>
+                                {isAdmin && (
+                                    <Link href="/admin/restaurants/new">
+                                        <button className="px-5 py-2.5 bg-green-800 text-white text-sm font-bold rounded-full hover:bg-green-900 active:scale-[0.97] transition-all">
+                                            + Create Restaurant
+                                        </button>
+                                    </Link>
+                                )}
                             </div>
                         ) : (
                             <p className="text-gray-500">No results found.</p>
@@ -123,7 +129,7 @@ export default function RestaurantsPage() {
                                     </div>
                                 </Link>
                                 <div className="flex items-center gap-1">
-                                    {canDelete && (
+                                    {isAdmin && canDelete && (
                                         <button
                                             onClick={() => handleDelete(res.id, res.name)}
                                             disabled={deletingId === res.id}

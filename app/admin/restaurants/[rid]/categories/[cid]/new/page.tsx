@@ -180,56 +180,71 @@ export default function NewDishPage() {
 
                 {/* Section 2 — Options */}
                 <FormSection title="Options" description="Add selectable options like sizes, add-ons, or extras that customers can choose from.">
-                    <FormCard>
-                        <FormField label="Option Header (English)" hint="e.g. Choose your size, Select toppings">
-                            <input
-                                placeholder="Option Header (English)"
-                                className={formInputClass}
-                                value={optHeader}
-                                onChange={e => setOptHeader(e.target.value)}
-                            />
-                        </FormField>
-                        <FormField label="Option Header (Arabic)">
-                            <input
-                                placeholder="Option Header (Arabic)"
-                                className={formInputRtlClass}
-                                value={optHeaderAr}
-                                onChange={e => setOptHeaderAr(e.target.value)}
-                                dir="rtl"
-                            />
-                        </FormField>
-                        <FormRow label="Required" hint="Customer must pick at least one option">
-                            <button
-                                onClick={() => setOptRequired(!optRequired)}
-                                role="switch"
-                                aria-checked={optRequired}
-                                aria-label="Required selection"
-                                className={`w-12 h-7 rounded-full transition-colors relative ${optRequired ? 'bg-green-600' : 'bg-gray-300'}`}
-                            >
-                                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-all ${optRequired ? 'left-[22px]' : 'left-0.5'}`} />
-                            </button>
-                        </FormRow>
-                        <FormField label="Max Selection" hint="Leave empty for unlimited selections">
-                            <input
-                                placeholder="Max Selection"
-                                type="number"
-                                className={formInputClass}
-                                value={optMax}
-                                onChange={e => setOptMax(e.target.value)}
-                            />
-                        </FormField>
-                    </FormCard>
+                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                        {/* Header config */}
+                        <div className="p-4 space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-medium text-gray-400 mb-1">Header (English)</label>
+                                    <input
+                                        placeholder="e.g. Choose your size"
+                                        className={formInputClass}
+                                        value={optHeader}
+                                        onChange={e => setOptHeader(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-medium text-gray-400 mb-1">Header (Arabic)</label>
+                                    <input
+                                        placeholder="e.g. اختر الحجم"
+                                        className={formInputRtlClass}
+                                        value={optHeaderAr}
+                                        onChange={e => setOptHeaderAr(e.target.value)}
+                                        dir="rtl"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setOptRequired(!optRequired)}
+                                        role="switch"
+                                        aria-checked={optRequired}
+                                        aria-label="Required selection"
+                                        className={`w-10 h-6 rounded-full transition-colors relative ${optRequired ? 'bg-green-600' : 'bg-gray-300'}`}
+                                    >
+                                        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${optRequired ? 'left-[18px]' : 'left-0.5'}`} />
+                                    </button>
+                                    <span className="text-sm text-gray-600">Required</span>
+                                </div>
+                                <div className="flex items-center gap-2 ml-auto">
+                                    <span className="text-sm text-gray-600">Max</span>
+                                    <input
+                                        placeholder="∞"
+                                        type="number"
+                                        className={`${formInputClass} !w-16 text-center`}
+                                        value={optMax}
+                                        onChange={e => setOptMax(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
-                    <div className="mt-3 space-y-3">
-                        {optItems.map((item, idx) => (
-                            <div key={idx} className="bg-white rounded-xl p-4 border border-gray-100">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex-1 grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-[11px] font-medium text-gray-400 mb-1">Name</label>
+                        {/* Option items table */}
+                        {optItems.length > 0 && (
+                            <div className="border-t border-gray-100">
+                                <div className="grid grid-cols-[1fr_1fr_80px_36px] gap-0 px-4 py-2 bg-gray-50/80">
+                                    <span className="text-[11px] font-medium text-gray-400">Name</span>
+                                    <span className="text-[11px] font-medium text-gray-400 text-right" dir="rtl">Arabic</span>
+                                    <span className="text-[11px] font-medium text-gray-400 text-center">Price</span>
+                                    <span />
+                                </div>
+                                <div className="divide-y divide-gray-50">
+                                    {optItems.map((item, idx) => (
+                                        <div key={idx} className="grid grid-cols-[1fr_1fr_80px_36px] gap-0 items-center group hover:bg-gray-50/50 transition-colors">
                                             <input
                                                 placeholder="Name"
-                                                className={formInputClass}
+                                                className="w-full px-4 py-2.5 text-sm bg-transparent outline-none placeholder:text-gray-300"
                                                 value={item.name}
                                                 onChange={e => {
                                                     const newItems = [...optItems];
@@ -237,12 +252,9 @@ export default function NewDishPage() {
                                                     setOptItems(newItems);
                                                 }}
                                             />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-medium text-gray-400 mb-1">Arabic Name</label>
                                             <input
-                                                placeholder="Arabic Name"
-                                                className={formInputRtlClass}
+                                                placeholder="الاسم"
+                                                className="w-full px-4 py-2.5 text-sm bg-transparent outline-none text-right placeholder:text-gray-300"
                                                 dir="rtl"
                                                 value={item.nameAr}
                                                 onChange={e => {
@@ -251,41 +263,41 @@ export default function NewDishPage() {
                                                     setOptItems(newItems);
                                                 }}
                                             />
+                                            <input
+                                                placeholder="0.000"
+                                                type="number"
+                                                step="0.001"
+                                                className="w-full px-2 py-2.5 text-sm bg-transparent outline-none text-center placeholder:text-gray-300"
+                                                value={item.price}
+                                                onChange={e => {
+                                                    const newItems = [...optItems];
+                                                    newItems[idx].price = e.target.value;
+                                                    setOptItems(newItems);
+                                                }}
+                                            />
+                                            <button
+                                                onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))}
+                                                aria-label="Remove option"
+                                                className="w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-all mx-auto no-min-tap"
+                                            >
+                                                <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
                                         </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setOptItems(prev => prev.filter((_, i) => i !== idx))}
-                                        aria-label="Remove option"
-                                        className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center ml-3 hover:bg-red-100 transition-colors no-min-tap"
-                                    >
-                                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                                <div>
-                                    <label className="block text-[11px] font-medium text-gray-400 mb-1">Price</label>
-                                    <input
-                                        placeholder="0.000"
-                                        className={formInputClass}
-                                        type="number"
-                                        step="0.01"
-                                        value={item.price}
-                                        onChange={e => {
-                                            const newItems = [...optItems];
-                                            newItems[idx].price = e.target.value;
-                                            setOptItems(newItems);
-                                        }}
-                                    />
+                                    ))}
                                 </div>
                             </div>
-                        ))}
+                        )}
 
-                        <button
-                            onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
-                            aria-label="Add option"
-                            className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors"
-                        >
-                            + Add Option
-                        </button>
+                        {/* Add option button */}
+                        <div className="border-t border-gray-100">
+                            <button
+                                onClick={() => setOptItems([...optItems, { name: "", nameAr: "", price: "" }])}
+                                aria-label="Add option"
+                                className="w-full py-3 text-center text-sm font-semibold text-gray-400 hover:text-green-800 hover:bg-gray-50 transition-colors"
+                            >
+                                + Add Option
+                            </button>
+                        </div>
                     </div>
                 </FormSection>
 

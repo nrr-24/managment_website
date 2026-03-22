@@ -118,7 +118,7 @@ export default function RestaurantManagePage() {
     const { rid } = useParams<{ rid: string }>();
     const router = useRouter();
     const { toast, confirm } = useGlobalUI();
-    const { canDelete } = useAuth();
+    const { canDelete, isAdmin } = useAuth();
 
     // Restaurant data
     const [name, setName] = useState("");
@@ -625,7 +625,7 @@ export default function RestaurantManagePage() {
                 </FormSection>
 
                 {/* ── Section 5: Danger Zone ── */}
-                {canDelete && (
+                {isAdmin && canDelete && (
                     <FormSection title="Danger Zone" description="Irreversible actions. Please be careful.">
                         <div className="bg-red-50/50 rounded-2xl border border-red-100 overflow-hidden">
                             <button

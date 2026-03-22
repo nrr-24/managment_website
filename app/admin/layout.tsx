@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    const { user, loading, hasManagerAccess, logout } = useAuth();
+    const { user, loading, hasManagerAccess, isAdmin, logout } = useAuth();
     const r = useRouter();
     const path = usePathname();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const navItems = [
         { label: "Restaurants", href: "/admin/restaurants", match: "/restaurants" },
-        { label: "Users", href: "/admin/users", match: "/users" },
+        ...(isAdmin ? [{ label: "Users", href: "/admin/users", match: "/users" }] : []),
     ];
 
     return (

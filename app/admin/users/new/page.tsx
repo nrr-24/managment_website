@@ -56,8 +56,8 @@ export default function NewUserPage() {
             toast("Password must be at least 6 characters", "error");
             return;
         }
-        if (role === "viewer" && selectedRids.length === 0) {
-            toast("Viewers must have at least 1 restaurant assigned", "error");
+        if ((role === "viewer" || role === "manager") && selectedRids.length === 0) {
+            toast("Viewers and managers must have at least 1 restaurant assigned", "error");
             return;
         }
         setBusy(true);
@@ -67,7 +67,7 @@ export default function NewUserPage() {
                 email: email.trim(),
                 password: password,
                 role,
-                restaurantIds: role === "viewer" ? selectedRids : [],
+                restaurantIds: (role === "viewer" || role === "manager") ? selectedRids : [],
                 canDelete: isAdmin ? canDeleteToggle : false,
             });
             toast("User created successfully!");
@@ -130,7 +130,7 @@ export default function NewUserPage() {
                 </FormSection>
 
                 {/* Section 2 — Role & Access */}
-                <FormSection title="Role & Access" description="Admins have full control including user management. Managers can access all restaurants. Viewers only see their assigned restaurants.">
+                <FormSection title="Role & Access" description="Admins have full control including user management. Managers and viewers only see their assigned restaurants.">
                     <FormCard>
                         <FormRow label="Role">
                             <div className="bg-gray-100 p-1 rounded-full flex gap-1">
@@ -176,10 +176,10 @@ export default function NewUserPage() {
                         )}
                     </FormCard>
 
-                    {role === "viewer" && (
+                    {(role === "viewer" || role === "manager") && (
                         <div className="mt-4">
                             <FormCard>
-                                <FormField label="Restaurant Access" hint="Select at least one restaurant for this viewer">
+                                <FormField label="Restaurant Access" hint={`Select at least one restaurant for this ${role}`}>
                                     <div className="space-y-2 mt-1">
                                         {restaurants.map(r => {
                                             const selected = selectedRids.includes(r.id);

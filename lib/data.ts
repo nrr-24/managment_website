@@ -276,23 +276,24 @@ function toFirestoreDishFormat(data: any): any {
             result.areOptionsRequired = false;
             result.maxOptionsSelection = null;
         }
-    } else if (result.options === undefined || result.options === null) {
-        // No options — write null for all fields (matching iOS)
+    } else if ('options' in result) {
+        // options explicitly set to null — clear all fields (matching iOS)
         result.options = null;
         result.optionsHeader = null;
         result.optionsHeaderAr = null;
         result.areOptionsRequired = false;
         result.maxOptionsSelection = null;
     }
+    // If options not in result at all (partial update), leave existing Firestore data untouched
 
-    // Ensure allergens have id field
+    // Ensure allergens have id field (only if allergens is in the update)
     if (Array.isArray(result.allergens)) {
         result.allergens = result.allergens.map((a: any) => ({
             id: a.id || a.name?.toLowerCase().replace(/\s+/g, "_") || generateUUID(),
             name: a.name || "",
             nameAr: a.nameAr || "",
         }));
-    } else {
+    } else if ('allergens' in result) {
         result.allergens = [];
     }
 

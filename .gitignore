@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+backfill-thumbnails.js
+fine-dine-menu-firebase-adminsdk-fbsvc-59ad89f79f.json

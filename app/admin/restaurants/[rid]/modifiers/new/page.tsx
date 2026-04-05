@@ -17,7 +17,7 @@ export default function NewModifierPage() {
     const [nameAr, setNameAr] = useState("");
     const [isRequired, setIsRequired] = useState(false);
     const [maxSelection, setMaxSelection] = useState("");
-    
+
     const [items, setItems] = useState<{ id?: string; name: string; nameAr: string; price: string }[]>([]);
 
     const [busy, setBusy] = useState(false);
@@ -109,8 +109,8 @@ export default function NewModifierPage() {
                                 dir="rtl"
                             />
                         </FormField>
-                        
-                        <div className="flex items-center gap-6 mt-4">
+
+                        <div className="flex items-center gap-6 mt-4 px-4">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsRequired(!isRequired)}

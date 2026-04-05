@@ -152,6 +152,8 @@ export type DishOption = {
     name: string;
     nameAr?: string;
     price?: number;
+    isActive?: boolean;
+    calories?: number;
 };
 
 export type Dish = {
@@ -197,6 +199,7 @@ export type ModifierGroup = {
     name: string; // Group Name
     nameAr?: string;
     required?: boolean;
+    minSelection?: number;
     maxSelection?: number;
     items: DishOption[];
     createdAt?: any;
@@ -225,6 +228,8 @@ function normalizeDish(raw: any): Dish {
                 name: item.name || "",
                 nameAr: item.nameAr || "",
                 price: item.price ?? 0,
+                isActive: item.isActive,
+                calories: item.calories,
             }))
             : [];
         // Only create an options object if there are items or a header
@@ -274,12 +279,17 @@ function toFirestoreDishFormat(data: any): any {
     if (result.options && typeof result.options === "object" && !Array.isArray(result.options)) {
         const opts = result.options;
         const items = Array.isArray(opts.items)
-            ? opts.items.map((item: any) => ({
-                id: item.id || generateUUID(),
-                name: item.name || "",
-                nameAr: item.nameAr || "",
-                price: item.price ?? 0,
-            }))
+            ? opts.items.map((item: any) => {
+                const i: any = {
+                    id: item.id || generateUUID(),
+                    name: item.name || "",
+                    nameAr: item.nameAr || "",
+                    price: item.price ?? 0,
+                };
+                if (item.isActive !== undefined) i.isActive = item.isActive;
+                if (item.calories !== undefined) i.calories = item.calories;
+                return i;
+            })
             : [];
         // Only write options if there are actual items
         if (items.length > 0) {
@@ -528,12 +538,17 @@ export async function getModifierGroup(restaurantId: string, modifierId: string)
 
 export async function createModifierGroup(restaurantId: string, data: Partial<Omit<ModifierGroup, "id">>) {
     const colRef = collection(db, "restaurants", restaurantId, "modifiers");
-    const items = data.items?.map(item => ({
-        id: item.id || generateUUID(),
-        name: item.name || "",
-        nameAr: item.nameAr || "",
-        price: item.price ?? 0,
-    })) || [];
+    const items = data.items?.map(item => {
+        const i: any = {
+            id: item.id || generateUUID(),
+            name: item.name || "",
+            nameAr: item.nameAr || "",
+            price: item.price ?? 0,
+        };
+        if (item.isActive !== undefined) i.isActive = item.isActive;
+        if (item.calories !== undefined) i.calories = item.calories;
+        return i;
+    }) || [];
     
     const docRef = await addDoc(colRef, {
         ...cleanData(data),
@@ -596,12 +611,17 @@ export async function migrateOptionsToModifiers(restaurantId: string) {
 export async function updateModifierGroup(restaurantId: string, modifierId: string, data: Partial<Omit<ModifierGroup, "id">>) {
     const updateData = { ...data };
     if (updateData.items) {
-        updateData.items = updateData.items.map(item => ({
-            id: item.id || generateUUID(),
-            name: item.name || "",
-            nameAr: item.nameAr || "",
-            price: item.price ?? 0,
-        }));
+        updateData.items = updateData.items.map(item => {
+            const i: any = {
+                id: item.id || generateUUID(),
+                name: item.name || "",
+                nameAr: item.nameAr || "",
+                price: item.price ?? 0,
+            };
+            if (item.isActive !== undefined) i.isActive = item.isActive;
+            if (item.calories !== undefined) i.calories = item.calories;
+            return i;
+        });
     }
     await updateDoc(doc(db, "restaurants", restaurantId, "modifiers", modifierId), cleanData(updateData));
 }

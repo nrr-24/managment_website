@@ -137,6 +137,7 @@ export default function RestaurantManagePage() {
     const [saving, setSaving] = useState(false);
 
     const [cats, setCats] = useState<Category[]>([]);
+    const [activeTab, setActiveTab] = useState<"details" | "categories" | "modifiers">("details");
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -291,7 +292,7 @@ export default function RestaurantManagePage() {
 
         // Persist to Firestore
         try {
-            await reorderCategories(rid, newCats.map(c => c.id));
+            await reorderCategories(rid, newCats.map((c: Category) => c.id));
         } catch {
             toast("Failed to save order", "error");
             await refresh(); // Revert on failure
@@ -357,8 +358,38 @@ export default function RestaurantManagePage() {
         <Page title={name || rid} actions={actions} backPath="/" breadcrumbs={[{label: "Restaurants", href: "/admin/restaurants"}, {label: name || "Restaurant"}]}>
             <div className="max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold px-1 mb-1">{name || "Restaurant"}</h2>
-                <p className="text-sm text-gray-400 px-1 mb-8">Manage your restaurant profile, menu appearance, and images.</p>
+                <p className="text-sm text-gray-400 px-1 mb-6">Manage your restaurant profile, menu appearance, and items.</p>
 
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 mb-8 overflow-x-auto hide-scrollbar">
+                    <button
+                        onClick={() => setActiveTab("details")}
+                        className={`px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
+                            activeTab === "details" ? "border-green-800 text-green-800" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                    >
+                        Details
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("categories")}
+                        className={`px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
+                            activeTab === "categories" ? "border-green-800 text-green-800" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                    >
+                        Categories
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("modifiers")}
+                        className={`px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
+                            activeTab === "modifiers" ? "border-green-800 text-green-800" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                    >
+                        Modifiers
+                    </button>
+                </div>
+
+                {activeTab === "details" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* ── Section 1: Restaurant Info ── */}
                 <FormSection title="Restaurant Info" description="The name your customers will see on the menu page.">
                     <FormCard>
@@ -571,7 +602,11 @@ export default function RestaurantManagePage() {
                         </div>
                     </div>
                 </FormSection>
+                </div>
+                )}
 
+                {activeTab === "categories" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* ── Section 4: Categories ── */}
                 <FormSection title="Categories" description="Organize your menu into categories. Each category contains dishes.">
                     <div className="space-y-2">
@@ -623,9 +658,29 @@ export default function RestaurantManagePage() {
                         )}
                     </div>
                 </FormSection>
+                </div>
+                )}
+
+                {activeTab === "modifiers" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <FormSection title="Modifiers" description="Create add-ons and modifiers for your dishes.">
+                            <FormCard className="!divide-y-0">
+                                <div className="p-8 text-center bg-gray-50/50 rounded-2xl">
+                                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                        <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                        </svg>
+                                    </div>
+                                    <p className="font-semibold text-gray-900 mb-1">Coming Soon</p>
+                                    <p className="text-sm text-gray-500">Modifiers feature is not yet available.</p>
+                                </div>
+                            </FormCard>
+                        </FormSection>
+                    </div>
+                )}
 
                 {/* ── Section 5: Danger Zone ── */}
-                {isAdmin && canDelete && (
+                {activeTab === "details" && isAdmin && canDelete && (
                     <FormSection title="Danger Zone" description="Irreversible actions. Please be careful.">
                         <div className="bg-red-50/50 rounded-2xl border border-red-100 overflow-hidden">
                             <button

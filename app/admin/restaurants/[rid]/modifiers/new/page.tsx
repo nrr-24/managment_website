@@ -7,6 +7,122 @@ import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createModifierGroup, getRestaurant } from "@/lib/data";
 import { FormSection, FormCard, FormField, formInputClass, formInputRtlClass } from "@/components/ui/FormSection";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Define it at the top level
+const noSpinClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
+function SortableModifierItem({
+    item,
+    idx,
+    updateItem,
+    removeItem,
+}: {
+    item: { id: string; name: string; nameAr: string; price: string; calories: string; isActive: boolean };
+    idx: number;
+    updateItem: (idx: number, updates: Partial<typeof item>) => void;
+    removeItem: (idx: number) => void;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: item.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : undefined,
+        position: isDragging ? "relative" as const : undefined,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className={`p-4 bg-white border border-gray-100 rounded-2xl mb-3 flex flex-wrap md:flex-nowrap items-center gap-4 transition-all group ${isDragging ? "shadow-xl ring-2 ring-purple-500/20 z-50" : "hover:border-gray-200"}`}>
+            <button
+                {...attributes}
+                {...listeners}
+                className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none p-1 -ml-1 shrink-0"
+                aria-label="Drag to reorder"
+            >
+                <svg className="w-5 h-5 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h8M8 15h8" /></svg>
+            </button>
+            <div className="flex-1 min-w-0 min-w-[200px]">
+                <input
+                    placeholder="Name"
+                    className="w-full text-sm font-semibold text-gray-900 bg-transparent outline-none placeholder:text-gray-300 mb-1"
+                    value={item.name}
+                    onChange={e => updateItem(idx, { name: e.target.value })}
+                />
+                <input
+                    placeholder="الاسم"
+                    className="w-full text-[11px] text-gray-400 bg-transparent outline-none text-right placeholder:text-gray-200"
+                    dir="rtl"
+                    value={item.nameAr}
+                    onChange={e => updateItem(idx, { nameAr: e.target.value })}
+                />
+            </div>
+            <div className="flex gap-4 items-center shrink-0 w-full md:w-auto">
+                <div className="flex-1 items-center flex gap-3 bg-gray-50/80 rounded-xl px-3 py-2 border border-gray-100/50">
+                    <span className="text-xs font-semibold text-gray-500">KD</span>
+                    <input
+                        placeholder="0.00"
+                        type="number"
+                        step="0.001"
+                        className={`w-full md:w-16 text-sm font-medium text-right bg-transparent outline-none text-gray-800 ${noSpinClass}`}
+                        value={item.price}
+                        onChange={e => updateItem(idx, { price: e.target.value })}
+                    />
+                </div>
+                <div className="flex-1 items-center flex gap-2 bg-gray-50/80 rounded-xl px-3 py-2 border border-gray-100/50">
+                    <input
+                        placeholder="0"
+                        type="number"
+                        className={`w-full md:w-12 text-sm font-medium text-right bg-transparent outline-none text-gray-800 ${noSpinClass}`}
+                        value={item.calories}
+                        onChange={e => updateItem(idx, { calories: e.target.value })}
+                    />
+                    <span className="text-xs font-medium text-gray-500">cal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => updateItem(idx, { isActive: !item.isActive })}
+                        role="switch"
+                        aria-checked={item.isActive}
+                        className={`w-12 h-7 rounded-full transition-colors relative ${item.isActive ? 'bg-purple-600' : 'bg-gray-200'}`}
+                    >
+                        <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-all ${item.isActive ? 'left-[22px]' : 'left-0.5'}`} />
+                    </button>
+                </div>
+                <button
+                    onClick={() => removeItem(idx)}
+                    aria-label="Remove item"
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all no-min-tap"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export default function NewModifierPage() {
     const router = useRouter();
@@ -16,14 +132,21 @@ export default function NewModifierPage() {
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
     const [isRequired, setIsRequired] = useState(false);
+    const [minSelection, setMinSelection] = useState("");
     const [maxSelection, setMaxSelection] = useState("");
-
-    const [items, setItems] = useState<{ id?: string; name: string; nameAr: string; price: string }[]>([]);
+    
+    // Auto-generate UUIDs for initial items if given any, default empty
+    const [items, setItems] = useState<{ id: string; name: string; nameAr: string; price: string; calories: string; isActive: boolean }[]>([]);
 
     const [busy, setBusy] = useState(false);
     const [restaurantName, setRestaurantName] = useState("");
 
     useUnsavedChanges(name.trim().length > 0 || items.length > 0);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
 
     useEffect(() => {
         getRestaurant(rid).then(r => {
@@ -42,10 +165,12 @@ export default function NewModifierPage() {
                 name: name.trim(),
                 nameAr: nameAr.trim(),
                 required: isRequired,
-                maxSelection: parseInt(maxSelection) || undefined,
+                minSelection: minSelection ? parseInt(minSelection) : undefined,
+                maxSelection: maxSelection ? parseInt(maxSelection) : undefined,
                 items: items.filter(i => i.name.trim()).map(i => ({
                     ...i,
-                    price: parseFloat(i.price) || 0
+                    price: parseFloat(i.price) || 0,
+                    calories: parseInt(i.calories) || 0
                 }))
             });
 
@@ -56,6 +181,17 @@ export default function NewModifierPage() {
             toast(err.message || "Failed to create modifier", "error");
             setBusy(false);
         }
+    }
+
+    function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = items.findIndex(i => i.id === active.id);
+        const newIndex = items.findIndex(i => i.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        setItems(arrayMove(items, oldIndex, newIndex));
     }
 
     const actions = (
@@ -86,15 +222,14 @@ export default function NewModifierPage() {
 
     return (
         <Page title="New Modifier Group" actions={actions} leftAction={leftAction} breadcrumbs={breadcrumbs}>
-            <div className="space-y-6 max-w-2xl mx-auto">
+            <div className="space-y-6 max-w-2xl mx-auto px-4 md:px-0">
                 <h2 className="text-3xl font-bold px-4">New Modifier Group</h2>
 
-                {/* Section 1 — Info */}
                 <FormSection title="Group Info" description="The overarching name for this group of modifiers (e.g., 'Meat Selection').">
                     <FormCard>
                         <FormField label="Group Name (English)" required>
                             <input
-                                placeholder="e.g. Choose your size"
+                                placeholder="e.g. Wagyu Striploin Steak (300g)"
                                 className={formInputClass}
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
@@ -109,96 +244,78 @@ export default function NewModifierPage() {
                                 dir="rtl"
                             />
                         </FormField>
-
-                        <div className="flex items-center gap-6 mt-4 px-4">
+                        
+                        <div className="flex flex-wrap items-center gap-6 mt-4 pt-4 border-t border-gray-100">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsRequired(!isRequired)}
                                     role="switch"
                                     aria-checked={isRequired}
-                                    className={`w-10 h-6 rounded-full transition-colors relative ${isRequired ? 'bg-green-600' : 'bg-gray-300'}`}
+                                    className={`w-10 h-6 rounded-full transition-colors relative ${isRequired ? 'bg-purple-600' : 'bg-gray-200'}`}
                                 >
                                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${isRequired ? 'left-[18px]' : 'left-0.5'}`} />
                                 </button>
                                 <span className="text-sm font-medium text-gray-700">Required Selection</span>
                             </div>
-                            <div className="flex items-center gap-3 ml-auto">
-                                <span className="text-sm font-medium text-gray-700">Max Choices</span>
-                                <input
-                                    placeholder="∞"
-                                    type="number"
-                                    className={`${formInputClass} !w-16 text-center`}
-                                    value={maxSelection}
-                                    onChange={e => setMaxSelection(e.target.value)}
-                                />
+                            <div className="flex items-center gap-6 ml-auto">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Min Choices</span>
+                                    <input
+                                        placeholder="0"
+                                        type="number"
+                                        className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
+                                        value={minSelection}
+                                        onChange={e => setMinSelection(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Max Choices</span>
+                                    <input
+                                        placeholder="∞"
+                                        type="number"
+                                        className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
+                                        value={maxSelection}
+                                        onChange={e => setMaxSelection(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </FormCard>
                 </FormSection>
 
-                {/* Section 2 — Items */}
-                <FormSection title="Modifier Items" description="The specific add-ons or options underneath this group.">
-                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <FormSection title="Modifiers" description="The specific add-ons or options underneath this group.">
+                    <div className="bg-gray-50/50 rounded-3xl p-4 md:p-6 border border-dashed border-gray-200">
                         {items.length > 0 && (
-                            <div className="border-b border-gray-100">
-                                <div className="grid grid-cols-[1fr_1fr_80px_36px] gap-0 px-4 py-2 bg-gray-50/80">
-                                    <span className="text-[11px] font-medium text-gray-400">Name</span>
-                                    <span className="text-[11px] font-medium text-gray-400 text-right" dir="rtl">Arabic</span>
-                                    <span className="text-[11px] font-medium text-gray-400 text-center">Price</span>
-                                    <span />
-                                </div>
-                                <div className="divide-y divide-gray-50">
-                                    {items.map((item, idx) => (
-                                        <div key={idx} className="grid grid-cols-[1fr_1fr_80px_36px] gap-0 items-center group hover:bg-gray-50/50 transition-colors">
-                                            <input
-                                                placeholder="Name"
-                                                className="w-full px-4 py-2.5 text-sm bg-transparent outline-none placeholder:text-gray-300"
-                                                value={item.name}
-                                                onChange={e => {
-                                                    const newItems = [...items];
-                                                    newItems[idx].name = e.target.value;
-                                                    setItems(newItems);
-                                                }}
-                                            />
-                                            <input
-                                                placeholder="الاسم"
-                                                className="w-full px-4 py-2.5 text-sm bg-transparent outline-none text-right placeholder:text-gray-300"
-                                                dir="rtl"
-                                                value={item.nameAr}
-                                                onChange={e => {
-                                                    const newItems = [...items];
-                                                    newItems[idx].nameAr = e.target.value;
-                                                    setItems(newItems);
-                                                }}
-                                            />
-                                            <input
-                                                placeholder="0.000"
-                                                type="number"
-                                                step="0.001"
-                                                className="w-full px-2 py-2.5 text-sm bg-transparent outline-none text-center placeholder:text-gray-300"
-                                                value={item.price}
-                                                onChange={e => {
-                                                    const newItems = [...items];
-                                                    newItems[idx].price = e.target.value;
-                                                    setItems(newItems);
-                                                }}
-                                            />
-                                            <button
-                                                onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))}
-                                                aria-label="Remove item"
-                                                className="w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-all mx-auto no-min-tap"
-                                            >
-                                                <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
+                            <div className="hidden md:flex gap-4 px-4 pb-2 pt-1 uppercase tracking-wider text-[11px] font-bold text-gray-400">
+                                <span className="w-6 shrink-0"></span>
+                                <span className="flex-1">Name</span>
+                                <span className="w-[104px] shrink-0 text-center">Price</span>
+                                <span className="w-[88px] shrink-0 text-center">Calories</span>
+                                <span className="w-12 shrink-0"></span>
+                                <span className="w-8 shrink-0"></span>
                             </div>
                         )}
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                            <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                                {items.map((item, idx) => (
+                                    <SortableModifierItem
+                                        key={item.id}
+                                        item={item}
+                                        idx={idx}
+                                        updateItem={(i, upd) => {
+                                            const newItems = [...items];
+                                            newItems[i] = { ...newItems[i], ...upd };
+                                            setItems(newItems);
+                                        }}
+                                        removeItem={i => setItems(items.filter((_, index) => index !== i))}
+                                    />
+                                ))}
+                            </SortableContext>
+                        </DndContext>
 
                         <button
-                            onClick={() => setItems([...items, { name: "", nameAr: "", price: "" }])}
-                            className="w-full py-4 text-center text-sm font-bold text-green-800 hover:bg-green-50 transition-colors"
+                            onClick={() => setItems([...items, { id: crypto.randomUUID(), name: "", nameAr: "", price: "", calories: "", isActive: true }])}
+                            className="w-full py-4 mt-2 text-center text-sm font-bold text-green-800 bg-white border-2 border-dashed border-green-100 rounded-2xl hover:bg-green-50 hover:border-green-200 transition-all active:scale-[0.99]"
                         >
                             + Add Modifier Item
                         </button>

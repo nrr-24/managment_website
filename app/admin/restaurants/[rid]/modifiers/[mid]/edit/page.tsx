@@ -34,7 +34,7 @@ function SortableModifierItem({
     updateItem,
     removeItem,
 }: {
-    item: { id: string; name: string; nameAr: string; price: string; calories: string; isActive: boolean };
+    item: { id: string; name: string; nameAr: string; price: string; isActive: boolean };
     idx: number;
     updateItem: (idx: number, updates: Partial<typeof item>) => void;
     removeItem: (idx: number) => void;
@@ -92,16 +92,6 @@ function SortableModifierItem({
                         onChange={e => updateItem(idx, { price: e.target.value })}
                     />
                 </div>
-                <div className="flex-1 items-center flex gap-2 bg-gray-50/80 rounded-xl px-3 py-2 border border-gray-100/50">
-                    <input
-                        placeholder="0"
-                        type="number"
-                        className={`w-full md:w-12 text-sm font-medium text-right bg-transparent outline-none text-gray-800 ${noSpinClass}`}
-                        value={item.calories}
-                        onChange={e => updateItem(idx, { calories: e.target.value })}
-                    />
-                    <span className="text-xs font-medium text-gray-500">cal</span>
-                </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => updateItem(idx, { isActive: !item.isActive })}
@@ -135,7 +125,7 @@ export default function EditModifierPage() {
     const [minSelection, setMinSelection] = useState("");
     const [maxSelection, setMaxSelection] = useState("");
     
-    const [items, setItems] = useState<{ id: string; name: string; nameAr: string; price: string; calories: string; isActive: boolean }[]>([]);
+    const [items, setItems] = useState<{ id: string; name: string; nameAr: string; price: string; isActive: boolean }[]>([]);
 
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
@@ -166,7 +156,6 @@ export default function EditModifierPage() {
                     name: i.name || "",
                     nameAr: i.nameAr || "",
                     price: i.price?.toString() || "",
-                    calories: i.calories?.toString() || "",
                     isActive: i.isActive ?? true
                 })) || []);
                 initialDataRef.current = JSON.stringify({ 
@@ -180,7 +169,6 @@ export default function EditModifierPage() {
                         name: i.name || "", 
                         nameAr: i.nameAr || "", 
                         price: i.price?.toString() || "",
-                        calories: i.calories?.toString() || "",
                         isActive: i.isActive ?? true
                     })) || []
                 });
@@ -204,8 +192,7 @@ export default function EditModifierPage() {
                 maxSelection: maxSelection ? parseInt(maxSelection) : undefined,
                 items: items.filter(i => i.name.trim()).map(i => ({
                     ...i,
-                    price: parseFloat(i.price) || 0,
-                    calories: parseInt(i.calories) || 0
+                    price: parseFloat(i.price) || 0
                 }))
             });
 
@@ -341,7 +328,6 @@ export default function EditModifierPage() {
                                 <span className="w-6 shrink-0"></span>
                                 <span className="flex-1">Name</span>
                                 <span className="w-[104px] shrink-0 text-center">Price</span>
-                                <span className="w-[88px] shrink-0 text-center">Calories</span>
                                 <span className="w-12 shrink-0"></span>
                                 <span className="w-8 shrink-0"></span>
                             </div>
@@ -365,7 +351,7 @@ export default function EditModifierPage() {
                         </DndContext>
 
                         <button
-                            onClick={() => setItems([...items, { id: crypto.randomUUID(), name: "", nameAr: "", price: "", calories: "", isActive: true }])}
+                            onClick={() => setItems([...items, { id: crypto.randomUUID(), name: "", nameAr: "", price: "", isActive: true }])}
                             className="w-full py-4 mt-2 text-center text-sm font-bold text-green-800 bg-white border-2 border-dashed border-green-100 rounded-2xl hover:bg-green-50 hover:border-green-200 transition-all active:scale-[0.99]"
                         >
                             + Add Modifier Item

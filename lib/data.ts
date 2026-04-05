@@ -153,7 +153,6 @@ export type DishOption = {
     nameAr?: string;
     price?: number;
     isActive?: boolean;
-    calories?: number;
 };
 
 export type Dish = {
@@ -229,7 +228,6 @@ function normalizeDish(raw: any): Dish {
                 nameAr: item.nameAr || "",
                 price: item.price ?? 0,
                 isActive: item.isActive,
-                calories: item.calories,
             }))
             : [];
         // Only create an options object if there are items or a header
@@ -287,7 +285,6 @@ function toFirestoreDishFormat(data: any): any {
                     price: item.price ?? 0,
                 };
                 if (item.isActive !== undefined) i.isActive = item.isActive;
-                if (item.calories !== undefined) i.calories = item.calories;
                 return i;
             })
             : [];
@@ -546,7 +543,6 @@ export async function createModifierGroup(restaurantId: string, data: Partial<Om
             price: item.price ?? 0,
         };
         if (item.isActive !== undefined) i.isActive = item.isActive;
-        if (item.calories !== undefined) i.calories = item.calories;
         return i;
     }) || [];
     
@@ -619,7 +615,6 @@ export async function updateModifierGroup(restaurantId: string, modifierId: stri
                 price: item.price ?? 0,
             };
             if (item.isActive !== undefined) i.isActive = item.isActive;
-            if (item.calories !== undefined) i.calories = item.calories;
             return i;
         });
     }

@@ -6,8 +6,8 @@ service cloud.firestore {
 
     // Role lookup for current user
     function isManager() {
-      return signedIn()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "manager";
+      let role = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return signedIn() && (role == "manager" || role == "admin");
     }
 
     function isSelf(userId) {
@@ -38,6 +38,11 @@ service cloud.firestore {
     match /restaurants/{restaurantId} {
       allow read: if signedIn();
       allow create, update, delete: if isManager();
+
+      match /modifiers/{modifierId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isManager();
+      }
 
       match /categories/{categoryId} {
         allow read: if signedIn();

@@ -25,6 +25,7 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import {
     listCategories,
     Category,
@@ -54,7 +55,7 @@ function SortableCategoryItem({
     } = useSortable({ id: category.id });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
         zIndex: isDragging ? 50 : undefined,
         position: isDragging ? "relative" as const : undefined,
@@ -62,7 +63,7 @@ function SortableCategoryItem({
 
     return (
         <div ref={setNodeRef} style={style}>
-            <Card className={`p-3 hover:bg-gray-50 transition-all rounded-2xl group border border-gray-100 ${isDragging ? "shadow-xl bg-white ring-2 ring-green-800/20" : ""}`}>
+            <Card className={`p-3 hover:bg-gray-50 transition-colors transition-shadow rounded-2xl group border border-gray-100 ${isDragging ? "shadow-xl bg-white ring-2 ring-green-800/20" : ""}`}>
                 <div className="flex items-center justify-between">
                     {/* Drag Handle */}
                     <button
@@ -231,6 +232,7 @@ export default function CategoriesPage() {
                         sensors={sensors}
                         collisionDetection={closestCenter}
                         onDragEnd={handleDragEnd}
+                        modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
                     >
                         <SortableContext
                             items={cats.map(c => c.id)}

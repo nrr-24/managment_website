@@ -24,6 +24,7 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis, restrictToWindowEdges } from "@dnd-kit/modifiers";
 
 // Define it at the top level
 const noSpinClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
@@ -49,14 +50,14 @@ function SortableModifierItem({
     } = useSortable({ id: item.id });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
         zIndex: isDragging ? 50 : undefined,
         position: isDragging ? "relative" as const : undefined,
     };
 
     return (
-        <div ref={setNodeRef} style={style} className={`p-4 bg-white border border-gray-100 rounded-2xl mb-3 flex flex-wrap md:flex-nowrap items-center gap-4 transition-all group ${isDragging ? "shadow-xl ring-2 ring-purple-500/20 z-50" : "hover:border-gray-200"}`}>
+        <div ref={setNodeRef} style={style} className={`p-4 bg-white border border-gray-100 rounded-2xl mb-3 flex flex-wrap md:flex-nowrap items-center gap-4 transition-shadow transition-colors group ${isDragging ? "shadow-xl ring-2 ring-purple-500/20 z-50" : "hover:border-gray-200"}`}>
             <button
                 {...attributes}
                 {...listeners}
@@ -332,7 +333,12 @@ export default function EditModifierPage() {
                                 <span className="w-8 shrink-0"></span>
                             </div>
                         )}
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <DndContext 
+                            sensors={sensors} 
+                            collisionDetection={closestCenter} 
+                            onDragEnd={handleDragEnd}
+                            modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
+                        >
                             <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
                                 {items.map((item, idx) => (
                                     <SortableModifierItem

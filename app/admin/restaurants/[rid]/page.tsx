@@ -674,30 +674,7 @@ export default function RestaurantManagePage() {
                             title="Modifiers" 
                             description="Create add-ons and modifiers that you can attach to multiple dishes."
                         >
-                            <div className="flex justify-end mb-4">
-                                <button
-                                    onClick={async () => {
-                                        if (await confirm({ title: "Migrate Options", message: "Are you sure you want to migrate existing Custom Options into Centralized Modifiers? This might take a few moments." })) {
-                                            setMigrating(true);
-                                            try {
-                                                const count = await migrateOptionsToModifiers(rid);
-                                                toast(`Migration complete! Successfully linked ${count} dishes to centralized modifiers.`);
-                                                refresh();
-                                            } catch (err) {
-                                                console.error(err);
-                                                toast("Failed to migrate options", "error");
-                                            } finally {
-                                                setMigrating(false);
-                                            }
-                                        }
-                                    }}
-                                    disabled={migrating}
-                                    className="px-4 py-2 bg-purple-50 text-purple-700 text-sm font-semibold rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
-                                >
-                                    {migrating ? "Migrating..." : "Migrate Old Options"}
-                                </button>
-                            </div>
-                            
+
                             {modifiers.length === 0 ? (
                                 <FormCard className="!divide-y-0">
                                     <div className="p-8 text-center bg-gray-50/50 rounded-2xl">
@@ -718,20 +695,20 @@ export default function RestaurantManagePage() {
                             ) : (
                                 <>
                                     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-4">
-                                        <div className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-3 bg-gray-50/80 border-b border-gray-100 items-center">
+                                        <div className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-3 bg-gray-50/80 border-b border-gray-100 items-center text-center">
                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Group Name</span>
                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Modifiers</span>
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Items</span>
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Items</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</span>
                                         </div>
                                         <div className="divide-y divide-gray-50">
                                             {modifiers.map((mod) => (
-                                                <div key={mod.id} className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-4 items-center group hover:bg-gray-50/50 transition-colors">
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-gray-900">{mod.name}</p>
-                                                        {mod.nameAr && <p className="text-[11px] text-gray-400" dir="rtl">{mod.nameAr}</p>}
+                                                <div key={mod.id} className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-4 items-center text-center group hover:bg-gray-50/50 transition-colors">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">{mod.name}</p>
+                                                        {mod.nameAr && <p className="text-[11px] text-gray-400 truncate" dir="rtl">{mod.nameAr}</p>}
                                                     </div>
-                                                    <div>
+                                                    <div className="min-w-0">
                                                         <p className="text-sm text-gray-600 truncate">
                                                             {mod.items?.map((i: any) => i.name).join(", ") || "No Modifiers"}
                                                         </p>

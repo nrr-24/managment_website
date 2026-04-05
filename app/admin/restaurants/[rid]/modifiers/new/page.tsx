@@ -245,7 +245,7 @@ export default function NewModifierPage() {
                             />
                         </FormField>
                         
-                        <div className="flex flex-wrap items-center gap-6 mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex flex-wrap items-center gap-6 px-4 py-4">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsRequired(!isRequired)}
@@ -273,9 +273,23 @@ export default function NewModifierPage() {
                                     <input
                                         placeholder="∞"
                                         type="number"
+                                        max={items.length > 0 ? items.length : undefined}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={maxSelection}
-                                        onChange={e => setMaxSelection(e.target.value)}
+                                        onChange={e => {
+                                            if (e.target.value === "") {
+                                                setMaxSelection("");
+                                                return;
+                                            }
+                                            const num = parseInt(e.target.value);
+                                            if (!isNaN(num)) {
+                                                if (items.length > 0 && num > items.length) {
+                                                    setMaxSelection(items.length.toString());
+                                                } else {
+                                                    setMaxSelection(num.toString());
+                                                }
+                                            }
+                                        }}
                                     />
                                 </div>
                             </div>

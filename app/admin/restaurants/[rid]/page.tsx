@@ -17,6 +17,10 @@ import {
     deleteRestaurant,
     deleteImageByPath,
     reorderCategories,
+    ModifierGroup,
+    listModifierGroups,
+    deleteModifierGroup,
+    migrateOptionsToModifiers
 } from "@/lib/data";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth";
@@ -137,7 +141,9 @@ export default function RestaurantManagePage() {
     const [saving, setSaving] = useState(false);
 
     const [cats, setCats] = useState<Category[]>([]);
+    const [modifiers, setModifiers] = useState<ModifierGroup[]>([]);
     const [activeTab, setActiveTab] = useState<"details" | "categories" | "modifiers">("details");
+    const [migrating, setMigrating] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -202,6 +208,7 @@ export default function RestaurantManagePage() {
             });
         }
         setCats(await listCategories(rid));
+        setModifiers(await listModifierGroups(rid));
         setLoaded(true);
     }
 
@@ -663,18 +670,107 @@ export default function RestaurantManagePage() {
 
                 {activeTab === "modifiers" && (
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <FormSection title="Modifiers" description="Create add-ons and modifiers for your dishes.">
-                            <FormCard className="!divide-y-0">
-                                <div className="p-8 text-center bg-gray-50/50 rounded-2xl">
-                                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                        <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                                        </svg>
+                        <FormSection 
+                            title="Modifiers" 
+                            description="Create add-ons and modifiers that you can attach to multiple dishes."
+                        >
+                            <div className="flex justify-end mb-4">
+                                <button
+                                    onClick={async () => {
+                                        if (await confirm({ title: "Migrate Options", message: "Are you sure you want to migrate existing Custom Options into Centralized Modifiers? This might take a few moments." })) {
+                                            setMigrating(true);
+                                            try {
+                                                const count = await migrateOptionsToModifiers(rid);
+                                                toast(`Migration complete! Successfully linked ${count} dishes to centralized modifiers.`);
+                                                refresh();
+                                            } catch (err) {
+                                                console.error(err);
+                                                toast("Failed to migrate options", "error");
+                                            } finally {
+                                                setMigrating(false);
+                                            }
+                                        }
+                                    }}
+                                    disabled={migrating}
+                                    className="px-4 py-2 bg-purple-50 text-purple-700 text-sm font-semibold rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
+                                >
+                                    {migrating ? "Migrating..." : "Migrate Old Options"}
+                                </button>
+                            </div>
+                            
+                            {modifiers.length === 0 ? (
+                                <FormCard className="!divide-y-0">
+                                    <div className="p-8 text-center bg-gray-50/50 rounded-2xl">
+                                        <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                            <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                            </svg>
+                                        </div>
+                                        <p className="font-semibold text-gray-900 mb-1">No Modifiers Yet</p>
+                                        <p className="text-sm text-gray-500 mb-4">Create your first modifier group.</p>
+                                        <Link href={`/admin/restaurants/${rid}/modifiers/new`}>
+                                            <button className="px-5 py-2.5 bg-green-800 text-white font-bold rounded-full hover:opacity-90 transition-opacity">
+                                                + Add Modifier Group
+                                            </button>
+                                        </Link>
                                     </div>
-                                    <p className="font-semibold text-gray-900 mb-1">Coming Soon</p>
-                                    <p className="text-sm text-gray-500">Modifiers feature is not yet available.</p>
-                                </div>
-                            </FormCard>
+                                </FormCard>
+                            ) : (
+                                <>
+                                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-4">
+                                        <div className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-3 bg-gray-50/80 border-b border-gray-100 items-center">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Group Name</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Modifiers</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Items</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</span>
+                                        </div>
+                                        <div className="divide-y divide-gray-50">
+                                            {modifiers.map((mod) => (
+                                                <div key={mod.id} className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-4 items-center group hover:bg-gray-50/50 transition-colors">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-gray-900">{mod.name}</p>
+                                                        {mod.nameAr && <p className="text-[11px] text-gray-400" dir="rtl">{mod.nameAr}</p>}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600 truncate">
+                                                            {mod.items?.map((i: any) => i.name).join(", ") || "No Modifiers"}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="inline-flex px-2 py-1 rounded-md bg-purple-50 text-purple-700 text-[11px] font-bold">
+                                                            {mod.items?.length || 0} items
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Link href={`/admin/restaurants/${rid}/modifiers/${mod.id}/edit`}>
+                                                            <button className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-green-800 hover:bg-green-50 transition-all">
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                            </button>
+                                                        </Link>
+                                                        <button 
+                                                            onClick={async () => {
+                                                                if (await confirm({ title: "Delete Modifier", message: `Delete "${mod.name}"? This will remove it from all dishes that use it.`, destructive: true })) {
+                                                                    await deleteModifierGroup(rid, mod.id);
+                                                                    refresh();
+                                                                    toast("Modifier deleted", "success");
+                                                                }
+                                                            }}
+                                                            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <Link href={`/admin/restaurants/${rid}/modifiers/new`}>
+                                        <button className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors">
+                                            + Add Modifier Group
+                                        </button>
+                                    </Link>
+                                </>
+                            )}
                         </FormSection>
                     </div>
                 )}

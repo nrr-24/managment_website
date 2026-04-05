@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { createDish, updateDish, uploadSequentialDishImages, getRestaurant, getCategory } from "@/lib/data";
+import { createDish, updateDish, uploadSequentialDishImages, getRestaurant, getCategory, listModifierGroups, ModifierGroup } from "@/lib/data";
 import { FormSection, FormCard, FormField, FormRow, formInputClass, formTextareaClass, formInputRtlClass } from "@/components/ui/FormSection";
 
 export default function NewDishPage() {
@@ -25,7 +25,10 @@ export default function NewDishPage() {
     const [cardImageOrientation, setCardImageOrientation] = useState<"landscape" | "portrait">("landscape");
     const [catName, setCatName] = useState("");
 
-    // Options
+    const [linkedModifiers, setLinkedModifiers] = useState<string[]>([]);
+    const [availableModifiers, setAvailableModifiers] = useState<ModifierGroup[]>([]);
+    
+    // Custom Options
     const [optHeader, setOptHeader] = useState("");
     const [optHeaderAr, setOptHeaderAr] = useState("");
     const [optRequired, setOptRequired] = useState(false);
@@ -52,12 +55,49 @@ export default function NewDishPage() {
         getCategory(rid, cid).then(c => {
             if (c) setCatName(c.name || "");
         });
+        listModifierGroups(rid).then(mods => setAvailableModifiers(mods));
     }, [rid, cid]);
 
     async function handleCreate() {
         if (!name.trim()) return;
         setBusy(true);
         try {
+            const validCustomItems = optItems.filter(i => i.name.trim()).map(i => ({ ...i, price: parseFloat(i.price) || 0 }));
+            const customOptionsObj = validCustomItems.length > 0 ? {
+                header: optHeader,
+                headerAr: optHeaderAr,
+                required: optRequired,
+                maxSelection: parseInt(optMax) || undefined,
+                items: validCustomItems
+            } : null;
+
+            // Generate flattened iOS-compatible `options`
+            let flattenedItems: any[] = [];
+            
+            // 1. Centralized modifiers
+            for (const mid of linkedModifiers) {
+                const mod = availableModifiers.find(m => m.id === mid);
+                if (mod && mod.items && mod.items.length > 0) {
+                    flattenedItems.push({ name: `${mod.name} :`, nameAr: mod.nameAr ? `${mod.nameAr} :` : "", price: 0 }); // Header proxy
+                    flattenedItems.push(...mod.items);
+                }
+            }
+            
+            // 2. Custom options
+            if (validCustomItems.length > 0) {
+                if (optHeader) {
+                    flattenedItems.push({ name: `${optHeader} :`, nameAr: optHeaderAr ? `${optHeaderAr} :` : "", price: 0 });
+                }
+                flattenedItems.push(...validCustomItems);
+            }
+            
+            const legacyOptionsObj = flattenedItems.length > 0 ? {
+                header: "Options",
+                headerAr: "خيارات",
+                required: false,
+                items: flattenedItems.map(i => ({ ...i, id: crypto.randomUUID() }))
+            } : null;
+
             // 1. Create the dish first to get its ID
             const dishData: any = {
                 name: name.trim(),
@@ -66,13 +106,9 @@ export default function NewDishPage() {
                 descriptionAr: descAr.trim(),
                 price: parseFloat(price) || 0,
                 isActive,
-                options: optItems.filter(i => i.name.trim()).length > 0 ? {
-                    header: optHeader,
-                    headerAr: optHeaderAr,
-                    required: optRequired,
-                    maxSelection: parseInt(optMax) || undefined,
-                    items: optItems.filter(i => i.name.trim()).map(i => ({ ...i, price: parseFloat(i.price) || 0 }))
-                } : null,
+                modifierGroupIds: linkedModifiers,
+                customOptions: customOptionsObj,
+                options: legacyOptionsObj,
                 allergens: allergens.filter(a => a.name.trim()).length > 0 ? allergens.filter(a => a.name.trim()) : null
             };
 
@@ -178,8 +214,37 @@ export default function NewDishPage() {
                     </FormCard>
                 </FormSection>
 
-                {/* Section 2 — Options */}
-                <FormSection title="Options" description="Add selectable options like sizes, add-ons, or extras that customers can choose from.">
+                {/* Section 2a — Centralized Modifiers */}
+                <FormSection title="Linked Modifiers" description="Attach global modifier groups to this dish. Manage them in the Restaurants > Modifiers tab.">
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-2">
+                        {availableModifiers.length === 0 ? (
+                            <p className="text-sm text-gray-400">No modifiers created yet.</p>
+                        ) : (
+                            availableModifiers.map(mod => (
+                                <label key={mod.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={linkedModifiers.includes(mod.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) setLinkedModifiers([...linkedModifiers, mod.id]);
+                                            else setLinkedModifiers(linkedModifiers.filter(id => id !== mod.id));
+                                        }}
+                                        className="w-5 h-5 rounded border-gray-300 text-green-700 focus:ring-green-700 focus:ring-offset-0 transition-colors cursor-pointer mt-0.5"
+                                    />
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-800">{mod.name}</p>
+                                        <p className="text-[11px] text-gray-400">
+                                            {mod.items?.map(i => i.name).join(", ")}
+                                        </p>
+                                    </div>
+                                </label>
+                            ))
+                        )}
+                    </div>
+                </FormSection>
+
+                {/* Section 2b — Options */}
+                <FormSection title="Custom Options" description="Add specific options solely for this dish.">
                     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                         {/* Header config */}
                         <div className="p-4 space-y-3">

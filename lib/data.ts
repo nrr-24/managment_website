@@ -180,6 +180,26 @@ export type Dish = {
     // into `options` above by normalizeDish() when reading from Firestore:
     //   optionsHeader?, optionsHeaderAr?, areOptionsRequired?, maxOptionsSelection?
     //   options[] (as array of DishOption items)
+
+    // New web fields
+    modifierGroupIds?: string[];
+    customOptions?: {
+        header: string;
+        headerAr?: string;
+        required?: boolean;
+        maxSelection?: number;
+        items: DishOption[];
+    };
+};
+
+export type ModifierGroup = {
+    id: string;
+    name: string; // Group Name
+    nameAr?: string;
+    required?: boolean;
+    maxSelection?: number;
+    items: DishOption[];
+    createdAt?: any;
 };
 
 /**
@@ -485,6 +505,109 @@ export async function reorderDishes(restaurantId: string, categoryId: string, or
         batch.update(ref, { sortOrder: index });
     });
     await batch.commit();
+}
+
+// ---------- Modifier Groups ----------
+export async function listModifierGroups(restaurantId: string): Promise<ModifierGroup[]> {
+    const colRef = collection(db, "restaurants", restaurantId, "modifiers");
+    const snap = await getDocs(colRef);
+    const groups = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    groups.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
+        const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
+        return ta - tb;
+    });
+    return groups;
+}
+
+export async function getModifierGroup(restaurantId: string, modifierId: string): Promise<ModifierGroup | null> {
+    const snap = await getDoc(doc(db, "restaurants", restaurantId, "modifiers", modifierId));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...(snap.data() as any) };
+}
+
+export async function createModifierGroup(restaurantId: string, data: Partial<Omit<ModifierGroup, "id">>) {
+    const colRef = collection(db, "restaurants", restaurantId, "modifiers");
+    const items = data.items?.map(item => ({
+        id: item.id || generateUUID(),
+        name: item.name || "",
+        nameAr: item.nameAr || "",
+        price: item.price ?? 0,
+    })) || [];
+    
+    const docRef = await addDoc(colRef, {
+        ...cleanData(data),
+        items,
+        createdAt: serverTimestamp(),
+    });
+    return docRef.id;
+}
+
+export async function migrateOptionsToModifiers(restaurantId: string) {
+    const allDishes = await listAllDishes(restaurantId);
+    const existingGroups = await listModifierGroups(restaurantId);
+    
+    // Hash existing groups by a signature: header|items
+    const getSignature = (header: string, items: any[]) => {
+        const itemNames = items.map(i => i.name).sort().join(",");
+        return `${header}|${itemNames}`;
+    };
+    
+    const signatureMap = new Map<string, string>(); // signature -> groupId
+    for (const g of existingGroups) {
+        signatureMap.set(getSignature(g.name || "", g.items || []), g.id);
+    }
+    
+    let migratedCount = 0;
+    
+    for (const dish of allDishes) {
+        if (!dish.options || dish.options.items.length === 0) continue;
+        if (dish.modifierGroupIds !== undefined || dish.customOptions !== undefined) continue; // Already migrated
+        
+        const sig = getSignature(dish.options.header || "", dish.options.items);
+        let groupId = signatureMap.get(sig);
+        
+        if (!groupId) {
+            // Create new centralized modifier group
+            groupId = await createModifierGroup(restaurantId, {
+                name: dish.options.header || dish.name + " Options",
+                nameAr: dish.options.headerAr || "",
+                required: dish.options.required || false,
+                maxSelection: dish.options.maxSelection,
+                items: dish.options.items
+            });
+            signatureMap.set(sig, groupId);
+        }
+        
+        // Update dish to link the group and clear custom options
+        // We do NOT use updateDish directly because it might flatten CustomOptions back incorrectly if we're not careful.
+        // Actually, updateDoc is safer.
+        await updateDoc(doc(db, "restaurants", restaurantId, "categories", dish.categoryId, "dishes", dish.id), {
+            modifierGroupIds: [groupId],
+            customOptions: null
+        });
+        
+        migratedCount++;
+    }
+    
+    return migratedCount;
+}
+
+export async function updateModifierGroup(restaurantId: string, modifierId: string, data: Partial<Omit<ModifierGroup, "id">>) {
+    const updateData = { ...data };
+    if (updateData.items) {
+        updateData.items = updateData.items.map(item => ({
+            id: item.id || generateUUID(),
+            name: item.name || "",
+            nameAr: item.nameAr || "",
+            price: item.price ?? 0,
+        }));
+    }
+    await updateDoc(doc(db, "restaurants", restaurantId, "modifiers", modifierId), cleanData(updateData));
+}
+
+export async function deleteModifierGroup(restaurantId: string, modifierId: string) {
+    await deleteDoc(doc(db, "restaurants", restaurantId, "modifiers", modifierId));
 }
 
 // ---------- Dishes ----------

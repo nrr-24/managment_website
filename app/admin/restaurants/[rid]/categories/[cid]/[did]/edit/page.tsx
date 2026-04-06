@@ -49,7 +49,7 @@ export default function EditDishPage() {
 
     // Dirty tracking for unsaved changes
     const initialDataRef = useRef<string>("");
-    const currentData = JSON.stringify({ name, nameAr, desc, descAr, price, isActive, optHeader, optHeaderAr, optRequired, optMax, optItems, allergens, linkedModifiers });
+    const currentData = JSON.stringify({ name, nameAr, desc, descAr, price, isActive, allergens, linkedModifiers });
     const isDirty = loaded && currentData !== initialDataRef.current;
     useUnsavedChanges(isDirty);
 
@@ -131,16 +131,6 @@ export default function EditDishPage() {
                     descAr: d.descriptionAr || "",
                     price: d.price?.toString() || "",
                     isActive: d.isActive !== false,
-                    optHeader: optionsRef?.header || "",
-                    optHeaderAr: optionsRef?.headerAr || "",
-                    optRequired: optionsRef?.required || false,
-                    optMax: optionsRef?.maxSelection?.toString() || "",
-                    optItems: optionsRef?.items?.map(i => ({
-                        id: i.id,
-                        name: i.name || "",
-                        nameAr: i.nameAr || "",
-                        price: i.price?.toString() || ""
-                    })) || [],
                     allergens: d.allergens?.map(a => ({ id: a.id, name: a.name || "", nameAr: a.nameAr || "" })) || [],
                     linkedModifiers: d.modifierGroupIds || [],
                 });

@@ -98,7 +98,7 @@ function SortableModifierItem({
                         onClick={() => updateItem(idx, { isActive: !item.isActive })}
                         role="switch"
                         aria-checked={item.isActive}
-                        className={`w-12 h-7 rounded-full transition-colors relative ${item.isActive ? 'bg-purple-600' : 'bg-gray-200'}`}
+                        className={`w-12 h-7 rounded-full transition-colors relative ${item.isActive ? 'bg-green-600' : 'bg-gray-300'}`}
                     >
                         <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-all ${item.isActive ? 'left-[22px]' : 'left-0.5'}`} />
                     </button>
@@ -254,7 +254,7 @@ export default function EditModifierPage() {
                     <FormCard>
                         <FormField label="Group Name (English)" required>
                             <input
-                                placeholder="e.g. Wagyu Striploin Steak (300g)"
+                                placeholder="e.g. Size, Meat Selection"
                                 className={formInputClass}
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
@@ -262,7 +262,7 @@ export default function EditModifierPage() {
                         </FormField>
                         <FormField label="Group Name (Arabic)">
                             <input
-                                placeholder="e.g. اختيار اللحم"
+                                placeholder="مثلاً: الحجم، اختيار اللحم"
                                 className={formInputRtlClass}
                                 value={nameAr}
                                 onChange={(e) => setNameAr(e.target.value)}
@@ -276,7 +276,7 @@ export default function EditModifierPage() {
                                     onClick={() => setIsRequired(!isRequired)}
                                     role="switch"
                                     aria-checked={isRequired}
-                                    className={`w-10 h-6 rounded-full transition-colors relative ${isRequired ? 'bg-purple-600' : 'bg-gray-200'}`}
+                                    className={`w-10 h-6 rounded-full transition-colors relative ${isRequired ? 'bg-green-600' : 'bg-gray-300'}`}
                                 >
                                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${isRequired ? 'left-[18px]' : 'left-0.5'}`} />
                                 </button>

@@ -123,8 +123,8 @@ export default function NewModifierPage() {
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
     const [isRequired, setIsRequired] = useState(false);
-    const [minSelection, setMinSelection] = useState("");
-    const [maxSelection, setMaxSelection] = useState("");
+    const [minSelection, setMinSelection] = useState("0");
+    const [maxSelection, setMaxSelection] = useState("0");
     
     // Auto-generate UUIDs for initial items if given any, default empty
     const [items, setItems] = useState<{ id: string; name: string; nameAr: string; price: string; isActive: boolean }[]>([]);
@@ -227,7 +227,7 @@ export default function NewModifierPage() {
                         </FormField>
                         <FormField label="Group Name (Arabic)">
                             <input
-                                placeholder="e.g. اختر الحجم"
+                                placeholder="مثال: اختر الحجم"
                                 className={formInputRtlClass}
                                 value={nameAr}
                                 onChange={(e) => setNameAr(e.target.value)}
@@ -261,7 +261,7 @@ export default function NewModifierPage() {
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Max Choices</span>
                                     <input
-                                        placeholder="∞"
+                                        placeholder="0"
                                         type="number"
                                         max={items.length > 0 ? items.length : undefined}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}

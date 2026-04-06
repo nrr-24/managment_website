@@ -323,7 +323,7 @@ export default function NewModifierPage() {
 
                         <button
                             onClick={() => setItems([...items, { id: crypto.randomUUID(), name: "", nameAr: "", price: "", isActive: true }])}
-                            className="w-full py-4 mt-2 text-center text-sm font-bold text-green-800 bg-white border-2 border-dashed border-green-100 rounded-2xl hover:bg-green-50 hover:border-green-200 transition-all active:scale-[0.99]"
+                            className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors mt-2"
                         >
                             + Add Modifier Item
                         </button>

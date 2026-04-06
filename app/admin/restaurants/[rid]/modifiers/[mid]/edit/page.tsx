@@ -291,7 +291,7 @@ export default function EditModifierPage() {
                                         min={0}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={minSelection}
-                                        onChange={e => setMinSelection(e.target.value)}
+                                        onChange={e => { const v = e.target.value; if (v === "" || parseInt(v) >= 0) setMinSelection(v); }}
                                         onBlur={() => {
                                             const val = parseInt(minSelection) || 0;
                                             const max = parseInt(maxSelection) || 0;
@@ -308,7 +308,7 @@ export default function EditModifierPage() {
                                         min={0}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={maxSelection}
-                                        onChange={e => setMaxSelection(e.target.value)}
+                                        onChange={e => { const v = e.target.value; if (v === "" || parseInt(v) >= 0) setMaxSelection(v); }}
                                         onBlur={() => {
                                             const val = parseInt(maxSelection) || 0;
                                             const min = parseInt(minSelection) || 0;

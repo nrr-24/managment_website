@@ -156,8 +156,8 @@ export default function NewModifierPage() {
                 name: name.trim(),
                 nameAr: nameAr.trim(),
                 required: isRequired,
-                minSelection: minSelection ? parseInt(minSelection) : undefined,
-                maxSelection: maxSelection ? parseInt(maxSelection) : undefined,
+                minSelection: parseInt(minSelection) || 0,
+                maxSelection: parseInt(maxSelection) || 0,
                 items: items.filter(i => i.name.trim()).map(i => ({
                     ...i,
                     price: parseFloat(i.price) || 0
@@ -196,7 +196,7 @@ export default function NewModifierPage() {
 
     const leftAction = (
         <button
-            onClick={() => router.back()}
+            onClick={() => router.push(`/admin/restaurants/${rid}?tab=modifiers`)}
             className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel
@@ -227,7 +227,7 @@ export default function NewModifierPage() {
                         </FormField>
                         <FormField label="Group Name (Arabic)">
                             <input
-                                placeholder="مثال: اختر الحجم"
+                                placeholder="e.g. اختيار اللحم"
                                 className={formInputRtlClass}
                                 value={nameAr}
                                 onChange={(e) => setNameAr(e.target.value)}
@@ -253,9 +253,16 @@ export default function NewModifierPage() {
                                     <input
                                         placeholder="0"
                                         type="number"
+                                        min={0}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={minSelection}
                                         onChange={e => setMinSelection(e.target.value)}
+                                        onBlur={() => {
+                                            const val = parseInt(minSelection) || 0;
+                                            const max = parseInt(maxSelection) || 0;
+                                            const clamped = max > 0 && val > max ? max : val;
+                                            setMinSelection(Math.max(0, clamped).toString());
+                                        }}
                                     />
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -263,22 +270,15 @@ export default function NewModifierPage() {
                                     <input
                                         placeholder="0"
                                         type="number"
-                                        max={items.length > 0 ? items.length : undefined}
+                                        min={0}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={maxSelection}
-                                        onChange={e => {
-                                            if (e.target.value === "") {
-                                                setMaxSelection("");
-                                                return;
-                                            }
-                                            const num = parseInt(e.target.value);
-                                            if (!isNaN(num)) {
-                                                if (items.length > 0 && num > items.length) {
-                                                    setMaxSelection(items.length.toString());
-                                                } else {
-                                                    setMaxSelection(num.toString());
-                                                }
-                                            }
+                                        onChange={e => setMaxSelection(e.target.value)}
+                                        onBlur={() => {
+                                            const val = parseInt(maxSelection) || 0;
+                                            const min = parseInt(minSelection) || 0;
+                                            const clamped = val > 0 && val < min ? min : val;
+                                            setMaxSelection(Math.max(0, clamped).toString());
                                         }}
                                     />
                                 </div>

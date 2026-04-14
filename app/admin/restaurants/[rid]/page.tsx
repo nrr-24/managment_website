@@ -20,6 +20,7 @@ import {
     ModifierGroup,
     listModifierGroups,
     deleteModifierGroup,
+    createModifierGroup,
     migrateOptionsToModifiers
 } from "@/lib/data";
 import { useGlobalUI } from "@/components/ui/Toast";
@@ -144,6 +145,8 @@ export default function RestaurantManagePage() {
     const [modifiers, setModifiers] = useState<ModifierGroup[]>([]);
     const [activeTab, setActiveTab] = useState<"details" | "categories" | "modifiers">("details");
     const [migrating, setMigrating] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -343,6 +346,59 @@ export default function RestaurantManagePage() {
         setBgPreview("");
         await updateRestaurant(rid, { backgroundImagePath: "" });
         toast("Background removed");
+    }
+
+    async function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setImporting(true);
+        const reader = new FileReader();
+
+        reader.onload = async (event) => {
+            try {
+                const text = event.target?.result as string;
+                const data = JSON.parse(text);
+                
+                const groups = Array.isArray(data) ? data : [data];
+                let successCount = 0;
+
+                for (const group of groups) {
+                    if (!group.name) continue;
+                    
+                    await createModifierGroup(rid, {
+                        name: group.name,
+                        nameAr: group.nameAr || "",
+                        required: group.required ?? false,
+                        minSelection: group.minSelection,
+                        maxSelection: group.maxSelection,
+                        items: (group.items || []).map((item: any) => ({
+                            name: item.name || "",
+                            nameAr: item.nameAr || "",
+                            price: item.price ?? 0,
+                            isActive: item.isActive !== false
+                        }))
+                    });
+                    successCount++;
+                }
+
+                toast(`Successfully imported ${successCount} modifier group(s)`);
+                await refresh();
+            } catch (err) {
+                console.error("Import failed:", err);
+                toast("Failed to parse or import JSON. Please check the file format.", "error");
+            } finally {
+                setImporting(false);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+            }
+        };
+
+        reader.onerror = () => {
+            toast("Failed to read file", "error");
+            setImporting(false);
+        };
+
+        reader.readAsText(file);
     }
 
     const actions = (
@@ -685,11 +741,20 @@ export default function RestaurantManagePage() {
                                         </div>
                                         <p className="font-semibold text-gray-900 mb-1">No Modifiers Yet</p>
                                         <p className="text-sm text-gray-500 mb-4">Create your first modifier group.</p>
-                                        <Link href={`/admin/restaurants/${rid}/modifiers/new`}>
-                                            <button className="px-5 py-2.5 bg-green-800 text-white font-bold rounded-full hover:opacity-90 transition-opacity">
-                                                + Add Modifier Group
+                                        <div className="flex flex-col items-center gap-3">
+                                            <Link href={`/admin/restaurants/${rid}/modifiers/new`}>
+                                                <button className="px-5 py-2.5 bg-green-800 text-white font-bold rounded-full hover:opacity-90 transition-opacity">
+                                                    + Add Modifier Group
+                                                </button>
+                                            </Link>
+                                            <button 
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={importing}
+                                                className="text-sm font-semibold text-gray-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                {importing ? "Importing..." : "↓ Or Import JSON"}
                                             </button>
-                                        </Link>
+                                        </div>
                                     </div>
                                 </FormCard>
                             ) : (
@@ -741,11 +806,29 @@ export default function RestaurantManagePage() {
                                             ))}
                                         </div>
                                     </div>
-                                    <Link href={`/admin/restaurants/${rid}/modifiers/new`}>
-                                        <button className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors">
-                                            + Add Modifier Group
-                                        </button>
-                                    </Link>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <Link href={`/admin/restaurants/${rid}/modifiers/new`} className="flex-1">
+                                            <button className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors">
+                                                + Add Modifier Group
+                                            </button>
+                                        </Link>
+                                        <div className="flex-1">
+                                            <input
+                                                type="file"
+                                                accept=".json"
+                                                className="hidden"
+                                                ref={fileInputRef}
+                                                onChange={handleImportJSON}
+                                            />
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={importing}
+                                                className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors disabled:opacity-50"
+                                            >
+                                                {importing ? "Importing..." : "↓ Import JSON"}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </>
                             )}
                         </FormSection>

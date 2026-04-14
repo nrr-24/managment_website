@@ -730,6 +730,14 @@ export default function RestaurantManagePage() {
                             title="Modifiers" 
                             description="Create add-ons and modifiers that you can attach to multiple dishes."
                         >
+                            {/* Hidden file input for import */}
+                            <input
+                                type="file"
+                                accept=".json"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={handleImportJSON}
+                            />
 
                             {modifiers.length === 0 ? (
                                 <FormCard className="!divide-y-0">
@@ -748,9 +756,14 @@ export default function RestaurantManagePage() {
                                                 </button>
                                             </Link>
                                             <button 
-                                                onClick={() => fileInputRef.current?.click()}
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    console.log("Import button clicked");
+                                                    fileInputRef.current?.click();
+                                                }}
                                                 disabled={importing}
-                                                className="text-sm font-semibold text-gray-400 hover:text-blue-500 transition-colors"
+                                                className="text-sm font-semibold text-gray-400 hover:text-blue-500 transition-colors cursor-pointer"
                                             >
                                                 {importing ? "Importing..." : "↓ Or Import JSON"}
                                             </button>
@@ -813,17 +826,15 @@ export default function RestaurantManagePage() {
                                             </button>
                                         </Link>
                                         <div className="flex-1">
-                                            <input
-                                                type="file"
-                                                accept=".json"
-                                                className="hidden"
-                                                ref={fileInputRef}
-                                                onChange={handleImportJSON}
-                                            />
                                             <button
-                                                onClick={() => fileInputRef.current?.click()}
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    console.log("Import button clicked");
+                                                    fileInputRef.current?.click();
+                                                }}
                                                 disabled={importing}
-                                                className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors disabled:opacity-50"
+                                                className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors disabled:opacity-50 cursor-pointer"
                                             >
                                                 {importing ? "Importing..." : "↓ Import JSON"}
                                             </button>

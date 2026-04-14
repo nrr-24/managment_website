@@ -8,7 +8,7 @@ import { StorageImage } from "@/components/ui/StorageImage";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { RestaurantListSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { deleteRestaurant, listRestaurants, Restaurant } from "@/lib/data";
+import { deleteRestaurant, duplicateRestaurant, listRestaurants, Restaurant } from "@/lib/data";
 
 export default function RestaurantsPage() {
     const { toast, confirm } = useGlobalUI();
@@ -36,6 +36,7 @@ export default function RestaurantsPage() {
     }, []);
 
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
     async function handleDelete(id: string, name: string) {
         const ok = await confirm({ title: "Delete Restaurant", message: `Delete "${name}" and all its data? This cannot be undone.`, destructive: true });
@@ -50,6 +51,20 @@ export default function RestaurantsPage() {
             toast("Failed to delete restaurant", "error");
         } finally {
             setDeletingId(null);
+        }
+    }
+
+    async function handleDuplicate(id: string, name: string) {
+        setDuplicatingId(id);
+        try {
+            await duplicateRestaurant(id);
+            toast(`Duplicated "${name}" successfully`);
+            await refresh();
+        } catch (err) {
+            console.error("Duplicate restaurant failed:", err);
+            toast("Failed to duplicate restaurant", "error");
+        } finally {
+            setDuplicatingId(null);
         }
     }
 
@@ -128,23 +143,39 @@ export default function RestaurantsPage() {
                                         {res.nameAr && <p className="text-xs text-gray-400 mt-0.5">{res.nameAr}</p>}
                                     </div>
                                 </Link>
-                                <div className="flex items-center gap-1">
-                                    {isAdmin && canDelete && (
-                                        <button
-                                            onClick={() => handleDelete(res.id, res.name)}
-                                            disabled={deletingId === res.id}
-                                            aria-label={`Delete ${res.name}`}
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                        >
-                                            {deletingId === res.id ? (
-                                                <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
-                                            ) : (
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                    )}
+                                    <div className="flex items-center gap-1">
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => handleDuplicate(res.id, res.name)}
+                                                disabled={duplicatingId === res.id}
+                                                aria-label={`Duplicate ${res.name}`}
+                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                                            >
+                                                {duplicatingId === res.id ? (
+                                                    <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+                                                ) : (
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        )}
+                                        {isAdmin && canDelete && (
+                                            <button
+                                                onClick={() => handleDelete(res.id, res.name)}
+                                                disabled={deletingId === res.id}
+                                                aria-label={`Delete ${res.name}`}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                            >
+                                                {deletingId === res.id ? (
+                                                    <div className="w-5 h-5 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+                                                ) : (
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        )}
                                     <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                                     </svg>

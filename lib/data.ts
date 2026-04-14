@@ -7,6 +7,7 @@ import {
     doc,
     getDoc,
     getDocs,
+    increment,
     orderBy,
     query,
     serverTimestamp,
@@ -733,6 +734,8 @@ export async function uploadRestaurantImage(
         onProgress?.(100);
         const url = await getDownloadURL(result.ref);
 
+        await registerImageAsset(path);
+
         return { url, path };
     } catch (err) {
         console.error(`Error uploading restaurant ${type}:`, err);
@@ -762,6 +765,8 @@ export async function uploadDishImage(
     const result = await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
     onProgress?.(100);
     const url = await getDownloadURL(result.ref);
+
+    await registerImageAsset(path);
 
     return { url, path };
 }
@@ -809,7 +814,90 @@ export async function uploadCategoryImage(
     onProgress?.(100);
     const url = await getDownloadURL(result.ref);
 
+    await registerImageAsset(path);
+
     return { url, path };
+}
+
+/**
+ * Sanitizes a storage path for use as a Firestore document ID.
+ */
+function sanitizePath(path: string): string {
+    return path.replace(/\//g, "___").replace(/\./g, "--");
+}
+
+/**
+ * Registers a new image asset with a usage count of 1.
+ */
+async function registerImageAsset(path: string) {
+    if (!isStoragePath(path)) return;
+    const assetRef = doc(db, "image_assets", sanitizePath(path));
+    await setDoc(assetRef, {
+        path,
+        usageCount: 1,
+        updatedAt: serverTimestamp()
+    }, { merge: true });
+}
+
+/**
+ * Increments the reference count for an image asset.
+ * If the asset is not tracked (legacy), it initializes it to 2 (original + new copy).
+ */
+async function incrementImageAssetReference(path: string) {
+    if (!isStoragePath(path)) return;
+    const assetRef = doc(db, "image_assets", sanitizePath(path));
+    const snap = await getDoc(assetRef);
+    if (snap.exists()) {
+        await updateDoc(assetRef, {
+            usageCount: increment(1),
+            updatedAt: serverTimestamp()
+        });
+    } else {
+        // Legacy image being duplicated for the first time
+        await setDoc(assetRef, {
+            path,
+            usageCount: 2,
+            updatedAt: serverTimestamp()
+        });
+    }
+}
+
+/**
+ * Decrements the reference count for an image asset.
+ * If the count reaches 0 (or if it's a legacy untracked image),
+ * it deletes the image from storage.
+ */
+async function decrementImageAssetReference(path: string) {
+    if (!isStoragePath(path)) return;
+    const assetRef = doc(db, "image_assets", sanitizePath(path));
+    const snap = await getDoc(assetRef);
+    
+    let shouldDeleteFromStorage = false;
+
+    if (snap.exists()) {
+        const newCount = (snap.data().usageCount || 1) - 1;
+        if (newCount <= 0) {
+            shouldDeleteFromStorage = true;
+            await deleteDoc(assetRef);
+        } else {
+            await updateDoc(assetRef, {
+                usageCount: increment(-1),
+                updatedAt: serverTimestamp()
+            });
+        }
+    } else {
+        // Legacy image with no tracking doc — assume count was 1
+        shouldDeleteFromStorage = true;
+    }
+
+    if (shouldDeleteFromStorage) {
+        try {
+            const storageRef = ref(storage, path);
+            await deleteObject(storageRef);
+        } catch (err) {
+            console.warn("Storage delete failed in decrement:", path, err);
+        }
+    }
 }
 
 /**
@@ -830,8 +918,7 @@ async function deleteStoragePaths(paths: (string | undefined | null)[]) {
     for (const path of paths) {
         if (isStoragePath(path)) {
             try {
-                const storageRef = ref(storage, path!);
-                await deleteObject(storageRef);
+                await decrementImageAssetReference(path!);
             } catch (err) {
                 // Silently ignore — file may not exist
                 console.warn("Storage delete skipped:", path, err);
@@ -843,8 +930,7 @@ async function deleteStoragePaths(paths: (string | undefined | null)[]) {
 export async function deleteImageByPath(path?: string) {
     if (!path) return;
     try {
-        const storageRef = ref(storage, path);
-        await deleteObject(storageRef);
+        await decrementImageAssetReference(path);
     } catch (err) {
         console.error("Error deleting image:", err);
     }
@@ -973,6 +1059,7 @@ export async function uploadUserBackgroundImage(file: File, userId: string) {
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, processedBlob, { contentType: 'image/jpeg' });
     const url = await getDownloadURL(storageRef);
+    await registerImageAsset(path);
     return { url, path };
 }
 
@@ -1207,4 +1294,90 @@ export async function importMenuData(
 
     const dishCount = allCategories.reduce((sum, c) => sum + c.dishes.length, 0);
     return { categoryCount: allCategories.length, dishCount };
+}
+
+/**
+ * Deep duplicate a restaurant: copies restaurant doc, modifier groups,
+ * categories, and dishes. Images are referenced by the same paths.
+ */
+export async function duplicateRestaurant(restaurantId: string) {
+    const original = await getRestaurant(restaurantId);
+    if (!original) throw new Error("Original restaurant not found");
+
+    // 1. Create new restaurant doc with "Copy of" name
+    const newRestaurantId = await createRestaurant({
+        name: `Copy of ${original.name}`,
+        nameAr: original.nameAr ? `نسخة من ${original.nameAr}` : `نسخة من ${original.name}`,
+        themeColorHex: original.themeColorHex,
+        layout: original.layout,
+        dishColumns: original.dishColumns,
+        cardImageOrientation: original.cardImageOrientation,
+        menuFont: original.menuFont,
+        imagePath: original.imagePath,
+        backgroundImagePath: original.backgroundImagePath,
+    });
+
+    // Increment references for restaurant images
+    if (original.imagePath) await incrementImageAssetReference(original.imagePath);
+    if (original.backgroundImagePath) await incrementImageAssetReference(original.backgroundImagePath);
+
+    // 2. Duplicate Modifier Groups and store ID mapping
+    const modifierMapping: { [oldId: string]: string } = {};
+    const originalModifiers = await listModifierGroups(restaurantId);
+    for (const group of originalModifiers) {
+        const newGroupId = await createModifierGroup(newRestaurantId, {
+            name: group.name,
+            nameAr: group.nameAr,
+            required: group.required,
+            minSelection: group.minSelection,
+            maxSelection: group.maxSelection,
+            items: group.items,
+        });
+        modifierMapping[group.id] = newGroupId;
+    }
+
+    // 3. Duplicate Categories and Dishes
+    const originalCategories = await listCategories(restaurantId);
+    for (const cat of originalCategories) {
+        const newCategoryId = await createCategory(newRestaurantId, {
+            name: cat.name,
+            nameAr: cat.nameAr,
+            isActive: cat.isActive,
+            imagePath: cat.imagePath,
+            availabilityStart: cat.availabilityStart,
+            availabilityEnd: cat.availabilityEnd,
+            sortOrder: cat.sortOrder,
+        });
+
+        if (cat.imagePath) await incrementImageAssetReference(cat.imagePath);
+
+        const originalDishes = await listDishes(restaurantId, cat.id);
+        for (const dish of originalDishes) {
+            // Update modifier group IDs mapping
+            const newModifierGroupIds = dish.modifierGroupIds?.map(oldId => modifierMapping[oldId]).filter(Boolean);
+            
+            await createDish(newRestaurantId, newCategoryId, {
+                name: dish.name,
+                nameAr: dish.nameAr,
+                price: dish.price,
+                description: dish.description,
+                descriptionAr: dish.descriptionAr,
+                imagePaths: dish.imagePaths,
+                isActive: dish.isActive,
+                sortOrder: dish.sortOrder,
+                modifierGroupIds: newModifierGroupIds,
+                allergens: dish.allergens,
+                options: dish.options,
+                customOptions: dish.customOptions,
+            } as any);
+
+            if (dish.imagePaths) {
+                for (const p of dish.imagePaths) {
+                    await incrementImageAssetReference(p);
+                }
+            }
+        }
+    }
+
+    return newRestaurantId;
 }

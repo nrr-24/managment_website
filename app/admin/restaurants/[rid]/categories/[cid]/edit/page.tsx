@@ -138,7 +138,7 @@ export default function EditCategoryPage() {
 
     const leftAction = (
         <button
-            onClick={() => router.back()}
+            onClick={() => router.push(`/admin/restaurants/${rid}`)}
             className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel

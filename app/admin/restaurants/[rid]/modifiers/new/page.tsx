@@ -98,7 +98,7 @@ function SortableModifierItem({
                         onClick={() => updateItem(idx, { isActive: !item.isActive })}
                         role="switch"
                         aria-checked={item.isActive}
-                        className={`w-12 h-7 rounded-full transition-colors relative ${item.isActive ? 'bg-purple-600' : 'bg-gray-200'}`}
+                        className={`w-12 h-7 rounded-full transition-colors relative ${item.isActive ? 'bg-green-600' : 'bg-gray-300'}`}
                     >
                         <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-all ${item.isActive ? 'left-[22px]' : 'left-0.5'}`} />
                     </button>
@@ -123,8 +123,8 @@ export default function NewModifierPage() {
     const [name, setName] = useState("");
     const [nameAr, setNameAr] = useState("");
     const [isRequired, setIsRequired] = useState(false);
-    const [minSelection, setMinSelection] = useState("");
-    const [maxSelection, setMaxSelection] = useState("");
+    const [minSelection, setMinSelection] = useState("0");
+    const [maxSelection, setMaxSelection] = useState("0");
     
     // Auto-generate UUIDs for initial items if given any, default empty
     const [items, setItems] = useState<{ id: string; name: string; nameAr: string; price: string; isActive: boolean }[]>([]);
@@ -156,8 +156,8 @@ export default function NewModifierPage() {
                 name: name.trim(),
                 nameAr: nameAr.trim(),
                 required: isRequired,
-                minSelection: minSelection ? parseInt(minSelection) : undefined,
-                maxSelection: maxSelection ? parseInt(maxSelection) : undefined,
+                minSelection: parseInt(minSelection) || 0,
+                maxSelection: parseInt(maxSelection) || 0,
                 items: items.filter(i => i.name.trim()).map(i => ({
                     ...i,
                     price: parseFloat(i.price) || 0
@@ -196,7 +196,7 @@ export default function NewModifierPage() {
 
     const leftAction = (
         <button
-            onClick={() => router.back()}
+            onClick={() => router.push(`/admin/restaurants/${rid}?tab=modifiers`)}
             className="text-green-800 font-medium hover:opacity-70 transition-opacity"
         >
             Cancel
@@ -219,7 +219,7 @@ export default function NewModifierPage() {
                     <FormCard>
                         <FormField label="Group Name (English)" required>
                             <input
-                                placeholder="e.g. Wagyu Striploin Steak (300g)"
+                                placeholder="e.g. Size, Meat Selection"
                                 className={formInputClass}
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
@@ -227,7 +227,7 @@ export default function NewModifierPage() {
                         </FormField>
                         <FormField label="Group Name (Arabic)">
                             <input
-                                placeholder="e.g. اختر الحجم"
+                                placeholder="مثلاً: الحجم، اختيار اللحم"
                                 className={formInputRtlClass}
                                 value={nameAr}
                                 onChange={(e) => setNameAr(e.target.value)}
@@ -241,7 +241,7 @@ export default function NewModifierPage() {
                                     onClick={() => setIsRequired(!isRequired)}
                                     role="switch"
                                     aria-checked={isRequired}
-                                    className={`w-10 h-6 rounded-full transition-colors relative ${isRequired ? 'bg-purple-600' : 'bg-gray-200'}`}
+                                    className={`w-10 h-6 rounded-full transition-colors relative ${isRequired ? 'bg-green-600' : 'bg-gray-300'}`}
                                 >
                                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${isRequired ? 'left-[18px]' : 'left-0.5'}`} />
                                 </button>
@@ -253,32 +253,32 @@ export default function NewModifierPage() {
                                     <input
                                         placeholder="0"
                                         type="number"
+                                        min={0}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={minSelection}
-                                        onChange={e => setMinSelection(e.target.value)}
+                                        onChange={e => { const v = e.target.value; if (v === "" || parseInt(v) >= 0) setMinSelection(v); }}
+                                        onBlur={() => {
+                                            const val = parseInt(minSelection) || 0;
+                                            const max = parseInt(maxSelection) || 0;
+                                            const clamped = max > 0 && val > max ? max : val;
+                                            setMinSelection(Math.max(0, clamped).toString());
+                                        }}
                                     />
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Max Choices</span>
                                     <input
-                                        placeholder="∞"
+                                        placeholder="0"
                                         type="number"
-                                        max={items.length > 0 ? items.length : undefined}
+                                        min={0}
                                         className={`${formInputClass} !w-16 text-center ${noSpinClass}`}
                                         value={maxSelection}
-                                        onChange={e => {
-                                            if (e.target.value === "") {
-                                                setMaxSelection("");
-                                                return;
-                                            }
-                                            const num = parseInt(e.target.value);
-                                            if (!isNaN(num)) {
-                                                if (items.length > 0 && num > items.length) {
-                                                    setMaxSelection(items.length.toString());
-                                                } else {
-                                                    setMaxSelection(num.toString());
-                                                }
-                                            }
+                                        onChange={e => { const v = e.target.value; if (v === "" || parseInt(v) >= 0) setMaxSelection(v); }}
+                                        onBlur={() => {
+                                            const val = parseInt(maxSelection) || 0;
+                                            const min = parseInt(minSelection) || 0;
+                                            const clamped = val > 0 && val < min ? min : val;
+                                            setMaxSelection(Math.max(0, clamped).toString());
                                         }}
                                     />
                                 </div>
@@ -323,7 +323,7 @@ export default function NewModifierPage() {
 
                         <button
                             onClick={() => setItems([...items, { id: crypto.randomUUID(), name: "", nameAr: "", price: "", isActive: true }])}
-                            className="w-full py-4 mt-2 text-center text-sm font-bold text-green-800 bg-white border-2 border-dashed border-green-100 rounded-2xl hover:bg-green-50 hover:border-green-200 transition-all active:scale-[0.99]"
+                            className="w-full border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-sm font-semibold text-gray-400 hover:border-green-800 hover:text-green-800 transition-colors mt-2"
                         >
                             + Add Modifier Item
                         </button>

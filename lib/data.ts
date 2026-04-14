@@ -831,12 +831,16 @@ function sanitizePath(path: string): string {
  */
 async function registerImageAsset(path: string) {
     if (!isStoragePath(path)) return;
-    const assetRef = doc(db, "image_assets", sanitizePath(path));
-    await setDoc(assetRef, {
-        path,
-        usageCount: 1,
-        updatedAt: serverTimestamp()
-    }, { merge: true });
+    try {
+        const assetRef = doc(db, "image_assets", sanitizePath(path));
+        await setDoc(assetRef, {
+            path,
+            usageCount: 1,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    } catch (e) {
+        console.warn("Failed to register image asset. Check firestore rules.", e);
+    }
 }
 
 /**
@@ -845,20 +849,24 @@ async function registerImageAsset(path: string) {
  */
 async function incrementImageAssetReference(path: string) {
     if (!isStoragePath(path)) return;
-    const assetRef = doc(db, "image_assets", sanitizePath(path));
-    const snap = await getDoc(assetRef);
-    if (snap.exists()) {
-        await updateDoc(assetRef, {
-            usageCount: increment(1),
-            updatedAt: serverTimestamp()
-        });
-    } else {
-        // Legacy image being duplicated for the first time
-        await setDoc(assetRef, {
-            path,
-            usageCount: 2,
-            updatedAt: serverTimestamp()
-        });
+    try {
+        const assetRef = doc(db, "image_assets", sanitizePath(path));
+        const snap = await getDoc(assetRef);
+        if (snap.exists()) {
+            await updateDoc(assetRef, {
+                usageCount: increment(1),
+                updatedAt: serverTimestamp()
+            });
+        } else {
+            // Legacy image being duplicated for the first time
+            await setDoc(assetRef, {
+                path,
+                usageCount: 2,
+                updatedAt: serverTimestamp()
+            });
+        }
+    } catch (e) {
+        console.warn("Failed to increment image asset. Check firestore rules.", e);
     }
 }
 
@@ -869,33 +877,43 @@ async function incrementImageAssetReference(path: string) {
  */
 async function decrementImageAssetReference(path: string) {
     if (!isStoragePath(path)) return;
-    const assetRef = doc(db, "image_assets", sanitizePath(path));
-    const snap = await getDoc(assetRef);
-    
-    let shouldDeleteFromStorage = false;
+    try {
+        const assetRef = doc(db, "image_assets", sanitizePath(path));
+        const snap = await getDoc(assetRef);
+        
+        let shouldDeleteFromStorage = false;
 
-    if (snap.exists()) {
-        const newCount = (snap.data().usageCount || 1) - 1;
-        if (newCount <= 0) {
-            shouldDeleteFromStorage = true;
-            await deleteDoc(assetRef);
+        if (snap.exists()) {
+            const newCount = (snap.data().usageCount || 1) - 1;
+            if (newCount <= 0) {
+                shouldDeleteFromStorage = true;
+                await deleteDoc(assetRef);
+            } else {
+                await updateDoc(assetRef, {
+                    usageCount: increment(-1),
+                    updatedAt: serverTimestamp()
+                });
+            }
         } else {
-            await updateDoc(assetRef, {
-                usageCount: increment(-1),
-                updatedAt: serverTimestamp()
-            });
+            // Legacy image with no tracking doc — assume count was 1
+            shouldDeleteFromStorage = true;
         }
-    } else {
-        // Legacy image with no tracking doc — assume count was 1
-        shouldDeleteFromStorage = true;
-    }
 
-    if (shouldDeleteFromStorage) {
+        if (shouldDeleteFromStorage) {
+            try {
+                const storageRef = ref(storage, path);
+                await deleteObject(storageRef);
+            } catch (err) {
+                console.warn("Storage delete failed in decrement:", path, err);
+            }
+        }
+    } catch (e) {
+        console.warn("Failed to decrement image asset. Fallback to direct delete. Check firestore rules.", e);
         try {
             const storageRef = ref(storage, path);
             await deleteObject(storageRef);
         } catch (err) {
-            console.warn("Storage delete failed in decrement:", path, err);
+            console.warn("Storage delete failed in fallback:", path, err);
         }
     }
 }

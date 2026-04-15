@@ -190,6 +190,18 @@ export default function EditDishPage() {
             updates.imagePaths = finalPaths;
 
             await updateDish(rid, cid, did, updates);
+            
+            // Detect which existing images were removed during editing and decrement them
+            const originalPaths = dish?.imagePaths || [];
+            const removedPaths = originalPaths.filter((p: string) => !finalPaths.includes(p));
+            for (const p of removedPaths) {
+                try {
+                     await deleteImageByPath(p);
+                } catch (e) {
+                     console.warn("Failed to delete removed image:", p, e);
+                }
+            }
+
             toast("Dish updated successfully!");
             setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${cid}`), 1000);
         } catch (err) {
@@ -203,17 +215,7 @@ export default function EditDishPage() {
 
     async function handleRemoveImage(idx: number, isExisting: boolean) {
         if (isExisting) {
-            const img = existingImages[idx];
-            const ok = await confirm({ title: "Delete Image", message: "Permanently delete this image from storage?", destructive: true });
-            if (ok) {
-                try {
-                    await deleteImageByPath(img.path);
-                    setExistingImages(prev => prev.filter((_, i) => i !== idx));
-                } catch (err) {
-                    console.error("Failed to delete image:", err);
-                    toast("Failed to delete image", "error");
-                }
-            }
+            setExistingImages(prev => prev.filter((_, i) => i !== idx));
         } else {
             setNewImageFiles(prev => prev.filter((_, i) => i !== idx));
         }

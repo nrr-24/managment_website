@@ -34,11 +34,15 @@ function SortableModifierItem({
     idx,
     updateItem,
     removeItem,
+    isSelected,
+    onToggleSelect,
 }: {
     item: { id: string; name: string; nameAr: string; price: string; isActive: boolean };
     idx: number;
     updateItem: (idx: number, updates: Partial<typeof item>) => void;
     removeItem: (idx: number) => void;
+    isSelected: boolean;
+    onToggleSelect: () => void;
 }) {
     const {
         attributes,
@@ -66,6 +70,12 @@ function SortableModifierItem({
             >
                 <svg className="w-5 h-5 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h8M8 15h8" /></svg>
             </button>
+            <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={onToggleSelect}
+                className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer shrink-0"
+            />
             <div className="flex-1 min-w-0 min-w-[200px]">
                 <input
                     placeholder="Name"
@@ -127,6 +137,7 @@ export default function EditModifierPage() {
     const [maxSelection, setMaxSelection] = useState("0");
     
     const [items, setItems] = useState<{ id: string; name: string; nameAr: string; price: string; isActive: boolean }[]>([]);
+    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
@@ -216,6 +227,26 @@ export default function EditModifierPage() {
 
         setItems(arrayMove(items, oldIndex, newIndex));
     }
+
+    const toggleSelection = (id: string) => {
+        const newSet = new Set(selectedItemIds);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedItemIds(newSet);
+    };
+
+    const toggleAll = () => {
+        if (selectedItemIds.size === items.length) {
+            setSelectedItemIds(new Set());
+        } else {
+            setSelectedItemIds(new Set(items.map(i => i.id)));
+        }
+    };
+
+    const deleteSelected = () => {
+        setItems(items.filter(i => !selectedItemIds.has(i.id)));
+        setSelectedItemIds(new Set());
+    };
 
     const actions = (
         <button
@@ -325,8 +356,30 @@ export default function EditModifierPage() {
                 <FormSection title="Modifiers" description="The specific add-ons or options underneath this group.">
                     <div className="bg-gray-50/50 rounded-3xl p-4 md:p-6 border border-dashed border-gray-200">
                         {items.length > 0 && (
+                            <div className="flex justify-between items-center mb-4 px-2">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedItemIds.size === items.length && items.length > 0}
+                                        onChange={toggleAll}
+                                        className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-medium text-gray-500">Select All</span>
+                                </label>
+                                {selectedItemIds.size > 0 && (
+                                    <button 
+                                        onClick={deleteSelected}
+                                        className="text-sm font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                                    >
+                                        Delete Selected ({selectedItemIds.size})
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        {items.length > 0 && (
                             <div className="hidden md:flex gap-4 px-4 pb-2 pt-1 uppercase tracking-wider text-[11px] font-bold text-gray-400">
                                 <span className="w-6 shrink-0"></span>
+                                <span className="w-5 shrink-0"></span>
                                 <span className="flex-1">Name</span>
                                 <span className="w-[104px] shrink-0 text-center">Price</span>
                                 <span className="w-12 shrink-0"></span>
@@ -351,6 +404,8 @@ export default function EditModifierPage() {
                                             setItems(newItems);
                                         }}
                                         removeItem={i => setItems(items.filter((_, index) => index !== i))}
+                                        isSelected={selectedItemIds.has(item.id)}
+                                        onToggleSelect={() => toggleSelection(item.id)}
                                     />
                                 ))}
                             </SortableContext>

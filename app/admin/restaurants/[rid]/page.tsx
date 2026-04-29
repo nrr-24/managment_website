@@ -146,6 +146,7 @@ export default function RestaurantManagePage() {
     const [activeTab, setActiveTab] = useState<"details" | "categories" | "modifiers">("details");
     const [migrating, setMigrating] = useState(false);
     const [importing, setImporting] = useState(false);
+    const [selectedModifierIds, setSelectedModifierIds] = useState<Set<string>>(new Set());
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const sensors = useSensors(
@@ -400,6 +401,35 @@ export default function RestaurantManagePage() {
 
         reader.readAsText(file);
     }
+
+    const toggleModifierSelection = (id: string) => {
+        const newSet = new Set(selectedModifierIds);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedModifierIds(newSet);
+    };
+
+    const toggleAllModifiers = () => {
+        if (selectedModifierIds.size === modifiers.length) {
+            setSelectedModifierIds(new Set());
+        } else {
+            setSelectedModifierIds(new Set(modifiers.map(m => m.id)));
+        }
+    };
+
+    const deleteSelectedModifiers = async () => {
+        if (!await confirm({ title: "Delete Selected Modifiers", message: `Delete ${selectedModifierIds.size} modifier group(s)? This will remove them from all dishes that use them.`, destructive: true })) {
+            return;
+        }
+        try {
+            await Promise.all(Array.from(selectedModifierIds).map(id => deleteModifierGroup(rid, id)));
+            setSelectedModifierIds(new Set());
+            await refresh();
+            toast(`${selectedModifierIds.size} modifier group(s) deleted successfully`, "success");
+        } catch (err) {
+            toast("Failed to delete some modifier groups", "error");
+        }
+    };
 
     const actions = (
         <button
@@ -773,20 +803,47 @@ export default function RestaurantManagePage() {
                             ) : (
                                 <>
                                     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-4">
-                                        <div className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-3 bg-gray-50/80 border-b border-gray-100 items-center text-center">
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Group Name</span>
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Modifiers</span>
+                                        {selectedModifierIds.size > 0 && (
+                                            <div className="bg-red-50/50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
+                                                <span className="text-sm font-semibold text-red-700">{selectedModifierIds.size} selected</span>
+                                                <button 
+                                                    onClick={deleteSelectedModifiers}
+                                                    className="text-sm font-bold text-red-600 hover:text-red-800 bg-red-100 px-4 py-1.5 rounded-lg transition-colors"
+                                                >
+                                                    Delete Selected
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="grid grid-cols-[40px_1fr_2fr_100px_80px] gap-4 px-6 py-3 bg-gray-50/80 border-b border-gray-100 items-center text-center">
+                                            <label className="flex items-center justify-center cursor-pointer">
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={selectedModifierIds.size === modifiers.length && modifiers.length > 0}
+                                                    onChange={toggleAllModifiers}
+                                                    className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                                />
+                                            </label>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Group Name</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Modifiers</span>
                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Items</span>
                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</span>
                                         </div>
                                         <div className="divide-y divide-gray-50">
                                             {modifiers.map((mod) => (
-                                                <div key={mod.id} className="grid grid-cols-[1fr_2fr_100px_80px] gap-4 px-6 py-4 items-center text-center group hover:bg-gray-50/50 transition-colors">
-                                                    <div className="min-w-0">
+                                                <div key={mod.id} className="grid grid-cols-[40px_1fr_2fr_100px_80px] gap-4 px-6 py-4 items-center text-center group hover:bg-gray-50/50 transition-colors">
+                                                    <div className="flex items-center justify-center">
+                                                        <input 
+                                                            type="checkbox"
+                                                            checked={selectedModifierIds.has(mod.id)}
+                                                            onChange={() => toggleModifierSelection(mod.id)}
+                                                            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0 text-left">
                                                         <p className="text-sm font-semibold text-gray-900 truncate">{mod.name}</p>
                                                         {mod.nameAr && <p className="text-[11px] text-gray-400 truncate" dir="rtl">{mod.nameAr}</p>}
                                                     </div>
-                                                    <div className="min-w-0">
+                                                    <div className="min-w-0 text-left">
                                                         <p className="text-sm text-gray-600 truncate">
                                                             {mod.items?.map((i: any) => i.name).join(", ") || "No Modifiers"}
                                                         </p>

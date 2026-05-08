@@ -371,13 +371,14 @@ function ListLayout({
                     {categories.map(cat => (
                         <button
                             key={cat.id}
+                            ref={el => { itemRefs.current[cat.id] = el; }}
                             onClick={() => scrollToCategory(cat.id)}
                             className={`flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95 group ${
                                 selectedCategoryId === cat.id ? "opacity-100" : "opacity-60 hover:opacity-80"
                             }`}
                         >
                             <div className={`w-20 h-14 sm:w-24 sm:h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                                selectedCategoryId === cat.id ? "border-blue-500 scale-105" : "border-transparent"
+                                selectedCategoryId === cat.id ? "border-white/80 scale-105" : "border-transparent"
                             }`}>
                                 {cat.imagePath ? (
                                     <StorageImage path={cat.imagePath} className="w-full h-full object-cover" />
@@ -387,9 +388,7 @@ function ListLayout({
                                     </div>
                                 )}
                             </div>
-                            <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-center max-w-[80px] sm:max-w-[96px] truncate ${
-                                selectedCategoryId === cat.id ? "text-blue-400" : "text-white"
-                            }`}>
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-center max-w-[80px] sm:max-w-[96px] truncate text-white">
                                 {t(cat.name, cat.nameAr)}
                             </span>
                         </button>

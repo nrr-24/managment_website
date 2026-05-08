@@ -37,20 +37,20 @@ service cloud.firestore {
     // RESTAURANTS / MENU
     match /restaurants/{restaurantId} {
       allow read: if true;
-      allow create, update, delete: if isManager();
+      allow write: if isManager();
 
       match /modifiers/{modifierId} {
         allow read: if true;
-        allow create, update, delete: if isManager();
+        allow write: if isManager();
       }
 
       match /categories/{categoryId} {
         allow read: if true;
-        allow create, update, delete: if isManager();
+        allow write: if isManager();
 
         match /dishes/{dishId} {
           allow read: if true;
-          allow create, update, delete: if isManager();
+          allow write: if isManager();
         }
       }
     }

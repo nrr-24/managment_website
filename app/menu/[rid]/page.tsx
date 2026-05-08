@@ -71,9 +71,9 @@ export default function PublicMenuPage() {
                 if (res.layout !== "grid" && activeCats.length > 0) {
                     setSelectedCategoryId(activeCats[0].id);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to load menu:", err);
-                setError("Failed to load menu data");
+                setError(err.message || "Failed to load menu data");
             } finally {
                 setLoading(false);
             }

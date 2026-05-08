@@ -310,11 +310,58 @@ function ListLayout({
 }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const isScrollingRef = useRef(false);
+
+    // Scroll sync: track which category is in view
+    useEffect(() => {
+        const observerOptions = {
+            root: null,
+            rootMargin: '-15% 0px -75% 0px', // Detect when header is near the top
+            threshold: 0
+        };
+
+        const observerCallback = (entries: IntersectionObserverEntry[]) => {
+            if (isScrollingRef.current) return; 
+
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    onSelectCategory(entry.target.id);
+                }
+            });
+        };
+
+        const observer = new IntersectionObserver(observerCallback, observerOptions);
+        
+        Object.values(categoryRefs.current).forEach(el => {
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, [categories, onSelectCategory]);
 
     const scrollToCategory = (id: string) => {
+        isScrollingRef.current = true;
         onSelectCategory(id);
         categoryRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+        
+        // Resume observer after scroll completes
+        setTimeout(() => {
+            isScrollingRef.current = false;
+        }, 1000);
     };
+
+    // Keep horizontal strip in sync
+    const stripRef = useRef<HTMLDivElement>(null);
+    const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    useEffect(() => {
+        if (selectedCategoryId && itemRefs.current[selectedCategoryId]) {
+            itemRefs.current[selectedCategoryId]?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center'
+            });
+        }
+    }, [selectedCategoryId]);
 
     return (
         <div className="flex flex-col gap-6">
@@ -359,6 +406,7 @@ function ListLayout({
                     return (
                         <div 
                             key={cat.id} 
+                            id={cat.id}
                             ref={el => { categoryRefs.current[cat.id] = el; }}
                             className="flex flex-col gap-4 scroll-mt-24"
                         >
@@ -488,11 +536,11 @@ function DishCard({
                     </div>
                 )}
             </div>
-            <div className="p-2 sm:p-3 flex flex-col gap-0.5 bg-black">
-                <h3 className="font-bold text-xs sm:text-sm leading-tight line-clamp-2 text-white" style={{ fontSize: `${14 * fontScale}px` }}>
+            <div className="p-2 sm:p-3 flex flex-col gap-0.5 bg-black text-center">
+                <h3 className="font-bold text-xs sm:text-sm leading-tight line-clamp-2 text-white text-center" style={{ fontSize: `${14 * fontScale}px` }}>
                     {t(dish.name, dish.nameAr)}
                 </h3>
-                <span className="text-white/70 text-[10px] sm:text-xs font-bold" style={{ fontSize: `${12 * fontScale}px` }}>
+                <span className="text-white/70 text-[10px] sm:text-xs font-bold text-center" style={{ fontSize: `${12 * fontScale}px` }}>
                     {dish.price.toFixed(3)}
                 </span>
             </div>

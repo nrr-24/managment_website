@@ -134,15 +134,19 @@ export default function PublicMenuPage() {
             {/* Background */}
             <div className="fixed inset-0 z-0">
                 {backgroundImage ? (
-                    <StorageImage 
-                        path={backgroundImage} 
-                        className="w-full h-full object-cover opacity-60"
+                    <StorageImage
+                        path={backgroundImage}
+                        className="w-full h-full object-cover opacity-50 scale-105"
                         alt=""
                     />
                 ) : (
-                    <div className="w-full h-full bg-gradient-to-b from-gray-900 to-black" />
+                    <div className="w-full h-full bg-gradient-to-br from-[#1b1b21] via-[#0e0e12] to-black" />
                 )}
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+                {/* Tint + blur */}
+                <div className="absolute inset-0 bg-black/55 backdrop-blur-[3px]" />
+                {/* Vignette for depth */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/70" />
+                <div className="absolute inset-0" style={{ boxShadow: "inset 0 0 200px 40px rgba(0,0,0,0.7)" }} />
             </div>
 
             {/* Main Content */}
@@ -168,8 +172,8 @@ export default function PublicMenuPage() {
                         </div>
 
                         {/* Title */}
-                        <h1 
-                            className="flex-1 text-xl font-bold text-center drop-shadow-lg line-clamp-1"
+                        <h1
+                            className="flex-1 text-xl font-bold tracking-tight text-center drop-shadow-lg line-clamp-1"
                             style={{ fontSize: `${20 * fontScale}px` }}
                         >
                             {t(restaurant.name, restaurant.nameAr)}
@@ -412,9 +416,12 @@ function ListLayout({
                                 onClick={() => scrollToCategory(cat.id)}
                                 className="flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95 group"
                             >
-                                <div className={`w-24 sm:w-32 aspect-[1.69/1] rounded-xl overflow-hidden transition-all ${
-                                    isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-90"
-                                }`}>
+                                <div
+                                    className={`w-24 sm:w-32 aspect-[1.69/1] rounded-xl overflow-hidden transition-all duration-300 ${
+                                        isSelected ? "opacity-100 ring-2 shadow-lg shadow-black/40" : "opacity-65 ring-1 ring-white/10 group-hover:opacity-90"
+                                    }`}
+                                    style={isSelected ? { boxShadow: `0 6px 18px rgba(0,0,0,0.45)`, "--tw-ring-color": accentColor } as React.CSSProperties : undefined}
+                                >
                                     {cat.imagePath ? (
                                         <StorageImage path={cat.imagePath} className="w-full h-full object-cover" />
                                     ) : (
@@ -449,16 +456,19 @@ function ListLayout({
                             key={cat.id} 
                             id={cat.id}
                             ref={el => { categoryRefs.current[cat.id] = el; }}
-                            className="flex flex-col gap-4 scroll-mt-24"
+                            className="flex flex-col gap-5 scroll-mt-24"
                         >
-                            <h2 className="text-xl sm:text-2xl font-bold px-2 drop-shadow-md text-center" style={{ fontSize: `${22 * fontScale}px` }}>
-                                {t(cat.name, cat.nameAr)}
-                            </h2>
-                            <div className={`grid gap-2 sm:gap-3 grid-cols-2 md:grid-cols-3`}>
+                            <div className="flex flex-col items-center gap-2">
+                                <h2 className="font-bold tracking-tight text-center drop-shadow-md" style={{ fontSize: `${24 * fontScale}px` }}>
+                                    {t(cat.name, cat.nameAr)}
+                                </h2>
+                                <span className="h-[3px] w-9 rounded-full opacity-80" style={{ backgroundColor: accentColor }} />
+                            </div>
+                            <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3`}>
                                 {catDishes.map(dish => (
-                                    <DishCard 
-                                        key={dish.id} 
-                                        dish={dish} 
+                                    <DishCard
+                                        key={dish.id}
+                                        dish={dish}
                                         onClick={() => onSelectDish(dish, catDishes)}
                                         t={t}
                                         fontScale={fontScale}
@@ -524,20 +534,20 @@ function GridLayout({
                 <button
                     key={cat.id}
                     onClick={() => onSelectCategory(cat)}
-                    className="flex flex-col bg-black/80 rounded-2xl overflow-hidden border border-white/5 hover:border-white/20 transition-all active:scale-95 group"
+                    className="flex flex-col bg-[#0d0d0f] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:ring-white/25 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group"
                 >
                     <div className="aspect-[1.69/1] relative overflow-hidden">
                         {cat.imagePath ? (
-                            <StorageImage path={cat.imagePath} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <StorageImage path={cat.imagePath} className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-700 ease-out" />
                         ) : (
                             <div className="w-full h-full bg-gray-900 flex items-center justify-center">
                                 <svg className="w-8 h-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                             </div>
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     </div>
-                    <div className="p-4 text-center">
-                        <span className="font-bold text-lg leading-tight" style={{ fontSize: `${20 * fontScale}px` }}>
+                    <div className="px-4 py-3.5 text-center">
+                        <span className="font-semibold tracking-tight leading-tight" style={{ fontSize: `${19 * fontScale}px` }}>
                             {t(cat.name, cat.nameAr)}
                         </span>
                     </div>
@@ -547,15 +557,15 @@ function GridLayout({
     );
 }
 
-function DishCard({ 
-    dish, 
-    onClick, 
-    t, 
+function DishCard({
+    dish,
+    onClick,
+    t,
     fontScale,
     orientation = "landscape"
-}: { 
-    dish: Dish; 
-    onClick: () => void; 
+}: {
+    dish: Dish;
+    onClick: () => void;
     t: (en: string, ar?: string) => string;
     fontScale: number;
     orientation?: "landscape" | "portrait";
@@ -566,22 +576,24 @@ function DishCard({
     return (
         <button
             onClick={onClick}
-            className="flex flex-col bg-black rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all active:scale-[0.98] group text-left"
+            className="flex flex-col bg-[#0d0d0f] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:ring-white/25 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group text-left"
         >
             <div className={`relative overflow-hidden ${isPortrait ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
                 {imgPath ? (
-                    <StorageImage path={imgPath} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <StorageImage path={imgPath} className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-700 ease-out" />
                 ) : (
                     <div className="w-full h-full bg-gray-900/50 flex items-center justify-center">
                         <svg className="w-8 h-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                     </div>
                 )}
+                {/* Bottom blend into the title strip */}
+                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#0d0d0f] to-transparent" />
             </div>
-            <div className="p-3 flex flex-col gap-0.5 bg-black text-left">
-                <h3 className="font-bold text-xs sm:text-sm leading-tight line-clamp-2 text-white" style={{ fontSize: `${14 * fontScale}px` }}>
+            <div className="px-3 py-2.5 flex flex-col gap-1 text-left">
+                <h3 className="font-semibold tracking-tight leading-snug line-clamp-2 text-white/95" style={{ fontSize: `${14 * fontScale}px` }}>
                     {t(dish.name, dish.nameAr)}
                 </h3>
-                <span className="text-white/70 text-[10px] sm:text-xs font-bold" style={{ fontSize: `${12 * fontScale}px` }}>
+                <span className="font-semibold tabular-nums text-white/50" style={{ fontSize: `${12 * fontScale}px` }}>
                     {dish.price.toFixed(3)}
                 </span>
             </div>
@@ -761,7 +773,7 @@ function DishDetailOverlay({ dishes, initialIndex, onClose, t, accentColor, modi
 
             <div className="flex-1 overflow-y-auto no-scrollbar">
                 {/* Image */}
-                <div className="w-full aspect-[4/3] bg-gray-900">
+                <div className="w-full aspect-[4/3] bg-gray-900 relative">
                     {dish.imagePaths?.[0] ? (
                         <StorageImage path={dish.imagePaths[0]} className="w-full h-full object-cover" />
                     ) : (
@@ -769,24 +781,27 @@ function DishDetailOverlay({ dishes, initialIndex, onClose, t, accentColor, modi
                             <svg className="w-16 h-16 text-gray-800" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                         </div>
                     )}
+                    {/* Blend image into content */}
+                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent" />
                 </div>
 
                 {/* Info */}
-                <div className="px-6 pt-8 pb-16 flex flex-col gap-5 max-w-2xl mx-auto">
-                    <div className="flex flex-col gap-1.5 text-center">
-                        <h2 className="text-3xl sm:text-4xl font-bold">{t(dish.name, dish.nameAr)}</h2>
-                        <span className="text-xl sm:text-2xl font-bold text-white/90">{dish.price.toFixed(3)}</span>
+                <div className="px-6 -mt-6 relative z-10 pb-16 flex flex-col gap-6 max-w-2xl mx-auto">
+                    <div className="flex flex-col items-center gap-2.5 text-center">
+                        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight drop-shadow-lg">{t(dish.name, dish.nameAr)}</h2>
+                        <span className="text-lg sm:text-xl font-semibold tabular-nums text-white/85">{dish.price.toFixed(3)}</span>
+                        <span className="h-[3px] w-10 rounded-full opacity-80" style={{ backgroundColor: accentColor }} />
                     </div>
 
                     {dish.description && (
-                        <p className="text-gray-300 text-sm sm:text-base leading-relaxed text-center">{t(dish.description, dish.descriptionAr)}</p>
+                        <p className="text-gray-300/90 text-sm sm:text-base leading-relaxed text-center max-w-xl mx-auto">{t(dish.description, dish.descriptionAr)}</p>
                     )}
 
                     {/* Allergens */}
                     {dish.allergens && dish.allergens.length > 0 && (
                         <div className="flex flex-wrap gap-2 justify-center">
                             {dish.allergens.map((a: DishAllergen, i: number) => (
-                                <span key={a.id || i} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-gray-400">
+                                <span key={a.id || i} className="px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-xs font-semibold uppercase tracking-wide text-gray-300/80">
                                     {t(a.name, a.nameAr)}
                                 </span>
                             ))}

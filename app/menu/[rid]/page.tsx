@@ -172,6 +172,13 @@ export default function PublicMenuPage() {
     const fontConfig = getFontConfig(restaurant.menuFont || "system");
     const accent = restaurant.themeColorHex || "#ffffff";
     const t = (en: string, ar?: string) => (isAr && ar ? ar : en);
+
+    // Layout rules from the restaurant config
+    const cols = restaurant.dishColumns || 2;
+    const dishGridClass =
+        cols === 1 ? "grid-cols-1" : cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2";
+    const orientation: "landscape" | "portrait" = restaurant.cardImageOrientation === "portrait" ? "portrait" : "landscape";
+
     const cycleFontScale = () => setFontScale((p) => (p < 1.14 ? 1.15 : 1));
     const openDish = (dish: Dish, list: Dish[]) =>
         setSelectedDish({ dishes: list, index: list.findIndex((d) => d.id === dish.id) });
@@ -337,7 +344,8 @@ export default function PublicMenuPage() {
                                         onSelect={(d) => openDish(d, catDishes)}
                                         t={t}
                                         fontScale={fontScale}
-                                        orientation={restaurant.cardImageOrientation}
+                                        orientation={orientation}
+                                        gridClass={dishGridClass}
                                     />
                                 </section>
                             );
@@ -358,7 +366,8 @@ export default function PublicMenuPage() {
                                     onSelect={(d) => openDish(d, catDishes)}
                                     t={t}
                                     fontScale={fontScale}
-                                    orientation={restaurant.cardImageOrientation}
+                                    orientation={orientation}
+                                    gridClass={dishGridClass}
                                 />
                             </div>
                         );
@@ -416,6 +425,7 @@ export default function PublicMenuPage() {
                     t={t}
                     accent={accent}
                     modifierGroups={modifierGroups}
+                    orientation={orientation}
                 />
             )}
 
@@ -477,15 +487,17 @@ function DishGrid({
     t,
     fontScale,
     orientation,
+    gridClass,
 }: {
     dishes: Dish[];
     onSelect: (d: Dish) => void;
     t: (en: string, ar?: string) => string;
     fontScale: number;
     orientation?: "landscape" | "portrait";
+    gridClass: string;
 }) {
     return (
-        <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3">
+        <div className={`grid gap-3 sm:gap-4 ${gridClass}`}>
             {dishes.map((dish) => (
                 <DishCard key={dish.id} dish={dish} onClick={() => onSelect(dish)} t={t} fontScale={fontScale} orientation={orientation} />
             ))}
@@ -673,6 +685,7 @@ function DishDetailOverlay({
     t,
     accent,
     modifierGroups,
+    orientation = "landscape",
 }: {
     dishes: Dish[];
     initialIndex: number;
@@ -680,11 +693,15 @@ function DishDetailOverlay({
     t: (en: string, ar?: string) => string;
     accent: string;
     modifierGroups: ModifierGroup[];
+    orientation?: "landscape" | "portrait";
 }) {
     const [index, setIndex] = useState(initialIndex);
     const scrollRef = useRef<HTMLDivElement>(null);
     const dish = dishes[index];
     const sections = buildOptionSections(dish, modifierGroups);
+    const imgPath = dish.imagePaths?.[0];
+    // Orientation-aware frame; image is shown in full (contain) over a blurred fill.
+    const imageAspect = orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
 
     // Reset scroll when navigating between dishes
     useEffect(() => {
@@ -721,16 +738,20 @@ function DishDetailOverlay({
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar">
-                {/* Image */}
-                <div className="w-full aspect-[4/3] bg-gray-900 relative">
-                    {dish.imagePaths?.[0] ? (
-                        <StorageImage path={dish.imagePaths[0]} className="w-full h-full object-cover" />
+                {/* Image — shown in full (no cropping), framed per orientation */}
+                <div className={`w-full ${imageAspect} max-h-[68vh] bg-black relative overflow-hidden`}>
+                    {imgPath ? (
+                        <>
+                            {/* Blurred fill so letterboxing reads as depth, not empty bars */}
+                            <StorageImage path={imgPath} className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40" alt="" />
+                            <StorageImage path={imgPath} className="relative w-full h-full object-contain" />
+                        </>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
                             <PlaceholderIcon className="w-16 h-16 text-white/15" />
                         </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none" />
                 </div>
 
                 {/* Info */}

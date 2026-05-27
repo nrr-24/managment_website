@@ -327,7 +327,7 @@ function ListLayout({
     restaurant: Restaurant;
     accentColor: string;
 }) {
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const stripWrapRef = useRef<HTMLDivElement>(null);
     const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const isScrollingRef = useRef(false);
 
@@ -359,14 +359,30 @@ function ListLayout({
     }, [categories, onSelectCategory]);
 
     const scrollToCategory = (id: string) => {
+        const el = categoryRefs.current[id];
+        if (!el) return;
+
         isScrollingRef.current = true;
         onSelectCategory(id);
-        categoryRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
-        
+
+        // Scroll the real scroll container (<main>) so we can offset past the sticky strip.
+        const scroller = el.closest("main") as HTMLElement | null;
+        const offset = (stripWrapRef.current?.offsetHeight ?? 120) + 12;
+
+        if (scroller) {
+            const top = el.getBoundingClientRect().top
+                - scroller.getBoundingClientRect().top
+                + scroller.scrollTop
+                - offset;
+            scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        } else {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
         // Resume observer after scroll completes
         setTimeout(() => {
             isScrollingRef.current = false;
-        }, 1000);
+        }, 800);
     };
 
     // Keep horizontal strip in sync
@@ -385,7 +401,7 @@ function ListLayout({
     return (
         <div className="flex flex-col gap-6">
             {/* Category Strip */}
-            <div className="sticky top-0 z-20 py-3 -mx-4 px-4 bg-black/50 backdrop-blur-md overflow-x-auto no-scrollbar">
+            <div ref={stripWrapRef} className="sticky top-0 z-20 py-3 -mx-4 px-4 bg-black/50 backdrop-blur-md overflow-x-auto no-scrollbar">
                 <div className="flex gap-3 sm:gap-4">
                     {categories.map(cat => {
                         const isSelected = selectedCategoryId === cat.id;

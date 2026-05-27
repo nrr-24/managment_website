@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
     getRestaurant, 
@@ -9,9 +9,10 @@ import {
     listModifierGroups,
     Restaurant, 
     Category, 
-    Dish, 
+    Dish,
     ModifierGroup,
-    DishAllergen
+    DishAllergen,
+    DishOption
 } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
 import { getFontConfig } from "@/components/ui/FontPicker";
@@ -29,6 +30,7 @@ export default function PublicMenuPage() {
     const { rid } = useParams() as { rid: string };
     const [data, setData] = useState<MenuProps | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Menu State
@@ -39,48 +41,56 @@ export default function PublicMenuPage() {
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [gridSelectedCategory, setGridSelectedCategory] = useState<Category | null>(null);
 
-    useEffect(() => {
-        async function loadData() {
-            try {
-                const res = await getRestaurant(rid);
-                if (!res) {
-                    setError("Restaurant not found");
-                    return;
-                }
-
-                const cats = await listCategories(rid);
-                const activeCats = cats.filter(c => c.isActive);
-                
-                // Fetch all dishes for all active categories
-                const allDishesPromises = activeCats.map(async c => {
-                    const d = await listDishes(rid, c.id);
-                    return d.map(dish => ({ ...dish, categoryId: c.id }));
-                });
-                const dishesArrays = await Promise.all(allDishesPromises);
-                const allDishes = dishesArrays.flat().filter(d => d.isActive !== false);
-
-                const mods = await listModifierGroups(rid);
-
-                setData({
-                    restaurant: res,
-                    categories: activeCats,
-                    dishes: allDishes,
-                    modifierGroups: mods
-                });
-
-                if (res.layout !== "grid" && activeCats.length > 0) {
-                    setSelectedCategoryId(activeCats[0].id);
-                }
-            } catch (err: any) {
-                console.error("Failed to load menu:", err);
-                setError(err.message || "Failed to load menu data");
-            } finally {
-                setLoading(false);
+    const loadData = useCallback(async () => {
+        try {
+            setError(null);
+            const res = await getRestaurant(rid);
+            if (!res) {
+                setError("Restaurant not found");
+                return;
             }
-        }
 
-        loadData();
+            const cats = await listCategories(rid);
+            const activeCats = cats.filter(c => c.isActive);
+
+            // Fetch all dishes for all active categories
+            const allDishesPromises = activeCats.map(async c => {
+                const d = await listDishes(rid, c.id);
+                return d.map(dish => ({ ...dish, categoryId: c.id }));
+            });
+            const dishesArrays = await Promise.all(allDishesPromises);
+            const allDishes = dishesArrays.flat().filter(d => d.isActive !== false);
+
+            const mods = await listModifierGroups(rid);
+
+            setData({
+                restaurant: res,
+                categories: activeCats,
+                dishes: allDishes,
+                modifierGroups: mods
+            });
+
+            if (res.layout !== "grid" && activeCats.length > 0) {
+                setSelectedCategoryId(prev => prev ?? activeCats[0].id);
+            }
+        } catch (err: any) {
+            console.error("Failed to load menu:", err);
+            setError(err.message || "Failed to load menu data");
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     }, [rid]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const handleRefresh = () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        loadData();
+    };
 
     if (loading) {
         return (
@@ -143,12 +153,12 @@ export default function PublicMenuPage() {
                         {/* Leading Button */}
                         <div className="flex-shrink-0 min-w-[32px]">
                             {(gridSelectedCategory || selectedDish) && (
-                                <button 
+                                <button
                                     onClick={() => {
                                         if (selectedDish) setSelectedDish(null);
                                         else setGridSelectedCategory(null);
                                     }}
-                                    className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-95"
+                                    className="w-9 h-9 rounded-full bg-[#E9E3D3] text-[#222] flex items-center justify-center hover:bg-[#ddd6c2] transition-all active:scale-95 shadow-md"
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -166,27 +176,36 @@ export default function PublicMenuPage() {
                         </h1>
 
                         {/* Trailing Buttons */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button 
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                            <button
+                                onClick={handleRefresh}
+                                className="w-9 h-9 rounded-full bg-[#E9E3D3] text-[#222] flex items-center justify-center hover:bg-[#ddd6c2] transition-all active:scale-95 shadow-md"
+                                title="Refresh"
+                            >
+                                <svg className={`w-[18px] h-[18px] ${refreshing ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 4v5h5M19.5 13a7.5 7.5 0 01-13.6 4.35M20 20v-5h-5M4.5 11a7.5 7.5 0 0113.6-4.35" />
+                                </svg>
+                            </button>
+                            <button
                                 onClick={cycleFontScale}
-                                className="h-8 px-2 rounded-full bg-white/10 backdrop-blur-md flex items-center gap-0.5 hover:bg-white/20 transition-all active:scale-95"
+                                className="w-9 h-9 rounded-full bg-[#E9E3D3] text-[#222] flex items-center justify-center gap-0.5 hover:bg-[#ddd6c2] transition-all active:scale-95 shadow-md"
                                 title="Adjust Font Size"
                             >
-                                <span className="text-[9px] font-bold">A</span>
-                                <span className="text-[12px] font-bold">A</span>
+                                <span className="text-[10px] font-bold leading-none">A</span>
+                                <span className="text-[14px] font-bold leading-none">A</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowSearch(true)}
-                                className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-95"
+                                className="w-9 h-9 rounded-full bg-[#E9E3D3] text-[#222] flex items-center justify-center hover:bg-[#ddd6c2] transition-all active:scale-95 shadow-md"
                                 title="Search"
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setLanguage(l => l === "en" ? "ar" : "en")}
-                                className="h-8 px-2.5 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xs hover:bg-white/20 transition-all active:scale-95 min-w-[48px]"
+                                className="w-9 h-9 rounded-full bg-[#E9E3D3] text-[#222] flex items-center justify-center font-bold text-xs hover:bg-[#ddd6c2] transition-all active:scale-95 shadow-md"
                                 title="Toggle Language"
                             >
                                 {isAr ? "EN" : "AR"}
@@ -366,33 +385,40 @@ function ListLayout({
     return (
         <div className="flex flex-col gap-6">
             {/* Category Strip */}
-            <div className="sticky top-0 z-20 py-3 -mx-4 px-4 bg-black/40 backdrop-blur-md overflow-x-auto no-scrollbar">
-                <div className="flex gap-3">
-                    {categories.map(cat => (
-                        <button
-                            key={cat.id}
-                            ref={el => { itemRefs.current[cat.id] = el; }}
-                            onClick={() => scrollToCategory(cat.id)}
-                            className={`flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95 group ${
-                                selectedCategoryId === cat.id ? "opacity-100" : "opacity-60 hover:opacity-80"
-                            }`}
-                        >
-                            <div className={`w-20 h-14 sm:w-24 sm:h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                                selectedCategoryId === cat.id ? "border-white/80 scale-105" : "border-transparent"
-                            }`}>
-                                {cat.imagePath ? (
-                                    <StorageImage path={cat.imagePath} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-gray-700" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
-                                    </div>
-                                )}
-                            </div>
-                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-center max-w-[80px] sm:max-w-[96px] truncate text-white">
-                                {t(cat.name, cat.nameAr)}
-                            </span>
-                        </button>
-                    ))}
+            <div className="sticky top-0 z-20 py-3 -mx-4 px-4 bg-black/50 backdrop-blur-md overflow-x-auto no-scrollbar">
+                <div className="flex gap-3 sm:gap-4">
+                    {categories.map(cat => {
+                        const isSelected = selectedCategoryId === cat.id;
+                        return (
+                            <button
+                                key={cat.id}
+                                ref={el => { itemRefs.current[cat.id] = el; }}
+                                onClick={() => scrollToCategory(cat.id)}
+                                className="flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95 group"
+                            >
+                                <div className={`w-24 sm:w-32 aspect-[1.69/1] rounded-xl overflow-hidden transition-all ${
+                                    isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-90"
+                                }`}>
+                                    {cat.imagePath ? (
+                                        <StorageImage path={cat.imagePath} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                            <svg className="w-5 h-5 text-gray-700" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
+                                        </div>
+                                    )}
+                                </div>
+                                <span
+                                    className="h-[3px] w-full rounded-full transition-all"
+                                    style={{ backgroundColor: isSelected ? accentColor : "transparent" }}
+                                />
+                                <span className={`text-[11px] sm:text-xs text-center max-w-[96px] sm:max-w-[128px] truncate transition-all ${
+                                    isSelected ? "text-white font-bold" : "text-white/60 font-medium"
+                                }`}>
+                                    {t(cat.name, cat.nameAr)}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -524,7 +550,7 @@ function DishCard({
     return (
         <button
             onClick={onClick}
-            className="flex flex-col bg-black rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all active:scale-[0.98] group text-center"
+            className="flex flex-col bg-black rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all active:scale-[0.98] group text-left"
         >
             <div className={`relative overflow-hidden ${isPortrait ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
                 {imgPath ? (
@@ -535,11 +561,11 @@ function DishCard({
                     </div>
                 )}
             </div>
-            <div className="p-2 sm:p-3 flex flex-col gap-0.5 bg-black text-center">
-                <h3 className="font-bold text-xs sm:text-sm leading-tight line-clamp-2 text-white text-center" style={{ fontSize: `${14 * fontScale}px` }}>
+            <div className="p-3 flex flex-col gap-0.5 bg-black text-left">
+                <h3 className="font-bold text-xs sm:text-sm leading-tight line-clamp-2 text-white" style={{ fontSize: `${14 * fontScale}px` }}>
                     {t(dish.name, dish.nameAr)}
                 </h3>
-                <span className="text-white/70 text-[10px] sm:text-xs font-bold text-center" style={{ fontSize: `${12 * fontScale}px` }}>
+                <span className="text-white/70 text-[10px] sm:text-xs font-bold" style={{ fontSize: `${12 * fontScale}px` }}>
                     {dish.price.toFixed(3)}
                 </span>
             </div>
@@ -633,48 +659,93 @@ interface DishDetailOverlayProps {
     modifierGroups: ModifierGroup[];
 }
 
+type OptionSection = {
+    id: string;
+    header: string;
+    headerAr?: string;
+    required?: boolean;
+    items: DishOption[];
+};
+
+function buildOptionSections(dish: Dish, modifierGroups: ModifierGroup[]): OptionSection[] {
+    const sections: OptionSection[] = [];
+
+    // 1. Linked centralized modifier groups
+    dish.modifierGroupIds?.forEach(mgId => {
+        const mg = modifierGroups.find(g => g.id === mgId);
+        if (mg && mg.items.length > 0) {
+            sections.push({ id: `mg-${mg.id}`, header: mg.name, headerAr: mg.nameAr, required: mg.required, items: mg.items });
+        }
+    });
+
+    // 2. Per-dish custom options (web)
+    if (dish.customOptions && dish.customOptions.items.length > 0) {
+        sections.push({
+            id: "custom",
+            header: dish.customOptions.header,
+            headerAr: dish.customOptions.headerAr,
+            required: dish.customOptions.required,
+            items: dish.customOptions.items,
+        });
+    }
+
+    // 3. Legacy/iOS-native options (normalized into dish.options)
+    if (dish.options && dish.options.items.length > 0) {
+        sections.push({
+            id: "options",
+            header: dish.options.header,
+            headerAr: dish.options.headerAr,
+            required: dish.options.required,
+            items: dish.options.items,
+        });
+    }
+
+    return sections;
+}
+
 function DishDetailOverlay({ dishes, initialIndex, onClose, t, accentColor, modifierGroups }: DishDetailOverlayProps) {
     const [index, setIndex] = useState(initialIndex);
     const dish = dishes[index];
+    const sections = buildOptionSections(dish, modifierGroups);
 
-    // Simple swiping logic could be added here, but for now we focus on the UI
-    
+    const toolbarBtn = "w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#E9E3D3] text-[#222] flex items-center justify-center hover:bg-[#ddd6c2] transition-all active:scale-95 shadow-md disabled:opacity-40 disabled:hover:bg-[#E9E3D3]";
+
     return (
-        <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col slide-up">
+        <div className="fixed inset-0 z-[200] bg-black flex flex-col slide-up">
             {/* Top Bar */}
-            <div className="absolute top-0 inset-x-0 z-10 p-4 sm:p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
-                <button onClick={onClose} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-95">
+            <div className="absolute top-0 inset-x-0 z-10 p-4 sm:p-6 flex justify-between items-start bg-gradient-to-b from-black/70 to-transparent">
+                <button onClick={onClose} className={toolbarBtn}>
                     <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                
-                <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[9px] sm:text-[10px] font-bold tracking-widest">
-                        {index + 1} / {dishes.length}
-                    </div>
+
+                <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button 
+                        <button
                             disabled={index === 0}
                             onClick={() => setIndex(index - 1)}
-                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-95 disabled:opacity-30"
+                            className={toolbarBtn}
                         >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button 
+                        <button
                             disabled={index === dishes.length - 1}
                             onClick={() => setIndex(index + 1)}
-                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-95 disabled:opacity-30"
+                            className={toolbarBtn}
                         >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
                         </button>
                     </div>
+                    <div className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[10px] font-bold tracking-widest">
+                        {index + 1} / {dishes.length}
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
-                {/* Images */}
-                <div className="w-full aspect-square sm:aspect-[4/3] bg-gray-900 relative">
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+                {/* Image */}
+                <div className="w-full aspect-[4/3] bg-gray-900">
                     {dish.imagePaths?.[0] ? (
                         <StorageImage path={dish.imagePaths[0]} className="w-full h-full object-cover" />
                     ) : (
@@ -682,56 +753,59 @@ function DishDetailOverlay({ dishes, initialIndex, onClose, t, accentColor, modi
                             <svg className="w-16 h-16 text-gray-800" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" /></svg>
                         </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                 </div>
- 
+
                 {/* Info */}
-                <div className="px-6 -mt-12 sm:-mt-16 relative z-10 flex flex-col gap-4 max-w-2xl mx-auto text-center">
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-3xl sm:text-4xl font-bold drop-shadow-2xl">{t(dish.name, dish.nameAr)}</h2>
+                <div className="px-6 pt-8 pb-16 flex flex-col gap-5 max-w-2xl mx-auto">
+                    <div className="flex flex-col gap-1.5 text-center">
+                        <h2 className="text-3xl sm:text-4xl font-bold">{t(dish.name, dish.nameAr)}</h2>
                         <span className="text-xl sm:text-2xl font-bold text-white/90">{dish.price.toFixed(3)}</span>
                     </div>
 
                     {dish.description && (
-                        <p className="text-gray-300 text-sm sm:text-base leading-relaxed">{t(dish.description, dish.descriptionAr)}</p>
+                        <p className="text-gray-300 text-sm sm:text-base leading-relaxed text-center">{t(dish.description, dish.descriptionAr)}</p>
                     )}
 
                     {/* Allergens */}
                     {dish.allergens && dish.allergens.length > 0 && (
                         <div className="flex flex-wrap gap-2 justify-center">
-                            {dish.allergens.map((a: DishAllergen) => (
-                                <span key={a.id} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-gray-400">
+                            {dish.allergens.map((a: DishAllergen, i: number) => (
+                                <span key={a.id || i} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-gray-400">
                                     {t(a.name, a.nameAr)}
                                 </span>
                             ))}
                         </div>
                     )}
 
-                    {/* Modifiers (simplified view) */}
-                    <div className="flex flex-col gap-6 mt-4 text-left">
-                        {dish.modifierGroupIds?.map((mgId: string) => {
-                            const mg = modifierGroups.find((g: any) => g.id === mgId);
-                            if (!mg) return null;
-                            return (
-                                <div key={mgId} className="flex flex-col gap-0 border-t border-white/10 pt-3">
-                                    <div className="flex items-center justify-between py-1.5">
-                                        <h4 className="font-bold text-lg">{t(mg.name, mg.nameAr)}</h4>
-                                        {mg.required && (
+                    {/* Options / Modifiers */}
+                    {sections.length > 0 && (
+                        <div className="flex flex-col gap-6 mt-2 text-left">
+                            {sections.map(section => (
+                                <div key={section.id} className="flex flex-col">
+                                    <div className="flex items-center justify-between pb-1">
+                                        {section.header && (
+                                            <h4 className="font-bold text-lg sm:text-xl">{t(section.header, section.headerAr)}</h4>
+                                        )}
+                                        {section.required && (
                                             <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-white/10 rounded-md text-white/50">Required</span>
                                         )}
                                     </div>
-                                    <div className="flex flex-col gap-0">
-                                        {mg.items.map((item: any) => (
-                                            <div key={item.id} className="flex items-center justify-between py-3 border-b border-white/5">
-                                                <span className="font-bold text-base uppercase tracking-wide">{t(item.name, item.nameAr)}</span>
-                                                {item.price > 0 && <span className="text-base font-bold opacity-70">+ {item.price.toFixed(3)}</span>}
-                                            </div>
-                                        ))}
+                                    <div className="flex flex-col">
+                                        {section.items
+                                            .filter((item: DishOption) => item.isActive !== false)
+                                            .map((item: DishOption, i: number) => (
+                                                <div key={item.id || i} className="flex items-center justify-between py-3.5 border-b border-white/10">
+                                                    <span className="font-bold text-base uppercase tracking-wide">{t(item.name, item.nameAr)}</span>
+                                                    {(item.price ?? 0) > 0 && (
+                                                        <span className="text-base font-bold opacity-70 whitespace-nowrap pl-3">+ {(item.price ?? 0).toFixed(3)}</span>
+                                                    )}
+                                                </div>
+                                            ))}
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

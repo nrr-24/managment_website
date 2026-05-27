@@ -808,9 +808,12 @@ function DishDetailOverlay({ dishes, initialIndex, onClose, t, accentColor, modi
 
                     {/* Allergens */}
                     {dish.allergens && dish.allergens.length > 0 && (
-                        <div className="flex flex-wrap gap-2 justify-center">
+                        <div className="flex flex-wrap items-center gap-2 justify-center">
+                            <span className="text-xs sm:text-sm font-bold uppercase tracking-wide text-red-400">
+                                {t("Contains:", "يحتوي على:")}
+                            </span>
                             {dish.allergens.map((a: DishAllergen, i: number) => (
-                                <span key={a.id || i} className="px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-xs font-semibold uppercase tracking-wide text-gray-300/80">
+                                <span key={a.id || i} className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-xs font-semibold uppercase tracking-wide text-red-300">
                                     {t(a.name, a.nameAr)}
                                 </span>
                             ))}

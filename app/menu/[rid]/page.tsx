@@ -195,20 +195,18 @@ export default function PublicMenuPage() {
             className="min-h-screen bg-black text-white selection:bg-white/20 relative"
             style={{ ...fontConfig.style, fontSize: `${14 * fontScale}px` }}
         >
-            {/* Background */}
+            {/* Background — full-bleed image under a 55%→20%→55% scrim (matches the app) */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 {restaurant.backgroundImagePath ? (
                     <StorageImage
                         path={restaurant.backgroundImagePath}
-                        className="w-full h-full object-cover opacity-45 scale-105"
+                        className="w-full h-full object-cover scale-105"
                         alt=""
                     />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-[#1b1b21] via-[#0e0e12] to-black" />
                 )}
-                <div className="absolute inset-0 bg-black/55 backdrop-blur-[3px]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/70" />
-                <div className="absolute inset-0" style={{ boxShadow: "inset 0 0 220px 50px rgba(0,0,0,0.7)" }} />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/55" />
             </div>
 
             {/* Sticky top bar: header + (list) category strip */}
@@ -281,14 +279,12 @@ export default function PublicMenuPage() {
                                                 stripItemRefs.current[cat.id] = el;
                                             }}
                                             onClick={() => scrollToCategory(cat.id)}
-                                            className="group flex flex-col items-center gap-2 flex-shrink-0 w-24 sm:w-32"
+                                            className={`group relative flex-shrink-0 w-28 sm:w-36 rounded-[10px] overflow-hidden transition-all duration-300 ${
+                                                active ? "" : "opacity-60 hover:opacity-100"
+                                            }`}
+                                            style={active ? { boxShadow: `0 8px 20px rgba(0,0,0,0.45)` } : undefined}
                                         >
-                                            <div
-                                                className={`w-full aspect-[1.69/1] rounded-xl overflow-hidden ring-1 transition-all duration-300 ${
-                                                    active ? "ring-white/0 shadow-lg shadow-black/40" : "ring-white/10 opacity-70 group-hover:opacity-100"
-                                                }`}
-                                                style={active ? { boxShadow: `0 8px 20px rgba(0,0,0,0.45)`, outline: `2px solid ${accent}` } : undefined}
-                                            >
+                                            <div className="relative w-full aspect-[1.82/1]">
                                                 {cat.imagePath ? (
                                                     <StorageImage path={cat.imagePath} className="w-full h-full object-cover" />
                                                 ) : (
@@ -296,18 +292,17 @@ export default function PublicMenuPage() {
                                                         <PlaceholderIcon className="w-5 h-5 text-white/20" />
                                                     </div>
                                                 )}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                                                <span
+                                                    className="absolute inset-x-0 bottom-0 px-1.5 pb-2.5 text-center font-bold text-white leading-tight truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
+                                                    style={{ fontSize: `${13 * fontScale}px` }}
+                                                >
+                                                    {t(cat.name, cat.nameAr)}
+                                                </span>
+                                                {active && (
+                                                    <span className="absolute inset-x-0 bottom-0 h-[3px]" style={{ backgroundColor: accent }} />
+                                                )}
                                             </div>
-                                            <span
-                                                className="h-[3px] w-7 rounded-full transition-all"
-                                                style={{ backgroundColor: active ? accent : "transparent" }}
-                                            />
-                                            <span
-                                                className={`text-[11px] sm:text-xs text-center leading-tight max-w-full truncate transition-colors ${
-                                                    active ? "text-white font-semibold" : "text-white/55"
-                                                }`}
-                                            >
-                                                {t(cat.name, cat.nameAr)}
-                                            </span>
                                         </button>
                                     );
                                 })}
@@ -378,9 +373,9 @@ export default function PublicMenuPage() {
                             <button
                                 key={cat.id}
                                 onClick={() => setGridCategory(cat)}
-                                className="flex flex-col bg-[#0d0d0f] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:ring-white/25 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group"
+                                className="relative rounded-xl overflow-hidden shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group"
                             >
-                                <div className="aspect-[1.69/1] relative overflow-hidden">
+                                <div className="aspect-[1.82/1] relative overflow-hidden">
                                     {cat.imagePath ? (
                                         <StorageImage
                                             path={cat.imagePath}
@@ -391,12 +386,15 @@ export default function PublicMenuPage() {
                                             <PlaceholderIcon />
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                                </div>
-                                <div className="px-4 py-3.5 text-center">
-                                    <span className="font-semibold tracking-tight" style={{ fontSize: `${18 * fontScale}px` }}>
-                                        {t(cat.name, cat.nameAr)}
-                                    </span>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
+                                    <div className="absolute inset-0 flex items-center justify-center p-3">
+                                        <span
+                                            className="font-bold tracking-tight text-center text-white line-clamp-2 drop-shadow-lg"
+                                            style={{ fontSize: `${18 * fontScale}px` }}
+                                        >
+                                            {t(cat.name, cat.nameAr)}
+                                        </span>
+                                    </div>
                                 </div>
                             </button>
                         ))}
@@ -523,7 +521,7 @@ function DishCard({
     return (
         <button
             onClick={onClick}
-            className="flex flex-col bg-[#0d0d0f] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:ring-white/25 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group text-start"
+            className="flex flex-col rounded-xl overflow-hidden shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group"
         >
             <div className={`relative overflow-hidden ${aspect}`}>
                 {imgPath ? (
@@ -533,15 +531,16 @@ function DishCard({
                         <PlaceholderIcon />
                     </div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#0d0d0f] to-transparent" />
             </div>
-            <div className="px-3 py-2.5 flex flex-col gap-1">
-                <h3 className="font-semibold tracking-tight leading-snug line-clamp-2 text-white/95" style={{ fontSize: `${14 * fontScale}px` }}>
+            <div className="bg-black/85 px-2.5 py-4 flex flex-col items-center justify-center gap-1.5 text-center min-h-[62px]">
+                <h3 className="font-bold tracking-tight leading-snug line-clamp-2 text-white" style={{ fontSize: `${15 * fontScale}px` }}>
                     {t(dish.name, dish.nameAr)}
                 </h3>
-                <span className="font-semibold tabular-nums text-white/50" style={{ fontSize: `${12 * fontScale}px` }}>
-                    {dish.price.toFixed(3)}
-                </span>
+                {dish.price > 0 && (
+                    <span className="font-semibold tabular-nums text-white/80" style={{ fontSize: `${13 * fontScale}px` }}>
+                        {dish.price.toFixed(3)}
+                    </span>
+                )}
             </div>
         </button>
     );

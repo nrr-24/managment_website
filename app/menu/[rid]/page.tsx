@@ -277,7 +277,7 @@ export default function PublicMenuPage() {
                                                 stripItemRefs.current[cat.id] = el;
                                             }}
                                             onClick={() => scrollToCategory(cat.id)}
-                                            className={`group relative flex-shrink-0 w-28 sm:w-36 rounded-[10px] overflow-hidden transition-all duration-300 ${
+                                            className={`group relative flex-shrink-0 w-40 sm:w-52 rounded-[10px] overflow-hidden transition-all duration-300 ${
                                                 active ? "" : "opacity-60 hover:opacity-100"
                                             }`}
                                             style={active ? { boxShadow: `0 8px 20px rgba(0,0,0,0.45)` } : undefined}
@@ -292,8 +292,8 @@ export default function PublicMenuPage() {
                                                 )}
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                                                 <span
-                                                    className="absolute inset-x-0 bottom-0 px-1.5 pb-2.5 text-center font-bold text-white leading-tight truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
-                                                    style={{ fontSize: `${13 * fontScale}px` }}
+                                                    className="absolute inset-x-0 bottom-0 px-2 pb-3 text-center font-bold text-white leading-tight truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
+                                                    style={{ fontSize: `${15 * fontScale}px` }}
                                                 >
                                                     {t(cat.name, cat.nameAr)}
                                                 </span>

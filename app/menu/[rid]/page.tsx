@@ -175,8 +175,6 @@ export default function PublicMenuPage() {
 
     // Layout rules from the restaurant config
     const cols = restaurant.dishColumns || 2;
-    const dishGridClass =
-        cols === 1 ? "grid-cols-1" : cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2";
     const orientation: "landscape" | "portrait" = restaurant.cardImageOrientation === "portrait" ? "portrait" : "landscape";
 
     const cycleFontScale = () => setFontScale((p) => (p < 1.14 ? 1.15 : 1));
@@ -340,7 +338,7 @@ export default function PublicMenuPage() {
                                         t={t}
                                         fontScale={fontScale}
                                         orientation={orientation}
-                                        gridClass={dishGridClass}
+                                        cols={cols}
                                     />
                                 </section>
                             );
@@ -362,7 +360,7 @@ export default function PublicMenuPage() {
                                     t={t}
                                     fontScale={fontScale}
                                     orientation={orientation}
-                                    gridClass={dishGridClass}
+                                    cols={cols}
                                 />
                             </div>
                         );
@@ -485,19 +483,30 @@ function DishGrid({
     t,
     fontScale,
     orientation,
-    gridClass,
+    cols,
 }: {
     dishes: Dish[];
     onSelect: (d: Dish) => void;
     t: (en: string, ar?: string) => string;
     fontScale: number;
     orientation?: "landscape" | "portrait";
-    gridClass: string;
+    cols: number;
 }) {
+    // Flex-wrap (not CSS grid) so an incomplete final row centers instead of left-aligning.
+    // Each card takes an exact 1/cols share, minus its part of the inter-card gap.
+    const cardWidth = `calc((100% - ${cols - 1} * var(--gap)) / ${cols})`;
     return (
-        <div className={`grid gap-3 sm:gap-4 ${gridClass}`}>
+        <div className="flex flex-wrap justify-center gap-[var(--gap)] [--gap:0.75rem] sm:[--gap:1rem]">
             {dishes.map((dish) => (
-                <DishCard key={dish.id} dish={dish} onClick={() => onSelect(dish)} t={t} fontScale={fontScale} orientation={orientation} />
+                <DishCard
+                    key={dish.id}
+                    dish={dish}
+                    onClick={() => onSelect(dish)}
+                    t={t}
+                    fontScale={fontScale}
+                    orientation={orientation}
+                    style={{ width: cardWidth }}
+                />
             ))}
         </div>
     );
@@ -509,18 +518,21 @@ function DishCard({
     t,
     fontScale,
     orientation = "landscape",
+    style,
 }: {
     dish: Dish;
     onClick: () => void;
     t: (en: string, ar?: string) => string;
     fontScale: number;
     orientation?: "landscape" | "portrait";
+    style?: React.CSSProperties;
 }) {
     const imgPath = dish.imagePaths?.[0];
     const aspect = orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
     return (
         <button
             onClick={onClick}
+            style={style}
             className="flex flex-col rounded-xl overflow-hidden shadow-[0_4px_18px_rgba(0,0,0,0.45)] hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.6)] active:scale-[0.98] transition-all duration-300 group"
         >
             <div className={`relative overflow-hidden ${aspect}`}>
@@ -532,7 +544,11 @@ function DishCard({
                     </div>
                 )}
             </div>
-            <div className="bg-black/85 px-2.5 py-4 flex flex-col items-center justify-center gap-1.5 text-center min-h-[62px]">
+            {/* Fixed (font-scaled) height keeps every card's label identical regardless of name length */}
+            <div
+                className="bg-black/85 px-2.5 flex flex-col items-center justify-center gap-1 text-center"
+                style={{ height: `${88 * fontScale}px` }}
+            >
                 <h3 className="font-bold tracking-tight leading-snug line-clamp-2 text-white" style={{ fontSize: `${15 * fontScale}px` }}>
                     {t(dish.name, dish.nameAr)}
                 </h3>

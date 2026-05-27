@@ -219,7 +219,7 @@ export default function PublicMenuPage() {
                 </header>
 
                 {/* Content Area */}
-                <main className="flex-1 overflow-y-auto px-4 pb-20 no-scrollbar scroll-smooth">
+                <main className="flex-1 min-h-0 overflow-y-auto px-4 pb-20 no-scrollbar scroll-smooth">
                     <div className="max-w-5xl mx-auto w-full">
                         {restaurant.layout === "grid" ? (
                             <GridLayout 
@@ -369,9 +369,15 @@ function ListLayout({
         isScrollingRef.current = true;
         onSelectCategory(id);
 
-        // Scroll the real scroll container (<main>) so we can offset past the sticky strip.
-        const scroller = el.closest("main") as HTMLElement | null;
-        const offset = (stripWrapRef.current?.offsetHeight ?? 120) + 12;
+        const offset = (stripWrapRef.current?.offsetHeight ?? 110) + 10;
+
+        // Walk up to find the genuine scrollable ancestor (could be <main> or the document).
+        let scroller: HTMLElement | null = el.parentElement;
+        while (scroller) {
+            const oy = getComputedStyle(scroller).overflowY;
+            if ((oy === "auto" || oy === "scroll") && scroller.scrollHeight > scroller.clientHeight + 1) break;
+            scroller = scroller.parentElement;
+        }
 
         if (scroller) {
             const top = el.getBoundingClientRect().top
@@ -380,7 +386,10 @@ function ListLayout({
                 - offset;
             scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
         } else {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            // Document-level scroll fallback
+            const headerH = (document.querySelector("header") as HTMLElement | null)?.offsetHeight ?? 0;
+            const top = el.getBoundingClientRect().top + window.scrollY - offset - headerH;
+            window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
         }
 
         // Resume observer after scroll completes

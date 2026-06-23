@@ -6,6 +6,7 @@ import {
     signInWithEmailAndPassword,
     signOut as firebaseSignOut,
     onAuthStateChanged,
+    sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -42,6 +43,7 @@ interface AuthContextType {
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
     logout: () => Promise<void>;
+    sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -123,8 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await firebaseSignOut(auth);
     };
 
+    const sendPasswordReset = async (email: string) => {
+        await sendPasswordResetEmail(auth, email);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, isAdmin, isManager, hasManagerAccess, canDelete, restaurantIds, signIn, signOut, logout: signOut }}>
+        <AuthContext.Provider value={{ user, loading, isAdmin, isManager, hasManagerAccess, canDelete, restaurantIds, signIn, signOut, logout: signOut, sendPasswordReset }}>
             {children}
         </AuthContext.Provider>
     );

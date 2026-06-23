@@ -10,6 +10,27 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
+function clearClientCache() {
+    if (typeof window === 'undefined') return;
+
+    try {
+        sessionStorage.clear();
+    } catch (e) {
+        console.error('Failed to clear sessionStorage:', e);
+    }
+
+    try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && !key.startsWith('firebase:')) {
+                localStorage.removeItem(key);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to clear localStorage:', e);
+    }
+}
+
 interface AuthContextType {
     user: User | null;
     loading: boolean;
@@ -37,8 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setLoading(true);
-            setUser(user);
+
             if (user) {
+                const cachedUid = typeof window !== 'undefined' ? sessionStorage.getItem('auth_user_uid') : null;
+                if (cachedUid && cachedUid !== user.uid) {
+                    clearClientCache();
+                    if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('auth_user_uid', user.uid);
+                        window.location.reload();
+                    }
+                    return;
+                } else if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('auth_user_uid', user.uid);
+                }
+
+                setUser(user);
                 try {
                     const userDoc = await getDoc(doc(db, 'users', user.uid));
                     if (userDoc.exists()) {
@@ -64,6 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setRestaurantIds([]);
                 }
             } else {
+                const cachedUid = typeof window !== 'undefined' ? sessionStorage.getItem('auth_user_uid') : null;
+                if (cachedUid) {
+                    clearClientCache();
+                }
+                setUser(null);
                 setIsAdmin(false);
                 setIsManager(false);
                 setHasManagerAccess(false);

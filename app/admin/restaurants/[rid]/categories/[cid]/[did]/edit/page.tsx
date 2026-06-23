@@ -6,7 +6,7 @@ import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { getDish, updateDish, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory, listDishes, listModifierGroups, ModifierGroup } from "@/lib/data";
+import { getDish, updateDishAndMaybeMove, uploadSequentialDishImages, Dish, deleteImageByPath, getRestaurant, getCategory, listDishes, listModifierGroups, ModifierGroup, listCategories, Category } from "@/lib/data";
 import { StorageImage } from "@/components/ui/StorageImage";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { FormSection, FormCard, FormField, FormRow, formInputClass, formTextareaClass, formInputRtlClass } from "@/components/ui/FormSection";
@@ -26,6 +26,8 @@ export default function EditDishPage() {
     const [restaurantName, setRestaurantName] = useState("");
     const [cardImageOrientation, setCardImageOrientation] = useState<"landscape" | "portrait">("landscape");
     const [catName, setCatName] = useState("");
+    const [allCategories, setAllCategories] = useState<Category[]>([]);
+    const [selectedCategoryId, setSelectedCategoryId] = useState(cid);
 
     const [linkedModifiers, setLinkedModifiers] = useState<string[]>([]);
     const [availableModifiers, setAvailableModifiers] = useState<ModifierGroup[]>([]);
@@ -49,7 +51,7 @@ export default function EditDishPage() {
 
     // Dirty tracking for unsaved changes
     const initialDataRef = useRef<string>("");
-    const currentData = JSON.stringify({ name, nameAr, desc, descAr, price, isActive, allergens, linkedModifiers });
+    const currentData = JSON.stringify({ name, nameAr, desc, descAr, price, isActive, allergens, linkedModifiers, selectedCategoryId });
     const isDirty = loaded && currentData !== initialDataRef.current;
     useUnsavedChanges(isDirty);
 
@@ -84,6 +86,9 @@ export default function EditDishPage() {
         getCategory(rid, cid).then(c => {
             if (c) setCatName(c.name || "");
         });
+        listCategories(rid).then(cats => {
+            setAllCategories(cats);
+        });
         listModifierGroups(rid).then(mods => setAvailableModifiers(mods));
         // Fetch sibling dishes for prev/next navigation
         listDishes(rid, cid).then(allDishes => {
@@ -112,6 +117,7 @@ export default function EditDishPage() {
                 setDescAr(d.descriptionAr || "");
                 setPrice(d.price?.toString() || "");
                 setIsActive(d.isActive !== false);
+                setSelectedCategoryId(cid);
 
                 if (d.modifierGroupIds) {
                     setLinkedModifiers(d.modifierGroupIds);
@@ -133,6 +139,7 @@ export default function EditDishPage() {
                     isActive: d.isActive !== false,
                     allergens: d.allergens?.map(a => ({ id: a.id, name: a.name || "", nameAr: a.nameAr || "" })) || [],
                     linkedModifiers: d.modifierGroupIds || [],
+                    selectedCategoryId: cid,
                 });
             }
             setLoaded(true);
@@ -178,7 +185,7 @@ export default function EditDishPage() {
             let finalPaths = [...existingImages.map(img => img.path)];
 
             if (newImageFiles.length > 0) {
-                const results = await uploadSequentialDishImages(newImageFiles, rid, cid, name.trim(), (idx, p) => {
+                const results = await uploadSequentialDishImages(newImageFiles, rid, selectedCategoryId, name.trim(), (idx, p) => {
                     const file = newImageFiles[idx];
                     setUploadProgress(prev => ({ ...prev, [file.name]: p }));
                 });
@@ -189,7 +196,7 @@ export default function EditDishPage() {
 
             updates.imagePaths = finalPaths;
 
-            await updateDish(rid, cid, did, updates);
+            await updateDishAndMaybeMove(rid, cid, selectedCategoryId, did, updates);
             
             // Detect which existing images were removed during editing and decrement them
             const originalPaths = dish?.imagePaths || [];
@@ -203,7 +210,7 @@ export default function EditDishPage() {
             }
 
             toast("Dish updated successfully!");
-            setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${cid}`), 1000);
+            setTimeout(() => router.push(`/admin/restaurants/${rid}/categories/${selectedCategoryId}`), 1000);
         } catch (err) {
             console.error("Save dish failed:", err);
             toast("Failed to update dish. Please check your connection.", "error");
@@ -301,6 +308,19 @@ export default function EditDishPage() {
                                 value={price}
                                 onChange={e => setPrice(e.target.value)}
                             />
+                        </FormField>
+                        <FormField label="Category" required hint="Changing the category will rearrange and move this dish upon saving">
+                            <select
+                                className={`${formInputClass} cursor-pointer bg-transparent border-0 ring-0 focus:ring-0 outline-none`}
+                                value={selectedCategoryId}
+                                onChange={e => setSelectedCategoryId(e.target.value)}
+                            >
+                                {allCategories.map(cat => (
+                                    <option key={cat.id} value={cat.id} className="text-gray-900 bg-white">
+                                        {cat.name} {cat.nameAr ? `(${cat.nameAr})` : ''}
+                                    </option>
+                                ))}
+                            </select>
                         </FormField>
                     </FormCard>
                 </FormSection>

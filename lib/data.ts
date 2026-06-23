@@ -689,6 +689,39 @@ export async function updateDish(
     await updateDoc(doc(db, "restaurants", restaurantId, "categories", categoryId, "dishes", dishId), firestoreData);
 }
 
+export async function updateDishAndMaybeMove(
+    restaurantId: string,
+    oldCategoryId: string,
+    newCategoryId: string,
+    dishId: string,
+    data: Partial<Omit<Dish, "id">>
+) {
+    const firestoreData = toFirestoreDishFormat(cleanData(data));
+
+    if (oldCategoryId === newCategoryId) {
+        await updateDoc(doc(db, "restaurants", restaurantId, "categories", oldCategoryId, "dishes", dishId), firestoreData);
+    } else {
+        const oldDocRef = doc(db, "restaurants", restaurantId, "categories", oldCategoryId, "dishes", dishId);
+        const snap = await getDoc(oldDocRef);
+        const originalData = snap.exists() ? snap.data() : {};
+
+        const newDocRef = doc(db, "restaurants", restaurantId, "categories", newCategoryId, "dishes", dishId);
+
+        const newColRef = collection(db, "restaurants", restaurantId, "categories", newCategoryId, "dishes");
+        const existing = await getDocs(newColRef);
+        const newSortOrder = existing.size;
+
+        await setDoc(newDocRef, {
+            ...originalData,
+            ...firestoreData,
+            sortOrder: newSortOrder,
+            createdAt: originalData.createdAt || serverTimestamp(),
+        });
+
+        await deleteDoc(oldDocRef);
+    }
+}
+
 /**
  * Delete a dish: captures image paths, deletes Firestore doc, then deletes storage images.
  * Mimics Swift's deleteDish.

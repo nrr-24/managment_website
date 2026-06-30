@@ -10,16 +10,20 @@ interface PageProps {
     backPath?: string;
     leftAction?: React.ReactNode;
     breadcrumbs?: { label: string; href?: string }[];
+    /** Lock the page to the viewport height (md+) so inner regions scroll instead of the window. */
+    fullHeight?: boolean;
+    /** Override the default max content width (e.g. "max-w-6xl"). */
+    maxWidth?: string;
 }
 
-export function Page({ title, children, actions, showBack = true, backPath, leftAction, breadcrumbs }: PageProps) {
+export function Page({ title, children, actions, showBack = true, backPath, leftAction, breadcrumbs, fullHeight = false, maxWidth = "max-w-3xl" }: PageProps) {
     const router = useRouter();
 
     return (
-        <div className="min-h-screen bg-[#f8f8fa] font-sans antialiased text-gray-900">
-            <div className="container mx-auto px-4 py-6 max-w-3xl">
+        <div className={`bg-[#f8f8fa] font-sans antialiased text-gray-900 ${fullHeight ? "min-h-screen md:h-[calc(100dvh-3.5rem)] md:overflow-hidden md:flex md:flex-col" : "min-h-screen"}`}>
+            <div className={`container mx-auto px-4 ${maxWidth} ${fullHeight ? "py-4 md:flex-1 md:min-h-0 md:flex md:flex-col" : "py-6"}`}>
                 {/* iOS-style sticky toolbar — top-0 on mobile (nav hidden), top-14 on desktop */}
-                <div className="flex items-center justify-between mb-6 sticky top-0 sm:top-14 glass z-10 py-2.5 px-1 -mx-1 rounded-2xl">
+                <div className={`flex items-center justify-between glass z-10 py-2.5 px-1 -mx-1 rounded-2xl ${fullHeight ? "relative shrink-0 mb-3" : "mb-6 sticky top-0 sm:top-14"}`}>
                     <div className="flex-1 flex text-left">
                         {leftAction ? leftAction : showBack && (
                             <button
@@ -55,10 +59,10 @@ export function Page({ title, children, actions, showBack = true, backPath, left
                 </div>
 
                 {/* Breadcrumbs */}
-                {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
+                {breadcrumbs && <div className={fullHeight ? "shrink-0" : ""}><Breadcrumbs items={breadcrumbs} /></div>}
 
                 {/* Content with stagger animation */}
-                <div className="space-y-5 stagger-children">
+                <div className={fullHeight ? "stagger-children flex-1 min-h-0 flex flex-col" : "space-y-5 stagger-children"}>
                     {children}
                 </div>
             </div>

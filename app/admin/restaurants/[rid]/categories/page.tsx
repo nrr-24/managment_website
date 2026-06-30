@@ -186,13 +186,22 @@ export default function CategoriesPage() {
     }
 
     const actions = (
-        <Link href={`/admin/restaurants/${rid}/categories/new`}>
-            <button aria-label="Add new category" className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-            </button>
-        </Link>
+        <div className="flex items-center gap-2">
+            <Link href={`/admin/restaurants/${rid}/organize`}>
+                <button aria-label="Organize menu — move dishes between categories" className="w-8 h-8 flex items-center justify-center bg-green-50 text-green-800 rounded-full hover:bg-green-100 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7M17 15l4 3-4 3" />
+                    </svg>
+                </button>
+            </Link>
+            <Link href={`/admin/restaurants/${rid}/categories/new`}>
+                <button aria-label="Add new category" className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                    <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </button>
+            </Link>
+        </div>
     );
 
     const breadcrumbs = [

@@ -702,6 +702,16 @@ export default function RestaurantManagePage() {
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* ── Section 4: Categories ── */}
                 <FormSection title="Categories" description="Organize your menu into categories. Each category contains dishes.">
+                    {cats.length > 0 && (
+                        <Link href={`/admin/restaurants/${rid}/organize`}>
+                            <button className="w-full rounded-xl p-3 mb-3 text-center text-sm font-bold text-white bg-green-800 hover:bg-green-900 active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7M17 15l4 3-4 3" />
+                                </svg>
+                                Organize menu — drag dishes between categories
+                            </button>
+                        </Link>
+                    )}
                     <div className="space-y-2">
                         {cats.length === 0 ? (
                             <FormCard className="!divide-y-0">

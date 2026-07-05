@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ref, getDownloadURL } from "firebase/storage";
+import { useEffect, useMemo, useState } from "react";
 import { storage } from "@/lib/firebase";
 import { ImageLightbox } from "./ImageLightbox";
 
-// In-memory cache to avoid redundant Firebase calls for the same path
-const urlCache = new Map<string, string>();
+// The storage bucket is public-read for menu assets (see storage.rules), so we
+// can build the download URL directly instead of paying a getDownloadURL()
+// network round-trip per image. This is the single biggest menu-load speedup.
+const BUCKET = storage.app.options.storageBucket;
 
 interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     path?: string;
@@ -15,31 +16,42 @@ interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     lightbox?: boolean;
 }
 
-/**
- * Extracts a storage path from a Firebase Storage REST URL if possible.
- */
+/** Extracts a storage object path from a Firebase Storage REST URL if possible. */
 function tryExtractStoragePathFromFirebaseUrl(u: string): string | null {
     try {
         const url = new URL(u);
         if (!url.hostname.includes("firebasestorage.googleapis.com")) return null;
-
         // Pattern 1: /v0/b/<bucket>/o/<encodedObjectName>
         const m = url.pathname.match(/\/v0\/b\/[^/]+\/o\/(.+)$/);
         if (m?.[1]) return decodeURIComponent(m[1]);
-
         // Pattern 2: /v0/b/<bucket>/o?name=<encodedObjectName>
         const name = url.searchParams.get("name");
         if (name) return decodeURIComponent(name);
-
         return null;
     } catch {
         return null;
     }
 }
 
+/** Build a public download URL for a storage object path (no network call). */
+function publicUrl(objectPath: string): string {
+    return `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media`;
+}
+
+/** Resolve any stored value (plain path or legacy full URL) to a usable src. */
+function resolveSrc(path?: string): string | null {
+    if (!path || !BUCKET) return path || null;
+    if (path.startsWith("http")) {
+        const extracted = tryExtractStoragePathFromFirebaseUrl(path);
+        return extracted ? publicUrl(extracted) : path; // non-firebase URL: use as-is
+    }
+    return publicUrl(path);
+}
+
 /**
- * A component that loads images from Firebase Storage via path.
- * Mimics Swift's StorageImage view with similar caching and state handling.
+ * Loads images from Firebase Storage by path. URLs are derived synchronously,
+ * so the browser fetches the bytes directly (with native lazy-loading) instead
+ * of waiting on a getDownloadURL() call for every image.
  */
 export function StorageImage({
     path,
@@ -49,75 +61,14 @@ export function StorageImage({
     lightbox = false,
     ...props
 }: StorageImageProps) {
-    const [url, setUrl] = useState<string | null>(path ? urlCache.get(path) || null : null);
-    const [loading, setLoading] = useState(path ? !urlCache.has(path) : false);
+    const url = useMemo(() => resolveSrc(path), [path]);
     const [error, setError] = useState(false);
     const [showLightbox, setShowLightbox] = useState(false);
 
-    useEffect(() => {
-        if (!path) {
-            setUrl(null);
-            setLoading(false);
-            return;
-        }
+    // Clear any prior error when the path changes.
+    useEffect(() => setError(false), [path]);
 
-        if (urlCache.has(path)) {
-            setUrl(urlCache.get(path)!);
-            setLoading(false);
-            setError(false);
-            return;
-        }
-
-        let isMounted = true;
-        setLoading(true);
-        setError(false);
-
-        async function fetchUrl() {
-            try {
-                // If path is a full URL (legacy), try to extract path or use it as fallback
-                if (path?.startsWith('http')) {
-                    const extracted = tryExtractStoragePathFromFirebaseUrl(path);
-                    if (extracted) {
-                        const sRef = ref(storage, extracted);
-                        const dUrl = await getDownloadURL(sRef);
-                        if (isMounted) {
-                            urlCache.set(path, dUrl);
-                            setUrl(dUrl);
-                            setLoading(false);
-                        }
-                    } else {
-                        // Non-firebase or opaque URL
-                        if (isMounted) {
-                            setUrl(path);
-                            setLoading(false);
-                        }
-                    }
-                    return;
-                }
-
-                const sRef = ref(storage, path);
-                const dUrl = await getDownloadURL(sRef);
-
-                if (isMounted) {
-                    urlCache.set(path!, dUrl);
-                    setUrl(dUrl);
-                    setLoading(false);
-                }
-            } catch (err) {
-                console.error("StorageImage error for path:", path, err);
-                if (isMounted) {
-                    setError(true);
-                    setLoading(false);
-                }
-            }
-        }
-
-        fetchUrl();
-
-        return () => { isMounted = false; };
-    }, [path]);
-
-    if (!path || error) {
+    if (!path || error || !url) {
         return (
             <div className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 ${className}`}>
                 {fallbackIcon || (
@@ -129,24 +80,17 @@ export function StorageImage({
         );
     }
 
-    if (loading) {
-        return (
-            <div className={`flex items-center justify-center bg-gray-50 dark:bg-gray-900 animate-pulse ${className}`}>
-                <div className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
-            </div>
-        );
-    }
-
-    if (!url) return null;
-
-    const { onClick: _onClick, ...restProps } = props;
+    const { onClick: _onClick, onError: _onError, ...restProps } = props;
 
     return (
         <>
             <img
                 src={url}
                 alt={alt}
+                loading="lazy"
+                decoding="async"
                 className={`${className || ""}${lightbox ? " cursor-zoom-in" : ""}`}
+                onError={() => setError(true)}
                 onClick={lightbox ? (e) => { e.stopPropagation(); setShowLightbox(true); } : _onClick}
                 {...restProps}
             />

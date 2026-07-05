@@ -64,6 +64,7 @@ export default function PublicMenuPage() {
     const [topBarH, setTopBarH] = useState(0);
     const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
     const stripItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    const stripScrollRef = useRef<HTMLDivElement>(null);
     const programmaticScroll = useRef(false);
 
     // ── Data ──────────────────────────────────────────────────────────────
@@ -136,6 +137,12 @@ export default function PublicMenuPage() {
             inline: "center",
         });
     }, [activeCategoryId]);
+
+    const scrollStrip = (dir: number) => {
+        const el = stripScrollRef.current;
+        if (!el) return;
+        el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+    };
 
     const scrollToCategory = (id: string) => {
         const el = sectionRefs.current[id];
@@ -265,8 +272,27 @@ export default function PublicMenuPage() {
                 </header>
 
                 {isList && !gridCategory && (
-                    <nav className="border-t border-white/5">
-                        <div className="max-w-5xl mx-auto overflow-x-auto no-scrollbar px-4 py-3">
+                    <nav className="border-t border-white/5 relative">
+                        {/* Web-only scroll arrows for the category strip */}
+                        <button
+                            onClick={() => scrollStrip(-1)}
+                            aria-label="Scroll categories left"
+                            className="hidden md:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white items-center justify-center hover:bg-black/75 active:scale-95 transition"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => scrollStrip(1)}
+                            aria-label="Scroll categories right"
+                            className="hidden md:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white items-center justify-center hover:bg-black/75 active:scale-95 transition"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                        <div ref={stripScrollRef} className="max-w-5xl mx-auto overflow-x-auto no-scrollbar px-4 py-3 md:px-12">
                             <div className="flex gap-3 sm:gap-4">
                                 {categories.map((cat) => {
                                     const active = activeCategoryId === cat.id;
@@ -292,7 +318,7 @@ export default function PublicMenuPage() {
                                                 )}
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                                                 <span
-                                                    className="absolute inset-x-0 bottom-0 px-2 pb-3 text-center font-bold text-white leading-tight truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
+                                                    className="absolute inset-x-0 bottom-0 px-2 pb-3 text-center font-bold text-white leading-tight truncate [text-shadow:0_1px_3px_rgba(0,0,0,0.85)] [transform:translateZ(0)]"
                                                     style={{ fontSize: `${15 * fontScale}px` }}
                                                 >
                                                     {t(cat.name, cat.nameAr)}

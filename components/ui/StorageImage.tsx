@@ -14,6 +14,10 @@ interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     fallbackIcon?: React.ReactNode;
     /** When true, clicking the image opens a full-screen lightbox */
     lightbox?: boolean;
+    /** Route through the Next.js image optimizer (resized WebP). Use on the public menu. */
+    optimize?: boolean;
+    /** Target render width in px for the optimizer (must be a configured device/image size). */
+    optWidth?: number;
 }
 
 /** Extracts a storage object path from a Firebase Storage REST URL if possible. */
@@ -59,9 +63,19 @@ export function StorageImage({
     alt = "",
     fallbackIcon,
     lightbox = false,
+    optimize = false,
+    optWidth = 1080,
     ...props
 }: StorageImageProps) {
-    const url = useMemo(() => resolveSrc(path), [path]);
+    const rawUrl = useMemo(() => resolveSrc(path), [path]);
+    // Serve a resized WebP via the Next.js optimizer for public-menu images.
+    const url = useMemo(() => {
+        if (!rawUrl) return null;
+        if (optimize && rawUrl.includes("firebasestorage.googleapis.com")) {
+            return `/_next/image?url=${encodeURIComponent(rawUrl)}&w=${optWidth}&q=72`;
+        }
+        return rawUrl;
+    }, [rawUrl, optimize, optWidth]);
     const [error, setError] = useState(false);
     const [showLightbox, setShowLightbox] = useState(false);
 
@@ -95,7 +109,7 @@ export function StorageImage({
                 {...restProps}
             />
             {lightbox && showLightbox && (
-                <ImageLightbox src={url} alt={alt} onClose={() => setShowLightbox(false)} />
+                <ImageLightbox src={rawUrl || url} alt={alt} onClose={() => setShowLightbox(false)} />
             )}
         </>
     );

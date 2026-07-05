@@ -71,17 +71,22 @@ export default function PublicMenuPage() {
     const loadData = useCallback(async () => {
         try {
             setError(null);
-            const res = await getRestaurant(rid);
+            // Fetch restaurant, categories and modifier groups in parallel —
+            // only the per-category dish lists depend on the category list.
+            const [res, allCats, modifierGroups] = await Promise.all([
+                getRestaurant(rid),
+                listCategories(rid),
+                listModifierGroups(rid),
+            ]);
             if (!res) {
                 setError("Restaurant not found");
                 return;
             }
-            const cats = (await listCategories(rid)).filter((c) => c.isActive);
+            const cats = allCats.filter((c) => c.isActive);
             const dishArrays = await Promise.all(
                 cats.map(async (c) => (await listDishes(rid, c.id)).map((d) => ({ ...d, categoryId: c.id })))
             );
             const dishes = dishArrays.flat().filter((d) => d.isActive !== false);
-            const modifierGroups = await listModifierGroups(rid);
 
             setData({ restaurant: res, categories: cats, dishes, modifierGroups });
             if (res.layout !== "grid" && cats.length) {
@@ -207,6 +212,8 @@ export default function PublicMenuPage() {
                         path={restaurant.backgroundImagePath}
                         className="w-full h-full object-cover scale-105"
                         alt=""
+                        optimize
+                        optWidth={1080}
                     />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-[#1b1b21] via-[#0e0e12] to-black" />
@@ -310,7 +317,7 @@ export default function PublicMenuPage() {
                                         >
                                             <div className="relative w-full aspect-[1.82/1]">
                                                 {cat.imagePath ? (
-                                                    <StorageImage path={cat.imagePath} className="w-full h-full object-cover" />
+                                                    <StorageImage path={cat.imagePath} className="w-full h-full object-cover" optimize optWidth={640} />
                                                 ) : (
                                                     <div className="w-full h-full bg-white/5 flex items-center justify-center">
                                                         <PlaceholderIcon className="w-5 h-5 text-white/20" />
@@ -404,6 +411,8 @@ export default function PublicMenuPage() {
                                         <StorageImage
                                             path={cat.imagePath}
                                             className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-700 ease-out"
+                                            optimize
+                                            optWidth={640}
                                         />
                                     ) : (
                                         <div className="w-full h-full bg-white/5 flex items-center justify-center">
@@ -563,7 +572,7 @@ function DishCard({
         >
             <div className={`relative overflow-hidden ${aspect}`}>
                 {imgPath ? (
-                    <StorageImage path={imgPath} className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-700 ease-out" />
+                    <StorageImage path={imgPath} className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-700 ease-out" optimize optWidth={640} />
                 ) : (
                     <div className="w-full h-full bg-white/5 flex items-center justify-center">
                         <PlaceholderIcon />
@@ -646,7 +655,7 @@ function SearchOverlay({
                         >
                             <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
                                 {dish.imagePaths?.[0] ? (
-                                    <StorageImage path={dish.imagePaths[0]} className="w-full h-full object-cover" />
+                                    <StorageImage path={dish.imagePaths[0]} className="w-full h-full object-cover" optimize optWidth={128} />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center">
                                         <PlaceholderIcon className="w-6 h-6 text-white/20" />
@@ -793,8 +802,8 @@ function DishDetailOverlay({
                     {imgPath ? (
                         <>
                             {/* Blurred fill so letterboxing reads as depth, not empty bars */}
-                            <StorageImage path={imgPath} className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40" alt="" />
-                            <StorageImage path={imgPath} className="relative w-full h-full object-contain" />
+                            <StorageImage path={imgPath} className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40" alt="" optimize optWidth={640} />
+                            <StorageImage path={imgPath} className="relative w-full h-full object-contain" optimize optWidth={1080} />
                         </>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">

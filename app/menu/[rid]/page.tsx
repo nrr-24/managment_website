@@ -662,11 +662,13 @@ type OptionSection = {
 
 function buildOptionSections(dish: Dish, modifierGroups: ModifierGroup[]): OptionSection[] {
     const sections: OptionSection[] = [];
+    let hasStructured = false;
 
     dish.modifierGroupIds?.forEach((mgId) => {
         const mg = modifierGroups.find((g) => g.id === mgId);
         if (mg && mg.items.length > 0) {
             sections.push({ id: `mg-${mg.id}`, header: mg.name, headerAr: mg.nameAr, required: mg.required, items: mg.items });
+            hasStructured = true;
         }
     });
 
@@ -678,9 +680,14 @@ function buildOptionSections(dish: Dish, modifierGroups: ModifierGroup[]): Optio
             required: dish.customOptions.required,
             items: dish.customOptions.items,
         });
+        hasStructured = true;
     }
 
-    if (dish.options && dish.options.items.length > 0) {
+    // `dish.options` is the flattened, iOS-compatible mirror of the modifier
+    // groups above (regenerated on every save in the dish editor). Only render
+    // it when there's no structured source — i.e. a legacy dish that was never
+    // linked to a modifier group — otherwise it duplicates the sections above.
+    if (!hasStructured && dish.options && dish.options.items.length > 0) {
         sections.push({
             id: "options",
             header: dish.options.header,
@@ -725,16 +732,18 @@ function DishDetailOverlay({
 
     return (
         <div className="fixed inset-0 z-[200] bg-black flex flex-col slide-up">
-            {/* Toolbar */}
-            <div className="absolute top-0 inset-x-0 z-10 p-4 sm:p-6 flex justify-between items-start bg-gradient-to-b from-black/70 to-transparent">
-                <button onClick={onClose} className={CREAM_BTN} title="Back">
+            {/* Toolbar — z-30 keeps it above the scrolling info panel (z-10); the
+                container is click-through so only the buttons capture taps, letting
+                content scroll freely underneath even when the image is scrolled away. */}
+            <div className="absolute top-0 inset-x-0 z-30 p-4 sm:p-6 flex justify-between items-start bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+                <button onClick={onClose} className={`${CREAM_BTN} pointer-events-auto`} title="Back">
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
 
                 <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
                         <button disabled={index === 0} onClick={() => setIndex((i) => i - 1)} className={CREAM_BTN}>
                             <svg className="w-4 h-4 sm:w-5 sm:h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -773,7 +782,9 @@ function DishDetailOverlay({
                 <div className="px-6 -mt-6 relative z-10 pb-16 flex flex-col gap-6 max-w-2xl mx-auto">
                     <div className="flex flex-col items-center gap-2.5 text-center">
                         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight drop-shadow-lg">{t(dish.name, dish.nameAr)}</h2>
-                        <span className="text-lg sm:text-xl font-semibold tabular-nums text-white/85">{dish.price.toFixed(3)}</span>
+                        {dish.price > 0 && (
+                            <span className="text-lg sm:text-xl font-semibold tabular-nums text-white/85">{dish.price.toFixed(3)}</span>
+                        )}
                         <span className="h-[3px] w-10 rounded-full opacity-80" style={{ backgroundColor: accent }} />
                     </div>
 

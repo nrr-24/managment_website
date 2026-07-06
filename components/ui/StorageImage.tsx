@@ -53,6 +53,19 @@ function resolveSrc(path?: string): string | null {
 }
 
 /**
+ * Resolve a storage path to the final <img src> — same logic StorageImage uses,
+ * exported so callers can warm the browser cache (e.g. preload neighbouring dishes).
+ */
+export function storageImageUrl(path?: string, opts?: { optimize?: boolean; width?: number }): string | null {
+    const raw = resolveSrc(path);
+    if (!raw) return null;
+    if (opts?.optimize && raw.includes("firebasestorage.googleapis.com")) {
+        return `/_next/image?url=${encodeURIComponent(raw)}&w=${opts.width ?? 1080}&q=72`;
+    }
+    return raw;
+}
+
+/**
  * Loads images from Firebase Storage by path. URLs are derived synchronously,
  * so the browser fetches the bytes directly (with native lazy-loading) instead
  * of waiting on a getDownloadURL() call for every image.
@@ -69,18 +82,14 @@ export function StorageImage({
 }: StorageImageProps) {
     const rawUrl = useMemo(() => resolveSrc(path), [path]);
     // Serve a resized WebP via the Next.js optimizer for public-menu images.
-    const url = useMemo(() => {
-        if (!rawUrl) return null;
-        if (optimize && rawUrl.includes("firebasestorage.googleapis.com")) {
-            return `/_next/image?url=${encodeURIComponent(rawUrl)}&w=${optWidth}&q=72`;
-        }
-        return rawUrl;
-    }, [rawUrl, optimize, optWidth]);
+    const url = useMemo(() => storageImageUrl(path, { optimize, width: optWidth }), [path, optimize, optWidth]);
     const [error, setError] = useState(false);
+    const [loaded, setLoaded] = useState(false);
     const [showLightbox, setShowLightbox] = useState(false);
 
-    // Clear any prior error when the path changes.
+    // Clear prior error / loaded state whenever the source changes.
     useEffect(() => setError(false), [path]);
+    useEffect(() => setLoaded(false), [url]);
 
     if (!path || error || !url) {
         return (
@@ -94,17 +103,23 @@ export function StorageImage({
         );
     }
 
-    const { onClick: _onClick, onError: _onError, ...restProps } = props;
+    const { onClick: _onClick, onError: _onError, style: _style, ...restProps } = props;
 
     return (
         <>
             <img
+                // Key by URL so switching source mounts a fresh element instead of
+                // lingering on the previous image until the new one decodes.
+                key={url}
                 src={url}
                 alt={alt}
                 loading="lazy"
                 decoding="async"
-                className={`${className || ""}${lightbox ? " cursor-zoom-in" : ""}`}
+                onLoad={() => setLoaded(true)}
                 onError={() => setError(true)}
+                className={`${className || ""}${lightbox ? " cursor-zoom-in" : ""}`}
+                // Placeholder tint while the (menu) image is still loading.
+                style={optimize && !loaded ? { ..._style, backgroundColor: "rgba(255,255,255,0.06)" } : _style}
                 onClick={lightbox ? (e) => { e.stopPropagation(); setShowLightbox(true); } : _onClick}
                 {...restProps}
             />

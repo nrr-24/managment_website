@@ -14,7 +14,7 @@ import {
     DishAllergen,
     DishOption,
 } from "@/lib/data";
-import { StorageImage } from "@/components/ui/StorageImage";
+import { StorageImage, storageImageUrl } from "@/components/ui/StorageImage";
 import { getFontConfig } from "@/components/ui/FontPicker";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -615,6 +615,15 @@ function SearchOverlay({
         inputRef.current?.focus();
     }, []);
 
+    // Lock the page behind the overlay so scrolling results can't scroll it
+    useEffect(() => {
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = prev;
+        };
+    }, []);
+
     const q = query.trim().toLowerCase();
     const filtered = q
         ? dishes.filter(
@@ -646,7 +655,7 @@ function SearchOverlay({
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-2.5">
+                <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar flex flex-col gap-2.5">
                     {filtered.map((dish) => (
                         <button
                             key={dish.id}
@@ -765,6 +774,27 @@ function DishDetailOverlay({
         scrollRef.current?.scrollTo({ top: 0 });
     }, [index]);
 
+    // Lock the page behind the overlay so scrolling the card can't scroll it
+    useEffect(() => {
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = prev;
+        };
+    }, []);
+
+    // Warm the browser cache for the adjacent dishes so next/prev feels instant
+    useEffect(() => {
+        [index - 1, index + 1].forEach((i) => {
+            const p = dishes[i]?.imagePaths?.[0];
+            const src = p ? storageImageUrl(p, { optimize: true, width: 1080 }) : null;
+            if (src) {
+                const img = new window.Image();
+                img.src = src;
+            }
+        });
+    }, [index, dishes]);
+
     return (
         <div className="fixed inset-0 z-[200] bg-black flex flex-col slide-up">
             {/* Toolbar — z-30 keeps it above the scrolling info panel (z-10); the
@@ -796,7 +826,7 @@ function DishDetailOverlay({
                 </div>
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain no-scrollbar">
                 {/* Image — shown in full (no cropping), framed per orientation */}
                 <div className={`w-full ${imageAspect} max-h-[68vh] bg-black relative overflow-hidden`}>
                     {imgPath ? (

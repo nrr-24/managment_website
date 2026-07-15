@@ -136,6 +136,7 @@ export default function RestaurantManagePage() {
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [bgFile, setBgFile] = useState<File | null>(null);
     const [logoPath, setLogoPath] = useState("");
+    const [showLogo, setShowLogo] = useState(true);
     const [bgPath, setBgPath] = useState("");
 
     const [loaded, setLoaded] = useState(false);
@@ -160,7 +161,7 @@ export default function RestaurantManagePage() {
 
     // Dirty tracking for unsaved changes
     const initialDataRef = useRef<string>("");
-    const currentData = JSON.stringify({ name, nameAr, themeColor, layout, dishColumns, cardImageOrientation, menuFont });
+    const currentData = JSON.stringify({ name, nameAr, themeColor, layout, dishColumns, cardImageOrientation, menuFont, showLogo });
     useUnsavedChanges(loaded && currentData !== initialDataRef.current);
 
     // Local Previews
@@ -201,6 +202,7 @@ export default function RestaurantManagePage() {
             setMenuFont(r.menuFont || "system");
             setLogoPath(r.imagePath || "");
             setBgPath(r.backgroundImagePath || "");
+            setShowLogo(r.showLogo !== false);
             initialDataRef.current = JSON.stringify({
                 name: r.name || "",
                 nameAr: r.nameAr || "",
@@ -209,6 +211,7 @@ export default function RestaurantManagePage() {
                 dishColumns: r.dishColumns || 2,
                 cardImageOrientation: r.cardImageOrientation || "landscape",
                 menuFont: r.menuFont || "system",
+                showLogo: r.showLogo !== false,
             });
         }
         setCats(await listCategories(rid));
@@ -232,6 +235,7 @@ export default function RestaurantManagePage() {
                 dishColumns,
                 cardImageOrientation,
                 menuFont,
+                showLogo,
             };
 
             // Handle Logo Upload with timeout/error safety
@@ -630,6 +634,24 @@ export default function RestaurantManagePage() {
                                             Remove
                                         </button>
                                     )}
+                                </div>
+
+                                {/* Show-in-app toggle — hides the logo in the app without deleting it */}
+                                <div className="mt-5 w-full max-w-[320px] flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                                    <div className="text-left">
+                                        <p className="text-[13px] font-bold text-gray-800">Show logo in app</p>
+                                        <p className="text-[11px] text-gray-400">Hide it without removing the uploaded image.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={showLogo}
+                                        onClick={() => setShowLogo((v) => !v)}
+                                        aria-label="Toggle showing the logo in the app"
+                                        className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${showLogo ? "bg-green-800" : "bg-gray-200"}`}
+                                    >
+                                        <span className={`w-5 h-5 bg-white rounded-full shadow-sm absolute top-[2px] transition-all ${showLogo ? "left-[22px]" : "left-[2px]"}`} />
+                                    </button>
                                 </div>
                             </div>
                         </FormCard>

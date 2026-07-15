@@ -121,6 +121,8 @@ export type Restaurant = {
     name: string;
     nameAr?: string;
     imagePath?: string;
+    /** When false, the app hides the restaurant logo even if imagePath is set. Defaults to true when unset. */
+    showLogo?: boolean;
     themeColorHex?: string;
     backgroundImagePath?: string;
     menuFont?: string;

@@ -326,7 +326,7 @@ export default function PublicMenuPage() {
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                                                 <span
                                                     className="absolute inset-x-0 bottom-0 px-2 pb-3 text-center font-bold text-white leading-tight truncate [text-shadow:0_1px_3px_rgba(0,0,0,0.85)] [transform:translateZ(0)]"
-                                                    style={{ fontSize: `${15 * fontScale}px` }}
+                                                    style={{ fontSize: `${22 * fontScale}px` }}
                                                 >
                                                     {t(cat.name, cat.nameAr)}
                                                 </span>
@@ -504,7 +504,7 @@ export default function PublicMenuPage() {
 function SectionHeading({ title, accent, fontScale }: { title: string; accent: string; fontScale: number }) {
     return (
         <div className="flex flex-col items-center gap-2">
-            <h2 className="font-bold tracking-tight text-center drop-shadow-md" style={{ fontSize: `${24 * fontScale}px` }}>
+            <h2 className="font-bold tracking-tight text-center drop-shadow-md" style={{ fontSize: `${31 * fontScale}px` }}>
                 {title}
             </h2>
             <span className="h-[3px] w-9 rounded-full opacity-80" style={{ backgroundColor: accent }} />

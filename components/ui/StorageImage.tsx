@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ref, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import { ImageLightbox } from "./ImageLightbox";
 
@@ -40,6 +41,13 @@ function tryExtractStoragePathFromFirebaseUrl(u: string): string | null {
 /** Build a public download URL for a storage object path (no network call). */
 function publicUrl(objectPath: string): string {
     return `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media`;
+}
+
+/** Get the storage object path (for the SDK) from a plain path or a firebase URL. */
+function objectPath(path?: string): string | null {
+    if (!path) return null;
+    if (path.startsWith("http")) return tryExtractStoragePathFromFirebaseUrl(path);
+    return path;
 }
 
 /** Resolve any stored value (plain path or legacy full URL) to a usable src. */
@@ -85,20 +93,46 @@ export function StorageImage({
     const optimizedUrl = useMemo(() => storageImageUrl(path, { optimize, width: optWidth }), [path, optimize, optWidth]);
     const [error, setError] = useState(false);
     const [loaded, setLoaded] = useState(false);
-    const [useRaw, setUseRaw] = useState(false);
+    // Fallback chain: 0 = optimized · 1 = raw public URL · 2 = SDK getDownloadURL (tokened).
+    const [stage, setStage] = useState(0);
+    const [tokenedUrl, setTokenedUrl] = useState<string | null>(null);
     const [showLightbox, setShowLightbox] = useState(false);
 
-    // Fall back to the raw storage URL if the optimizer variant fails.
-    const url = useRaw ? rawUrl : optimizedUrl;
+    const url = stage === 0 ? optimizedUrl : stage === 1 ? rawUrl : tokenedUrl;
 
-    // Clear prior state whenever the source path changes.
+    // Restart the fallback chain whenever the source path changes.
     useEffect(() => {
         setError(false);
-        setUseRaw(false);
+        setStage(0);
+        setTokenedUrl(null);
     }, [path]);
     useEffect(() => setLoaded(false), [url]);
 
-    if (!path || error || !url) {
+    // Third layer: fetch a fresh, tokened download URL directly from the SDK.
+    useEffect(() => {
+        if (stage !== 2 || tokenedUrl) return;
+        const op = objectPath(path);
+        if (!op) {
+            setError(true);
+            return;
+        }
+        let mounted = true;
+        getDownloadURL(ref(storage, op))
+            .then((u) => mounted && setTokenedUrl(u))
+            .catch(() => mounted && setError(true));
+        return () => {
+            mounted = false;
+        };
+    }, [stage, tokenedUrl, path]);
+
+    function advanceStage() {
+        if (stage === 0 && optimizedUrl !== rawUrl) setStage(1);
+        else if (stage < 2) setStage(2);
+        else setError(true);
+    }
+
+    // Hard failure (no path, or every source exhausted) → fallback icon.
+    if (!path || error) {
         return (
             <div className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 ${className}`}>
                 {fallbackIcon || (
@@ -108,6 +142,11 @@ export function StorageImage({
                 )}
             </div>
         );
+    }
+
+    // Waiting on the tokened URL (stage 3) — show a neutral placeholder, not an error.
+    if (!url) {
+        return <div className={className} aria-busy="true" style={{ backgroundColor: "rgba(255,255,255,0.06)" }} />;
     }
 
     const { onClick: _onClick, onError: _onError, style: _style, ...restProps } = props;
@@ -123,11 +162,7 @@ export function StorageImage({
                 loading="lazy"
                 decoding="async"
                 onLoad={() => setLoaded(true)}
-                onError={() => {
-                    // Optimizer variant failed → retry with the raw URL before giving up.
-                    if (!useRaw && optimizedUrl !== rawUrl) setUseRaw(true);
-                    else setError(true);
-                }}
+                onError={advanceStage}
                 className={`${className || ""}${lightbox ? " cursor-zoom-in" : ""}`}
                 // Placeholder tint while the (menu) image is still loading.
                 style={optimize && !loaded ? { ..._style, backgroundColor: "rgba(255,255,255,0.06)" } : _style}

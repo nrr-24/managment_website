@@ -196,7 +196,7 @@ export default function PublicMenuPage() {
     const handleRefresh = () => {
         if (refreshing) return;
         setRefreshing(true);
-        loadData();
+        window.location.reload();
     };
 
     return (

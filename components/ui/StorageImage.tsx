@@ -82,13 +82,20 @@ export function StorageImage({
 }: StorageImageProps) {
     const rawUrl = useMemo(() => resolveSrc(path), [path]);
     // Serve a resized WebP via the Next.js optimizer for public-menu images.
-    const url = useMemo(() => storageImageUrl(path, { optimize, width: optWidth }), [path, optimize, optWidth]);
+    const optimizedUrl = useMemo(() => storageImageUrl(path, { optimize, width: optWidth }), [path, optimize, optWidth]);
     const [error, setError] = useState(false);
     const [loaded, setLoaded] = useState(false);
+    const [useRaw, setUseRaw] = useState(false);
     const [showLightbox, setShowLightbox] = useState(false);
 
-    // Clear prior error / loaded state whenever the source changes.
-    useEffect(() => setError(false), [path]);
+    // Fall back to the raw storage URL if the optimizer variant fails.
+    const url = useRaw ? rawUrl : optimizedUrl;
+
+    // Clear prior state whenever the source path changes.
+    useEffect(() => {
+        setError(false);
+        setUseRaw(false);
+    }, [path]);
     useEffect(() => setLoaded(false), [url]);
 
     if (!path || error || !url) {
@@ -116,7 +123,11 @@ export function StorageImage({
                 loading="lazy"
                 decoding="async"
                 onLoad={() => setLoaded(true)}
-                onError={() => setError(true)}
+                onError={() => {
+                    // Optimizer variant failed → retry with the raw URL before giving up.
+                    if (!useRaw && optimizedUrl !== rawUrl) setUseRaw(true);
+                    else setError(true);
+                }}
                 className={`${className || ""}${lightbox ? " cursor-zoom-in" : ""}`}
                 // Placeholder tint while the (menu) image is still loading.
                 style={optimize && !loaded ? { ..._style, backgroundColor: "rgba(255,255,255,0.06)" } : _style}

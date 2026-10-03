@@ -30,7 +30,6 @@ import {
     FormQuestion,
     FormQuestionType,
     getForm,
-    getRestaurant,
     newFormQuestion,
     updateForm,
 } from "@/lib/data";
@@ -185,10 +184,9 @@ function SortableQuestion({
 }
 
 export default function FormBuilderPage() {
-    const { rid, fid } = useParams<{ rid: string; fid: string }>();
+    const { fid } = useParams<{ fid: string }>();
     const { toast } = useGlobalUI();
 
-    const [restaurantName, setRestaurantName] = useState("");
     const [loaded, setLoaded] = useState(false);
     const [notFound, setNotFound] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -207,8 +205,7 @@ export default function FormBuilderPage() {
     );
 
     useEffect(() => {
-        getRestaurant(rid).then((r) => r && setRestaurantName(r.name || ""));
-        getForm(rid, fid)
+        getForm(fid)
             .then((f) => {
                 if (!f) {
                     setNotFound(true);
@@ -223,7 +220,7 @@ export default function FormBuilderPage() {
             .catch(() => toast("Failed to load form", "error"))
             .finally(() => setLoaded(true));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rid, fid]);
+    }, [fid]);
 
     // Warn before closing the tab with unsaved changes
     useEffect(() => {
@@ -263,7 +260,7 @@ export default function FormBuilderPage() {
         setSaving(true);
         try {
             const cleaned = questions.map((q) => ({ ...q, text: q.text.trim() }));
-            await updateForm(rid, fid, { title: title.trim(), isActive, questions: cleaned });
+            await updateForm(fid, { title: title.trim(), isActive, questions: cleaned });
             setTitle(title.trim());
             setQuestions(cleaned);
             setSavedSnapshot(JSON.stringify({ title: title.trim(), isActive, questions: cleaned }));
@@ -275,9 +272,7 @@ export default function FormBuilderPage() {
     }
 
     const crumbs = [
-        { label: "Restaurants", href: "/admin/restaurants" },
-        { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
-        { label: "Feedback", href: `/admin/restaurants/${rid}/forms` },
+        { label: "Feedback", href: "/admin/feedback" },
         { label: title || "Form" },
     ];
 
@@ -289,7 +284,7 @@ export default function FormBuilderPage() {
 
     if (!loaded) {
         return (
-            <Page title="Form" backPath={`/admin/restaurants/${rid}/forms`} breadcrumbs={crumbs}>
+            <Page title="Form" backPath="/admin/feedback" breadcrumbs={crumbs}>
                 <div className="space-y-4">
                     <Skeleton className="h-14 w-full" />
                     <Skeleton className="h-40 w-full" />
@@ -301,14 +296,14 @@ export default function FormBuilderPage() {
 
     if (notFound) {
         return (
-            <Page title="Form" backPath={`/admin/restaurants/${rid}/forms`} breadcrumbs={crumbs}>
+            <Page title="Form" backPath="/admin/feedback" breadcrumbs={crumbs}>
                 <p className="text-center text-gray-400 py-16">This form no longer exists.</p>
             </Page>
         );
     }
 
     return (
-        <Page title={title || "Form"} actions={actions} backPath={`/admin/restaurants/${rid}/forms`} breadcrumbs={crumbs} maxWidth="max-w-4xl">
+        <Page title={title || "Form"} actions={actions} backPath="/admin/feedback" breadcrumbs={crumbs} maxWidth="max-w-4xl">
             {/* Form settings */}
             <div className="bg-white rounded-2xl border border-gray-200/60 p-4 sm:p-5 space-y-4">
                 <div>
@@ -324,7 +319,7 @@ export default function FormBuilderPage() {
                 <div className="flex items-center justify-between gap-4">
                     <div>
                         <p className="text-[15px] font-medium text-gray-900">Show in the app</p>
-                        <p className="text-[12px] text-gray-400 mt-0.5">When on, customers can fill out this form from the menu screen.</p>
+                        <p className="text-[12px] text-gray-400 mt-0.5">When on, customers can fill out this form from the restaurant picker screen.</p>
                     </div>
                     <button
                         type="button"
@@ -369,7 +364,7 @@ export default function FormBuilderPage() {
             </button>
 
             <Link
-                href={`/admin/restaurants/${rid}/forms/${fid}/responses`}
+                href={`/admin/feedback/${fid}/responses`}
                 className="block text-center text-sm font-semibold text-green-800 hover:underline py-2"
             >
                 View responses →

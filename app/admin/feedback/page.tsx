@@ -2,30 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Page } from "@/components/ui/Page";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { CategoryListSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { FeedbackForm, createForm, deleteForm, getRestaurant, listForms } from "@/lib/data";
+import { FeedbackForm, createForm, deleteForm, listFeedbackRestaurants, listForms } from "@/lib/data";
 
-export default function FormsPage() {
-    const { rid } = useParams<{ rid: string }>();
+export default function FeedbackPage() {
     const router = useRouter();
     const { toast, confirm } = useGlobalUI();
     const { canDelete } = useAuth();
 
     const [forms, setForms] = useState<FeedbackForm[]>([]);
+    const [restaurantCount, setRestaurantCount] = useState<number | null>(null);
     const [loaded, setLoaded] = useState(false);
-    const [restaurantName, setRestaurantName] = useState("");
     const [newTitle, setNewTitle] = useState("");
     const [creating, setCreating] = useState(false);
 
     async function refresh() {
         try {
-            setForms(await listForms(rid));
+            setForms(await listForms());
         } catch {
             toast("Failed to load forms", "error");
         }
@@ -33,10 +32,12 @@ export default function FormsPage() {
     }
 
     useEffect(() => {
-        getRestaurant(rid).then((r) => r && setRestaurantName(r.name || ""));
         refresh();
+        listFeedbackRestaurants()
+            .then((r) => setRestaurantCount(r.length))
+            .catch(() => setRestaurantCount(null));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rid]);
+    }, []);
 
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
@@ -44,8 +45,8 @@ export default function FormsPage() {
         if (!title) return;
         setCreating(true);
         try {
-            const id = await createForm(rid, title);
-            router.push(`/admin/restaurants/${rid}/forms/${id}`);
+            const id = await createForm(title);
+            router.push(`/admin/feedback/${id}`);
         } catch {
             toast("Failed to create form", "error");
             setCreating(false);
@@ -60,7 +61,7 @@ export default function FormsPage() {
         });
         if (!ok) return;
         try {
-            await deleteForm(rid, form.id);
+            await deleteForm(form.id);
             toast("Form deleted");
             refresh();
         } catch {
@@ -69,18 +70,36 @@ export default function FormsPage() {
     }
 
     return (
-        <Page
-            title="Feedback Forms"
-            backPath={`/admin/restaurants/${rid}`}
-            breadcrumbs={[
-                { label: "Restaurants", href: "/admin/restaurants" },
-                { label: restaurantName || "Restaurant", href: `/admin/restaurants/${rid}` },
-                { label: "Feedback" },
-            ]}
-        >
+        <Page title="Customer Feedback" backPath="/admin" breadcrumbs={[{ label: "Feedback" }]}>
             <p className="text-sm text-gray-400 px-1">
-                Build forms that customers fill out in the app, then review what they said.
+                One set of forms for every restaurant. Customers pick their restaurant and branch first, then answer your questions.
             </p>
+
+            {/* Restaurants + branches setup */}
+            <Link href="/admin/feedback/restaurants" className="block">
+                <Card className="p-4 hover:bg-gray-50 transition-colors rounded-2xl border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center shrink-0">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" />
+                            </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-gray-900">Restaurants &amp; branches</p>
+                            <p className="text-[12px] text-gray-400">
+                                {restaurantCount === null
+                                    ? "The choices customers see at the top of every form"
+                                    : restaurantCount === 0
+                                    ? "None yet — add the restaurants customers can choose from"
+                                    : `${restaurantCount} restaurant${restaurantCount === 1 ? "" : "s"} customers can choose from`}
+                            </p>
+                        </div>
+                        <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </Card>
+            </Link>
 
             <form onSubmit={handleCreate} className="flex gap-2">
                 <input
@@ -107,7 +126,7 @@ export default function FormsPage() {
                     {forms.map((form) => (
                         <Card key={form.id} className="p-3 rounded-2xl border border-gray-100">
                             <div className="flex items-center gap-2">
-                                <Link href={`/admin/restaurants/${rid}/forms/${form.id}`} className="flex-1 min-w-0 px-2 py-1">
+                                <Link href={`/admin/feedback/${form.id}`} className="flex-1 min-w-0 px-2 py-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-blue-600 truncate">{form.title}</span>
                                         <span
@@ -123,7 +142,7 @@ export default function FormsPage() {
                                     </p>
                                 </Link>
                                 <Link
-                                    href={`/admin/restaurants/${rid}/forms/${form.id}/responses`}
+                                    href={`/admin/feedback/${form.id}/responses`}
                                     className="px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-50 rounded-lg transition-colors shrink-0"
                                 >
                                     Responses

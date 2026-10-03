@@ -40,8 +40,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const isAdminHome = path === "/admin";
 
     const navItems = [
-        { label: "Restaurants", href: "/admin/restaurants", match: "/restaurants" },
-        ...(isAdmin ? [{ label: "Users", href: "/admin/users", match: "/users" }] : []),
+        { label: "Restaurants", href: "/admin/restaurants" },
+        { label: "Feedback", href: "/admin/feedback" },
+        ...(isAdmin ? [{ label: "Users", href: "/admin/users" }] : []),
     ];
 
     return (
@@ -56,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </Link>
                             <div className="flex items-center gap-0.5 bg-gray-100/80 p-0.5 rounded-full">
                                 {navItems.map((item) => {
-                                    const active = path.includes(item.match);
+                                    const active = path.startsWith(item.href);
                                     return (
                                         <Link
                                             key={item.href}

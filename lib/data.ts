@@ -1435,10 +1435,10 @@ export async function duplicateRestaurant(restaurantId: string) {
     return newRestaurantId;
 }
 
-// ---------- Feedback Forms ----------
-// Stored at restaurants/{rid}/forms/{fid}. Questions are embedded in the form doc
-// (array order == display order) so the app reads a whole form in one fetch and
-// reordering is a single atomic write. Submissions live in .../forms/{fid}/responses.
+// ---------- Customer Feedback (universal, not tied to one menu restaurant) ----------
+// feedbackRestaurants/{id}            managers maintain the restaurant names + their branches
+// feedbackForms/{fid}                 questions are embedded (array order == display order)
+// feedbackForms/{fid}/responses/{id}  customer submissions, tagged with the chosen restaurant/branch
 
 export type FormQuestionType = "text" | "stars" | "yesno" | "smiley";
 
@@ -1465,6 +1465,19 @@ export type FeedbackForm = {
     updatedAt?: any;
 };
 
+export type FeedbackBranch = {
+    id: string;
+    name: string;
+};
+
+/** A restaurant name customers can pick in the feedback form, with the branches tied to it. */
+export type FeedbackRestaurant = {
+    id: string;
+    name: string;
+    branches: FeedbackBranch[];
+    createdAt?: any;
+};
+
 /** A single answer. `value` is a string for text, a number 1-5 for stars/smiley, a boolean for yes/no. */
 export type FormAnswer = {
     questionId: string;
@@ -1477,6 +1490,11 @@ export type FormAnswer = {
 export type FormResponse = {
     id: string;
     answers: FormAnswer[];
+    /** Snapshots of the customer's choice; ids may no longer exist if the list is edited later. */
+    restaurantId?: string;
+    restaurantName?: string;
+    branchId?: string;
+    branchName?: string;
     submittedAt?: any;
     submittedBy?: string;
 };
@@ -1485,29 +1503,65 @@ export function newFormQuestion(): FormQuestion {
     return { id: generateUUID(), text: "", type: "text", required: false };
 }
 
-function formsCol(restaurantId: string) {
-    return collection(db, "restaurants", restaurantId, "forms");
-}
-
 function millis(ts: any): number {
     return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : 0);
 }
 
-export async function listForms(restaurantId: string): Promise<FeedbackForm[]> {
-    const snap = await getDocs(formsCol(restaurantId));
+const byName = (a: { name: string }, b: { name: string }) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
+
+// ----- Restaurant names + branches -----
+
+export async function listFeedbackRestaurants(): Promise<FeedbackRestaurant[]> {
+    const snap = await getDocs(collection(db, "feedbackRestaurants"));
+    const list = snap.docs.map((d) => {
+        const data = d.data() as any;
+        return { id: d.id, ...data, branches: [...(data.branches ?? [])].sort(byName) } as FeedbackRestaurant;
+    });
+    return list.sort(byName);
+}
+
+export async function createFeedbackRestaurant(name: string): Promise<string> {
+    const docRef = await addDoc(collection(db, "feedbackRestaurants"), {
+        name,
+        branches: [],
+        createdAt: serverTimestamp(),
+    });
+    return docRef.id;
+}
+
+export async function updateFeedbackRestaurant(
+    id: string,
+    data: Partial<Pick<FeedbackRestaurant, "name" | "branches">>
+) {
+    await updateDoc(doc(db, "feedbackRestaurants", id), cleanData(data));
+}
+
+export async function deleteFeedbackRestaurant(id: string) {
+    await deleteDoc(doc(db, "feedbackRestaurants", id));
+}
+
+export function newFeedbackBranch(name: string): FeedbackBranch {
+    return { id: generateUUID(), name };
+}
+
+// ----- Forms -----
+
+export async function listForms(): Promise<FeedbackForm[]> {
+    const snap = await getDocs(collection(db, "feedbackForms"));
     const forms = snap.docs.map((d) => ({ id: d.id, questions: [], ...(d.data() as any) })) as FeedbackForm[];
     forms.sort((a, b) => millis(a.createdAt) - millis(b.createdAt));
     return forms;
 }
 
-export async function getForm(restaurantId: string, formId: string): Promise<FeedbackForm | null> {
-    const snap = await getDoc(doc(db, "restaurants", restaurantId, "forms", formId));
+export async function getForm(formId: string): Promise<FeedbackForm | null> {
+    const snap = await getDoc(doc(db, "feedbackForms", formId));
     if (!snap.exists()) return null;
     return { id: snap.id, questions: [], ...(snap.data() as any) };
 }
 
-export async function createForm(restaurantId: string, title: string): Promise<string> {
-    const docRef = await addDoc(formsCol(restaurantId), {
+export async function createForm(title: string): Promise<string> {
+    const docRef = await addDoc(collection(db, "feedbackForms"), {
         title,
         isActive: false,
         questions: [newFormQuestion()],
@@ -1518,35 +1572,34 @@ export async function createForm(restaurantId: string, title: string): Promise<s
 }
 
 export async function updateForm(
-    restaurantId: string,
     formId: string,
     data: Partial<Pick<FeedbackForm, "title" | "isActive" | "questions">>
 ) {
-    await updateDoc(doc(db, "restaurants", restaurantId, "forms", formId), {
+    await updateDoc(doc(db, "feedbackForms", formId), {
         ...cleanData(data),
         updatedAt: serverTimestamp(),
     });
 }
 
 /** Delete a form and all of its submissions. */
-export async function deleteForm(restaurantId: string, formId: string) {
-    const responsesSnap = await getDocs(collection(db, "restaurants", restaurantId, "forms", formId, "responses"));
+export async function deleteForm(formId: string) {
+    const responsesSnap = await getDocs(collection(db, "feedbackForms", formId, "responses"));
     // Batches are capped at 500 writes
     for (let i = 0; i < responsesSnap.docs.length; i += 400) {
         const batch = writeBatch(db);
         responsesSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
         await batch.commit();
     }
-    await deleteDoc(doc(db, "restaurants", restaurantId, "forms", formId));
+    await deleteDoc(doc(db, "feedbackForms", formId));
 }
 
-export async function listFormResponses(restaurantId: string, formId: string): Promise<FormResponse[]> {
-    const snap = await getDocs(collection(db, "restaurants", restaurantId, "forms", formId, "responses"));
+export async function listFormResponses(formId: string): Promise<FormResponse[]> {
+    const snap = await getDocs(collection(db, "feedbackForms", formId, "responses"));
     const responses = snap.docs.map((d) => ({ id: d.id, answers: [], ...(d.data() as any) })) as FormResponse[];
     responses.sort((a, b) => millis(b.submittedAt) - millis(a.submittedAt)); // newest first
     return responses;
 }
 
-export async function deleteFormResponse(restaurantId: string, formId: string, responseId: string) {
-    await deleteDoc(doc(db, "restaurants", restaurantId, "forms", formId, "responses", responseId));
+export async function deleteFormResponse(formId: string, responseId: string) {
+    await deleteDoc(doc(db, "feedbackForms", formId, "responses", responseId));
 }

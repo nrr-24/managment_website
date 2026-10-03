@@ -44,23 +44,6 @@ service cloud.firestore {
         allow write: if isManager();
       }
 
-      // FEEDBACK FORMS — managers build them, the app reads them, customers submit responses
-      match /forms/{formId} {
-        allow read: if true;
-        allow write: if isManager();
-
-        match /responses/{responseId} {
-          // Any signed-in user (customer devices) may submit; only managers may read or remove.
-          allow create: if signedIn()
-                        && request.resource.data.keys().hasOnly(['answers', 'submittedAt', 'submittedBy'])
-                        && request.resource.data.answers is list
-                        && request.resource.data.answers.size() <= 50
-                        && request.resource.data.submittedBy == request.auth.uid;
-          allow read, delete: if isManager();
-          allow update: if false;
-        }
-      }
-
       match /categories/{categoryId} {
         allow read: if true;
         allow write: if isManager();
@@ -71,6 +54,33 @@ service cloud.firestore {
         }
       }
     }
+    // CUSTOMER FEEDBACK — universal (not tied to a menu restaurant)
+    // Managers maintain the restaurant/branch choices and build the forms; signed-in
+    // customers (the app) read them and submit responses; only managers read responses.
+    match /feedbackRestaurants/{id} {
+      allow read: if signedIn();
+      allow write: if isManager();
+    }
+
+    match /feedbackForms/{formId} {
+      allow read: if signedIn();
+      allow write: if isManager();
+
+      match /responses/{responseId} {
+        allow create: if signedIn()
+                      && request.resource.data.keys().hasOnly(['answers', 'restaurantId', 'restaurantName', 'branchId', 'branchName', 'submittedAt', 'submittedBy'])
+                      && request.resource.data.answers is list
+                      && request.resource.data.answers.size() <= 50
+                      && request.resource.data.restaurantName is string
+                      && request.resource.data.restaurantName.size() <= 200
+                      && request.resource.data.branchName is string
+                      && request.resource.data.branchName.size() <= 200
+                      && request.resource.data.submittedBy == request.auth.uid;
+        allow read, delete: if isManager();
+        allow update: if false;
+      }
+    }
+
     // IMAGE ASSETS
     match /image_assets/{assetId} {
       allow read: if true;

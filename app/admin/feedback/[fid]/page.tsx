@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Page } from "@/components/ui/Page";
@@ -34,36 +35,64 @@ import {
     updateForm,
 } from "@/lib/data";
 
-/* ── Type dropdown (matches the design: bordered field, floating option list) ── */
+/* ── Type dropdown (matches the design: bordered field, floating option list) ──
+   The list is rendered in a portal on <body> with fixed positioning. Inside the page it
+   would be trapped in its section's stacking layer (sections animate in) and the
+   "Add question" button below would paint over it. */
 function TypeSelect({ value, onChange }: { value: FormQuestionType; onChange: (v: FormQuestionType) => void }) {
     const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
+
+    function openList() {
+        const rect = triggerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const listHeight = FORM_QUESTION_TYPES.length * 44 + 14;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        // Open upwards when there isn't room below and there is more room above
+        const flip = spaceBelow < listHeight + 12 && rect.top > spaceBelow;
+        setPos(
+            flip
+                ? { left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 6 }
+                : { left: rect.left, width: rect.width, top: rect.bottom + 6 }
+        );
+        setOpen(true);
+    }
 
     useEffect(() => {
         if (!open) return;
         function onDown(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+            const t = e.target as Node;
+            if (triggerRef.current?.contains(t) || listRef.current?.contains(t)) return;
+            setOpen(false);
         }
         function onKey(e: KeyboardEvent) {
             if (e.key === "Escape") setOpen(false);
         }
+        const close = () => setOpen(false);
         document.addEventListener("mousedown", onDown);
         document.addEventListener("keydown", onKey);
+        window.addEventListener("resize", close);
+        window.addEventListener("scroll", close, true); // fixed position would drift from the field
         return () => {
             document.removeEventListener("mousedown", onDown);
             document.removeEventListener("keydown", onKey);
+            window.removeEventListener("resize", close);
+            window.removeEventListener("scroll", close, true);
         };
     }, [open]);
 
     const current = FORM_QUESTION_TYPES.find((t) => t.value === value);
 
     return (
-        <div ref={ref} className="relative w-full sm:w-80">
+        <div className="relative w-full sm:w-80">
             <button
+                ref={triggerRef}
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={open}
-                onClick={() => setOpen((o) => !o)}
+                onClick={() => (open ? setOpen(false) : openList())}
                 className={`w-full h-11 px-4 flex items-center justify-between rounded-xl border bg-white text-[15px] text-gray-900 transition-colors ${
                     open ? "border-green-800 ring-2 ring-green-800/10" : "border-gray-200 hover:border-gray-300"
                 }`}
@@ -73,26 +102,34 @@ function TypeSelect({ value, onChange }: { value: FormQuestionType; onChange: (v
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
-            {open && (
-                <ul role="listbox" className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5">
-                    {FORM_QUESTION_TYPES.map((t) => (
-                        <li key={t.value} role="option" aria-selected={t.value === value}>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onChange(t.value);
-                                    setOpen(false);
-                                }}
-                                className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[15px] transition-colors ${
-                                    t.value === value ? "bg-green-50 text-green-900 font-semibold" : "text-gray-800 hover:bg-gray-50"
-                                }`}
-                            >
-                                {t.label}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {open &&
+                pos &&
+                createPortal(
+                    <ul
+                        ref={listRef}
+                        role="listbox"
+                        style={{ position: "fixed", left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom }}
+                        className="z-[1000] bg-white rounded-xl shadow-xl border border-gray-100 p-1.5"
+                    >
+                        {FORM_QUESTION_TYPES.map((t) => (
+                            <li key={t.value} role="option" aria-selected={t.value === value}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(t.value);
+                                        setOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[15px] transition-colors ${
+                                        t.value === value ? "bg-green-50 text-green-900 font-semibold" : "text-gray-800 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    {t.label}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>,
+                    document.body
+                )}
         </div>
     );
 }

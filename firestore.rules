@@ -44,6 +44,23 @@ service cloud.firestore {
         allow write: if isManager();
       }
 
+      // FEEDBACK FORMS — managers build them, the app reads them, customers submit responses
+      match /forms/{formId} {
+        allow read: if true;
+        allow write: if isManager();
+
+        match /responses/{responseId} {
+          // Any signed-in user (customer devices) may submit; only managers may read or remove.
+          allow create: if signedIn()
+                        && request.resource.data.keys().hasOnly(['answers', 'submittedAt', 'submittedBy'])
+                        && request.resource.data.answers is list
+                        && request.resource.data.answers.size() <= 50
+                        && request.resource.data.submittedBy == request.auth.uid;
+          allow read, delete: if isManager();
+          allow update: if false;
+        }
+      }
+
       match /categories/{categoryId} {
         allow read: if true;
         allow write: if isManager();

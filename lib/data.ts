@@ -1434,3 +1434,119 @@ export async function duplicateRestaurant(restaurantId: string) {
 
     return newRestaurantId;
 }
+
+// ---------- Feedback Forms ----------
+// Stored at restaurants/{rid}/forms/{fid}. Questions are embedded in the form doc
+// (array order == display order) so the app reads a whole form in one fetch and
+// reordering is a single atomic write. Submissions live in .../forms/{fid}/responses.
+
+export type FormQuestionType = "text" | "stars" | "yesno" | "smiley";
+
+export const FORM_QUESTION_TYPES: { value: FormQuestionType; label: string }[] = [
+    { value: "text", label: "Text Box" },
+    { value: "stars", label: "Star Rating" },
+    { value: "yesno", label: "Yes/No" },
+    { value: "smiley", label: "Smiley" },
+];
+
+export type FormQuestion = {
+    id: string;
+    text: string;
+    type: FormQuestionType;
+    required: boolean;
+};
+
+export type FeedbackForm = {
+    id: string;
+    title: string;
+    isActive: boolean;
+    questions: FormQuestion[];
+    createdAt?: any;
+    updatedAt?: any;
+};
+
+/** A single answer. `value` is a string for text, a number 1-5 for stars/smiley, a boolean for yes/no. */
+export type FormAnswer = {
+    questionId: string;
+    /** Snapshot of the question at submit time, so results stay readable if the form is edited later. */
+    questionText: string;
+    type: FormQuestionType;
+    value: string | number | boolean | null;
+};
+
+export type FormResponse = {
+    id: string;
+    answers: FormAnswer[];
+    submittedAt?: any;
+    submittedBy?: string;
+};
+
+export function newFormQuestion(): FormQuestion {
+    return { id: generateUUID(), text: "", type: "text", required: false };
+}
+
+function formsCol(restaurantId: string) {
+    return collection(db, "restaurants", restaurantId, "forms");
+}
+
+function millis(ts: any): number {
+    return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : 0);
+}
+
+export async function listForms(restaurantId: string): Promise<FeedbackForm[]> {
+    const snap = await getDocs(formsCol(restaurantId));
+    const forms = snap.docs.map((d) => ({ id: d.id, questions: [], ...(d.data() as any) })) as FeedbackForm[];
+    forms.sort((a, b) => millis(a.createdAt) - millis(b.createdAt));
+    return forms;
+}
+
+export async function getForm(restaurantId: string, formId: string): Promise<FeedbackForm | null> {
+    const snap = await getDoc(doc(db, "restaurants", restaurantId, "forms", formId));
+    if (!snap.exists()) return null;
+    return { id: snap.id, questions: [], ...(snap.data() as any) };
+}
+
+export async function createForm(restaurantId: string, title: string): Promise<string> {
+    const docRef = await addDoc(formsCol(restaurantId), {
+        title,
+        isActive: false,
+        questions: [newFormQuestion()],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    return docRef.id;
+}
+
+export async function updateForm(
+    restaurantId: string,
+    formId: string,
+    data: Partial<Pick<FeedbackForm, "title" | "isActive" | "questions">>
+) {
+    await updateDoc(doc(db, "restaurants", restaurantId, "forms", formId), {
+        ...cleanData(data),
+        updatedAt: serverTimestamp(),
+    });
+}
+
+/** Delete a form and all of its submissions. */
+export async function deleteForm(restaurantId: string, formId: string) {
+    const responsesSnap = await getDocs(collection(db, "restaurants", restaurantId, "forms", formId, "responses"));
+    // Batches are capped at 500 writes
+    for (let i = 0; i < responsesSnap.docs.length; i += 400) {
+        const batch = writeBatch(db);
+        responsesSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+    }
+    await deleteDoc(doc(db, "restaurants", restaurantId, "forms", formId));
+}
+
+export async function listFormResponses(restaurantId: string, formId: string): Promise<FormResponse[]> {
+    const snap = await getDocs(collection(db, "restaurants", restaurantId, "forms", formId, "responses"));
+    const responses = snap.docs.map((d) => ({ id: d.id, answers: [], ...(d.data() as any) })) as FormResponse[];
+    responses.sort((a, b) => millis(b.submittedAt) - millis(a.submittedAt)); // newest first
+    return responses;
+}
+
+export async function deleteFormResponse(restaurantId: string, formId: string, responseId: string) {
+    await deleteDoc(doc(db, "restaurants", restaurantId, "forms", formId, "responses", responseId));
+}

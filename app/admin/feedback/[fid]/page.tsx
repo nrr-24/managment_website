@@ -31,7 +31,9 @@ import {
     FormQuestion,
     FormQuestionType,
     defaultFormQuestions,
+    Restaurant,
     getForm,
+    listRestaurants,
     newFormQuestion,
     updateForm,
 } from "@/lib/data";
@@ -232,9 +234,14 @@ export default function FormBuilderPage() {
     const [title, setTitle] = useState("");
     const [isActive, setIsActive] = useState(false);
     const [questions, setQuestions] = useState<FormQuestion[]>([]);
+    const [restaurantIds, setRestaurantIds] = useState<string[]>([]);
+    const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([]);
     const [savedSnapshot, setSavedSnapshot] = useState("");
 
-    const snapshot = useMemo(() => JSON.stringify({ title, isActive, questions }), [title, isActive, questions]);
+    const snapshot = useMemo(
+        () => JSON.stringify({ title, isActive, questions, restaurantIds: [...restaurantIds].sort() }),
+        [title, isActive, questions, restaurantIds]
+    );
     const dirty = loaded && snapshot !== savedSnapshot;
 
     const sensors = useSensors(
@@ -243,16 +250,23 @@ export default function FormBuilderPage() {
     );
 
     useEffect(() => {
-        getForm(fid)
-            .then((f) => {
+        Promise.all([getForm(fid), listRestaurants()])
+            .then(([f, restaurants]) => {
+                const sorted = [...restaurants].sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" }));
+                setAllRestaurants(sorted);
                 if (!f) {
                     setNotFound(true);
                 } else {
                     const qs = f.questions.length ? f.questions : [newFormQuestion()];
+                    // Drop assignments to restaurants that no longer exist
+                    const ids = (f.restaurantIds ?? []).filter((id) => sorted.some((r) => r.id === id));
                     setTitle(f.title);
                     setIsActive(f.isActive === true);
                     setQuestions(qs);
-                    setSavedSnapshot(JSON.stringify({ title: f.title, isActive: f.isActive === true, questions: qs }));
+                    setRestaurantIds(ids);
+                    setSavedSnapshot(
+                        JSON.stringify({ title: f.title, isActive: f.isActive === true, questions: qs, restaurantIds: [...ids].sort() })
+                    );
                 }
             })
             .catch(() => toast("Failed to load form", "error"))
@@ -298,10 +312,10 @@ export default function FormBuilderPage() {
         setSaving(true);
         try {
             const cleaned = questions.map((q) => ({ ...q, text: q.text.trim() }));
-            await updateForm(fid, { title: title.trim(), isActive, questions: cleaned });
+            await updateForm(fid, { title: title.trim(), isActive, questions: cleaned, restaurantIds });
             setTitle(title.trim());
             setQuestions(cleaned);
-            setSavedSnapshot(JSON.stringify({ title: title.trim(), isActive, questions: cleaned }));
+            setSavedSnapshot(JSON.stringify({ title: title.trim(), isActive, questions: cleaned, restaurantIds: [...restaurantIds].sort() }));
             toast("Form saved");
         } catch {
             toast("Failed to save form", "error");
@@ -357,7 +371,7 @@ export default function FormBuilderPage() {
                 <div className="flex items-center justify-between gap-4">
                     <div>
                         <p className="text-[15px] font-medium text-gray-900">Show in the app</p>
-                        <p className="text-[12px] text-gray-400 mt-0.5">When on, customers can fill out this form from the restaurant picker screen.</p>
+                        <p className="text-[12px] text-gray-400 mt-0.5">When on, viewers can fill out this form from the restaurant picker screen.</p>
                     </div>
                     <button
                         type="button"
@@ -372,10 +386,65 @@ export default function FormBuilderPage() {
                 </div>
             </div>
 
+            {/* Which restaurants this form is for */}
+            <div className="bg-white rounded-2xl border border-gray-200/60 p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3 mb-1">
+                    <div>
+                        <h3 className="text-[15px] font-bold text-gray-900">Restaurants</h3>
+                        <p className="text-[12px] text-gray-400 mt-0.5 leading-relaxed">
+                            Viewers only see this form for the restaurants you tick, and each response is tagged with that restaurant automatically.
+                        </p>
+                    </div>
+                    {allRestaurants.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setRestaurantIds(restaurantIds.length === allRestaurants.length ? [] : allRestaurants.map((r) => r.id))}
+                            className="shrink-0 text-[13px] font-semibold text-green-800 hover:underline"
+                        >
+                            {restaurantIds.length === allRestaurants.length ? "Clear all" : "Select all"}
+                        </button>
+                    )}
+                </div>
+
+                {allRestaurants.length === 0 ? (
+                    <p className="text-[13px] text-gray-400 py-3">No restaurants yet.</p>
+                ) : (
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {allRestaurants.map((r) => {
+                            const checked = restaurantIds.includes(r.id);
+                            return (
+                                <label
+                                    key={r.id}
+                                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border cursor-pointer select-none transition-colors ${
+                                        checked ? "border-green-800/40 bg-green-50/60" : "border-gray-200 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() =>
+                                            setRestaurantIds((ids) => (checked ? ids.filter((id) => id !== r.id) : [...ids, r.id]))
+                                        }
+                                        className="w-5 h-5 rounded-md border-gray-300 accent-green-800 cursor-pointer shrink-0"
+                                    />
+                                    <span className="text-[15px] text-gray-900 truncate">{r.name}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {restaurantIds.length === 0 && allRestaurants.length > 0 && (
+                    <p className="mt-3 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                        No restaurant ticked — this form stays hidden from customers{isActive ? ", even though “Show in the app” is on" : ""}.
+                    </p>
+                )}
+            </div>
+
             {/* Offer the standard questions on a form that is still just one empty question */}
             {questions.length === 1 && !questions[0].text.trim() && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl bg-green-50/60 border border-green-100 px-4 py-3">
-                    <p className="text-[13px] text-green-900">Starting from scratch? Load our standard 8 feedback questions.</p>
+                    <p className="text-[13px] text-green-900">Starting from scratch? Load our standard feedback questions.</p>
                     <button
                         type="button"
                         onClick={() => setQuestions(defaultFormQuestions())}

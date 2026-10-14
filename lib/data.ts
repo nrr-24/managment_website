@@ -1435,10 +1435,10 @@ export async function duplicateRestaurant(restaurantId: string) {
     return newRestaurantId;
 }
 
-// ---------- Customer Feedback (universal, not tied to one menu restaurant) ----------
-// feedbackRestaurants/{id}            managers maintain the restaurant names + their branches
-// feedbackForms/{fid}                 questions are embedded (array order == display order)
-// feedbackForms/{fid}/responses/{id}  customer submissions, tagged with the chosen restaurant/branch
+// ---------- Customer Feedback ----------
+// feedbackForms/{fid}                 questions are embedded (array order == display order);
+//                                     `restaurantIds` are the menu restaurants the form is assigned to
+// feedbackForms/{fid}/responses/{id}  customer submissions, tagged with the restaurant they were given for
 
 export type FormQuestionType = "text" | "stars" | "yesno" | "smiley";
 
@@ -1461,21 +1461,11 @@ export type FeedbackForm = {
     title: string;
     isActive: boolean;
     questions: FormQuestion[];
+    /** Menu restaurants (restaurants/{id}) this form is for. Viewers only see it for restaurants
+     *  they have access to; a form with none assigned is hidden from customers. */
+    restaurantIds?: string[];
     createdAt?: any;
     updatedAt?: any;
-};
-
-export type FeedbackBranch = {
-    id: string;
-    name: string;
-};
-
-/** A restaurant name customers can pick in the feedback form, with the branches tied to it. */
-export type FeedbackRestaurant = {
-    id: string;
-    name: string;
-    branches: FeedbackBranch[];
-    createdAt?: any;
 };
 
 /** A single answer. `value` is a string for text, a number 1-5 for stars/smiley, a boolean for yes/no. */
@@ -1490,11 +1480,9 @@ export type FormAnswer = {
 export type FormResponse = {
     id: string;
     answers: FormAnswer[];
-    /** Snapshots of the customer's choice; ids may no longer exist if the list is edited later. */
+    /** The restaurant the feedback was given for (name is a snapshot; the id may be deleted later). */
     restaurantId?: string;
     restaurantName?: string;
-    branchId?: string;
-    branchName?: string;
     submittedAt?: any;
     submittedBy?: string;
 };
@@ -1518,6 +1506,7 @@ export function defaultFormQuestions(): FormQuestion[] {
         q("How would you rate the taste of our food?", "stars"),
         q("Would you come back to eat with us again?", "yesno"),
         q("Is there anything else you want to tell us?", "text"),
+        q("Table number", "text"),
         q("Name", "text", true),
         q("Email address", "text", true),
     ];
@@ -1525,44 +1514,6 @@ export function defaultFormQuestions(): FormQuestion[] {
 
 function millis(ts: any): number {
     return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : 0);
-}
-
-const byName = (a: { name: string }, b: { name: string }) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
-
-// ----- Restaurant names + branches -----
-
-export async function listFeedbackRestaurants(): Promise<FeedbackRestaurant[]> {
-    const snap = await getDocs(collection(db, "feedbackRestaurants"));
-    const list = snap.docs.map((d) => {
-        const data = d.data() as any;
-        return { id: d.id, ...data, branches: [...(data.branches ?? [])].sort(byName) } as FeedbackRestaurant;
-    });
-    return list.sort(byName);
-}
-
-export async function createFeedbackRestaurant(name: string): Promise<string> {
-    const docRef = await addDoc(collection(db, "feedbackRestaurants"), {
-        name,
-        branches: [],
-        createdAt: serverTimestamp(),
-    });
-    return docRef.id;
-}
-
-export async function updateFeedbackRestaurant(
-    id: string,
-    data: Partial<Pick<FeedbackRestaurant, "name" | "branches">>
-) {
-    await updateDoc(doc(db, "feedbackRestaurants", id), cleanData(data));
-}
-
-export async function deleteFeedbackRestaurant(id: string) {
-    await deleteDoc(doc(db, "feedbackRestaurants", id));
-}
-
-export function newFeedbackBranch(name: string): FeedbackBranch {
-    return { id: generateUUID(), name };
 }
 
 // ----- Forms -----
@@ -1584,6 +1535,7 @@ export async function createForm(title: string): Promise<string> {
     const docRef = await addDoc(collection(db, "feedbackForms"), {
         title,
         isActive: false,
+        restaurantIds: [],
         questions: defaultFormQuestions(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -1593,7 +1545,7 @@ export async function createForm(title: string): Promise<string> {
 
 export async function updateForm(
     formId: string,
-    data: Partial<Pick<FeedbackForm, "title" | "isActive" | "questions">>
+    data: Partial<Pick<FeedbackForm, "title" | "isActive" | "questions" | "restaurantIds">>
 ) {
     await updateDoc(doc(db, "feedbackForms", formId), {
         ...cleanData(data),

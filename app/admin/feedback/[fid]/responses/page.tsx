@@ -56,7 +56,6 @@ export default function ResponsesPage() {
     const [responses, setResponses] = useState<FormResponse[]>([]);
     const [loaded, setLoaded] = useState(false);
     const [restaurantFilter, setRestaurantFilter] = useState(ALL);
-    const [branchFilter, setBranchFilter] = useState(ALL);
 
     async function refresh() {
         try {
@@ -79,27 +78,10 @@ export default function ResponsesPage() {
         () => Array.from(new Set(responses.map((r) => r.restaurantName).filter((n): n is string => !!n))).sort((a, b) => a.localeCompare(b)),
         [responses]
     );
-    const branchOptions = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    responses
-                        .filter((r) => restaurantFilter === ALL || r.restaurantName === restaurantFilter)
-                        .map((r) => r.branchName)
-                        .filter((n): n is string => !!n)
-                )
-            ).sort((a, b) => a.localeCompare(b)),
-        [responses, restaurantFilter]
-    );
-
     const filtered = useMemo(
         () =>
-            responses.filter(
-                (r) =>
-                    (restaurantFilter === ALL || r.restaurantName === restaurantFilter) &&
-                    (branchFilter === ALL || r.branchName === branchFilter)
-            ),
-        [responses, restaurantFilter, branchFilter]
+            responses.filter((r) => restaurantFilter === ALL || r.restaurantName === restaurantFilter),
+        [responses, restaurantFilter]
     );
 
     // Per-question summary over the filtered responses, in the form's current question order
@@ -134,7 +116,7 @@ export default function ResponsesPage() {
     }
 
     const title = form?.title ? `${form.title} · Responses` : "Responses";
-    const isFiltered = restaurantFilter !== ALL || branchFilter !== ALL;
+    const isFiltered = restaurantFilter !== ALL;
 
     return (
         <Page
@@ -160,35 +142,17 @@ export default function ResponsesPage() {
                             {isFiltered && <span className="text-base font-medium text-gray-400"> of {responses.length}</span>}
                         </h2>
                         {restaurantOptions.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                <select
-                                    aria-label="Filter by restaurant"
-                                    value={restaurantFilter}
-                                    onChange={(e) => {
-                                        setRestaurantFilter(e.target.value);
-                                        setBranchFilter(ALL);
-                                    }}
-                                    className={filterClass}
-                                >
-                                    <option value={ALL}>All restaurants</option>
-                                    {restaurantOptions.map((n) => (
-                                        <option key={n} value={n}>{n}</option>
-                                    ))}
-                                </select>
-                                {branchOptions.length > 0 && (
-                                    <select
-                                        aria-label="Filter by branch"
-                                        value={branchFilter}
-                                        onChange={(e) => setBranchFilter(e.target.value)}
-                                        className={filterClass}
-                                    >
-                                        <option value={ALL}>All branches</option>
-                                        {branchOptions.map((n) => (
-                                            <option key={n} value={n}>{n}</option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
+                            <select
+                                aria-label="Filter by restaurant"
+                                value={restaurantFilter}
+                                onChange={(e) => setRestaurantFilter(e.target.value)}
+                                className={filterClass}
+                            >
+                                <option value={ALL}>All restaurants</option>
+                                {restaurantOptions.map((n) => (
+                                    <option key={n} value={n}>{n}</option>
+                                ))}
+                            </select>
                         )}
                     </div>
 
@@ -203,10 +167,7 @@ export default function ResponsesPage() {
                         <Card className="text-center py-12">
                             <p className="font-semibold text-gray-900 mb-1">No responses match these filters</p>
                             <button
-                                onClick={() => {
-                                    setRestaurantFilter(ALL);
-                                    setBranchFilter(ALL);
-                                }}
+                                onClick={() => setRestaurantFilter(ALL)}
                                 className="text-sm font-semibold text-green-800 hover:underline"
                             >
                                 Clear filters
@@ -234,7 +195,6 @@ export default function ResponsesPage() {
                                         <div className="min-w-0">
                                             <p className="text-[15px] font-bold text-gray-900 truncate">
                                                 {r.restaurantName || "Unknown restaurant"}
-                                                {r.branchName && <span className="font-medium text-gray-500"> · {r.branchName}</span>}
                                             </p>
                                             <p className="text-[12px] font-medium text-gray-400">{formatDate(r.submittedAt)}</p>
                                         </div>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { useGlobalUI } from "@/components/ui/Toast";
 import { CategoryListSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { FeedbackForm, createForm, deleteForm, listFeedbackRestaurants, listForms } from "@/lib/data";
+import { FeedbackForm, createForm, deleteForm, listForms } from "@/lib/data";
 
 export default function FeedbackPage() {
     const router = useRouter();
@@ -17,7 +17,6 @@ export default function FeedbackPage() {
     const { canDelete } = useAuth();
 
     const [forms, setForms] = useState<FeedbackForm[]>([]);
-    const [restaurantCount, setRestaurantCount] = useState<number | null>(null);
     const [loaded, setLoaded] = useState(false);
     const [newTitle, setNewTitle] = useState("");
     const [creating, setCreating] = useState(false);
@@ -33,9 +32,6 @@ export default function FeedbackPage() {
 
     useEffect(() => {
         refresh();
-        listFeedbackRestaurants()
-            .then((r) => setRestaurantCount(r.length))
-            .catch(() => setRestaurantCount(null));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -72,34 +68,8 @@ export default function FeedbackPage() {
     return (
         <Page title="Customer Feedback" backPath="/admin" breadcrumbs={[{ label: "Feedback" }]}>
             <p className="text-sm text-gray-400 px-1">
-                One set of forms for every restaurant. Customers pick their restaurant and branch first, then answer your questions.
+                Build a form, assign it to the restaurants it\u2019s for, and viewers of those restaurants can fill it out in the app. Each response is tagged with its restaurant.
             </p>
-
-            {/* Restaurants + branches setup */}
-            <Link href="/admin/feedback/restaurants" className="block">
-                <Card className="p-4 hover:bg-gray-50 transition-colors rounded-2xl border border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-50 text-green-700 rounded-xl flex items-center justify-center shrink-0">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" />
-                            </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-gray-900">Restaurants &amp; branches</p>
-                            <p className="text-[12px] text-gray-400">
-                                {restaurantCount === null
-                                    ? "The choices customers see at the top of every form"
-                                    : restaurantCount === 0
-                                    ? "None yet — add the restaurants customers can choose from"
-                                    : `${restaurantCount} restaurant${restaurantCount === 1 ? "" : "s"} customers can choose from`}
-                            </p>
-                        </div>
-                        <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </Card>
-            </Link>
 
             <form onSubmit={handleCreate} className="flex gap-2">
                 <input
@@ -129,16 +99,22 @@ export default function FeedbackPage() {
                                 <Link href={`/admin/feedback/${form.id}`} className="flex-1 min-w-0 px-2 py-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-blue-600 truncate">{form.title}</span>
-                                        <span
-                                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                                                form.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
-                                            }`}
-                                        >
-                                            {form.isActive ? "Live" : "Hidden"}
-                                        </span>
+                                        {(() => {
+                                            const assigned = (form.restaurantIds ?? []).length;
+                                            const [label, cls] = !form.isActive
+                                                ? ["Hidden", "bg-gray-100 text-gray-500"]
+                                                : assigned === 0
+                                                ? ["Needs a restaurant", "bg-amber-50 text-amber-700"]
+                                                : ["Live", "bg-green-50 text-green-700"];
+                                            return <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${cls}`}>{label}</span>;
+                                        })()}
                                     </div>
                                     <p className="text-[12px] text-gray-400 mt-0.5">
                                         {form.questions.length} question{form.questions.length === 1 ? "" : "s"}
+                                        {" · "}
+                                        {(form.restaurantIds ?? []).length === 0
+                                            ? "no restaurants"
+                                            : `${(form.restaurantIds ?? []).length} restaurant${(form.restaurantIds ?? []).length === 1 ? "" : "s"}`}
                                     </p>
                                 </Link>
                                 <Link

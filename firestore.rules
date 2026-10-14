@@ -54,28 +54,24 @@ service cloud.firestore {
         }
       }
     }
-    // CUSTOMER FEEDBACK — universal (not tied to a menu restaurant)
-    // Managers maintain the restaurant/branch choices and build the forms; signed-in
-    // customers (the app) read them and submit responses; only managers read responses.
-    match /feedbackRestaurants/{id} {
-      allow read: if signedIn();
-      allow write: if isManager();
-    }
-
+    // CUSTOMER FEEDBACK
+    // Managers build forms and assign them to menu restaurants (restaurantIds). Signed-in app
+    // users read forms and submit responses; only managers read or delete responses.
     match /feedbackForms/{formId} {
       allow read: if signedIn();
       allow write: if isManager();
 
       match /responses/{responseId} {
+        // The restaurant must be one the form is actually assigned to.
         allow create: if signedIn()
-                      && request.resource.data.keys().hasOnly(['answers', 'restaurantId', 'restaurantName', 'branchId', 'branchName', 'submittedAt', 'submittedBy'])
+                      && request.resource.data.keys().hasOnly(['answers', 'restaurantId', 'restaurantName', 'submittedAt', 'submittedBy'])
                       && request.resource.data.answers is list
                       && request.resource.data.answers.size() <= 50
+                      && request.resource.data.restaurantId is string
                       && request.resource.data.restaurantName is string
                       && request.resource.data.restaurantName.size() <= 200
-                      && request.resource.data.branchName is string
-                      && request.resource.data.branchName.size() <= 200
-                      && request.resource.data.submittedBy == request.auth.uid;
+                      && request.resource.data.submittedBy == request.auth.uid
+                      && get(/databases/$(database)/documents/feedbackForms/$(formId)).data.restaurantIds.hasAny([request.resource.data.restaurantId]);
         allow read, delete: if isManager();
         allow update: if false;
       }

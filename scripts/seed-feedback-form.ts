@@ -1,5 +1,5 @@
 /**
- * Put the standard 8 customer-feedback questions into Firestore.
+ * Put the standard customer-feedback questions into Firestore.
  *
  * Usage:
  *   npx tsx scripts/seed-feedback-form.ts --dry-run   # show what exists / what would change
@@ -7,6 +7,8 @@
  *
  * Behaviour (never creates duplicates):
  *   - a form already containing these questions  -> left untouched
+ *   - a form that already has the standard set but is missing some (e.g. a question added
+ *     later) -> only the missing ones are inserted, in place; nothing else is changed
  *   - a form that is still a single blank question -> filled with the questions
  *   - otherwise                                    -> a new "Customer Feedback" form is created
  * The form is left hidden (isActive: false); switch on "Show in the app" on the website.
@@ -43,6 +45,7 @@ const questions = (): Q[] => [
     q("How would you rate the taste of our food?", "stars"),
     q("Would you come back to eat with us again?", "yesno"),
     q("Is there anything else you want to tell us?", "text"),
+    q("Table number", "text"),
     q("Name", "text", true),
     q("Email address", "text", true),
 ];
@@ -56,12 +59,28 @@ async function main() {
     });
 
     const wanted = questions();
-    const alreadyThere = snap.docs.find((d) => {
-        const texts = ((d.data().questions ?? []) as Q[]).map((x) => x.text);
-        return wanted.every((w) => texts.includes(w.text));
-    });
+    const textsOf = (d: FirebaseFirestore.QueryDocumentSnapshot) => ((d.data().questions ?? []) as Q[]).map((x) => x.text);
+
+    const alreadyThere = snap.docs.find((d) => wanted.every((w) => textsOf(d).includes(w.text)));
     if (alreadyThere) {
         console.log(`\nForm ${alreadyThere.id} already has these questions — nothing to do.`);
+        return;
+    }
+
+    // A form that has the standard set (it contains the first question) but lacks some: insert
+    // only the missing ones, each just before the next standard question that the form has.
+    const partial = snap.docs.find((d) => textsOf(d).includes(wanted[0].text));
+    if (partial) {
+        const existing = [...((partial.data().questions ?? []) as Q[])];
+        const missing = wanted.filter((w) => !textsOf(partial).includes(w.text));
+        for (const m of missing) {
+            const after = wanted.slice(wanted.indexOf(m) + 1).map((w) => existing.findIndex((e) => e.text === w.text)).find((i) => i >= 0);
+            existing.splice(after ?? existing.length, 0, m);
+        }
+        console.log(`\nWill insert into form ${partial.id} ("${partial.data().title}"): ${missing.map((m) => `"${m.text}"`).join(", ")}`);
+        if (dryRun) return;
+        await partial.ref.update({ questions: existing, updatedAt: FieldValue.serverTimestamp() });
+        console.log("Done: inserted missing questions.");
         return;
     }
 

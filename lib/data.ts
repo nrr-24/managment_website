@@ -1503,6 +1503,26 @@ export function newFormQuestion(): FormQuestion {
     return { id: generateUUID(), text: "", type: "text", required: false };
 }
 
+/** The standard customer-feedback questions every new form starts with (all editable). */
+export function defaultFormQuestions(): FormQuestion[] {
+    const q = (text: string, type: FormQuestionType, required = false): FormQuestion => ({
+        id: generateUUID(),
+        text,
+        type,
+        required,
+    });
+    return [
+        q("Is this your first time at our restaurant?", "yesno"),
+        q("What is your overall satisfaction with our restaurant?", "stars", true),
+        q("How would you rate the hygiene?", "stars"),
+        q("How would you rate the taste of our food?", "stars"),
+        q("Would you come back to eat with us again?", "yesno"),
+        q("Is there anything else you want to tell us?", "text"),
+        q("Name", "text", true),
+        q("Email address", "text", true),
+    ];
+}
+
 function millis(ts: any): number {
     return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : 0);
 }
@@ -1564,7 +1584,7 @@ export async function createForm(title: string): Promise<string> {
     const docRef = await addDoc(collection(db, "feedbackForms"), {
         title,
         isActive: false,
-        questions: [newFormQuestion()],
+        questions: defaultFormQuestions(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });

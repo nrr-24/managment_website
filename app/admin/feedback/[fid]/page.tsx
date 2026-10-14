@@ -30,6 +30,7 @@ import {
     FORM_QUESTION_TYPES,
     FormQuestion,
     FormQuestionType,
+    defaultFormQuestions,
     getForm,
     newFormQuestion,
     updateForm,
@@ -370,6 +371,20 @@ export default function FormBuilderPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Offer the standard questions on a form that is still just one empty question */}
+            {questions.length === 1 && !questions[0].text.trim() && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl bg-green-50/60 border border-green-100 px-4 py-3">
+                    <p className="text-[13px] text-green-900">Starting from scratch? Load our standard 8 feedback questions.</p>
+                    <button
+                        type="button"
+                        onClick={() => setQuestions(defaultFormQuestions())}
+                        className="shrink-0 text-[13px] font-bold text-green-800 hover:underline"
+                    >
+                        Use standard questions
+                    </button>
+                </div>
+            )}
 
             {/* Questions */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>

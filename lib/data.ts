@@ -1575,3 +1575,52 @@ export async function listFormResponses(formId: string): Promise<FormResponse[]>
 export async function deleteFormResponse(formId: string, responseId: string) {
     await deleteDoc(doc(db, "feedbackForms", formId, "responses", responseId));
 }
+
+// ---------- Menu hubs (one QR code → a page listing several restaurants' menus) ----------
+// menuHubs/{slug}   the document id IS the URL slug (/hub/{slug}), so a printed QR code never
+//                   changes when you add or remove restaurants from the hub later.
+
+export type MenuHub = {
+    id: string;
+    title: string;
+    titleAr?: string;
+    restaurantIds: string[];
+    createdAt?: any;
+};
+
+export const HUB_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function slugify(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 40);
+}
+
+export async function listMenuHubs(): Promise<MenuHub[]> {
+    const snap = await getDocs(collection(db, "menuHubs"));
+    const hubs = snap.docs.map((d) => ({ id: d.id, restaurantIds: [], ...(d.data() as any) })) as MenuHub[];
+    return hubs.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+}
+
+export async function getMenuHub(slug: string): Promise<MenuHub | null> {
+    const snap = await getDoc(doc(db, "menuHubs", slug));
+    if (!snap.exists()) return null;
+    return { id: snap.id, restaurantIds: [], ...(snap.data() as any) };
+}
+
+/** Creates a hub whose id is the slug. Throws "exists" if the slug is taken. */
+export async function createMenuHub(slug: string, title: string) {
+    const ref = doc(db, "menuHubs", slug);
+    if ((await getDoc(ref)).exists()) throw new Error("exists");
+    await setDoc(ref, { title, restaurantIds: [], createdAt: serverTimestamp() });
+}
+
+export async function updateMenuHub(slug: string, data: Partial<Pick<MenuHub, "title" | "titleAr" | "restaurantIds">>) {
+    await updateDoc(doc(db, "menuHubs", slug), cleanData(data));
+}
+
+export async function deleteMenuHub(slug: string) {
+    await deleteDoc(doc(db, "menuHubs", slug));
+}

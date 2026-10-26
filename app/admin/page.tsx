@@ -51,6 +51,17 @@ export default function AdminPage() {
             ),
             color: 'bg-purple-50 text-purple-600',
         },
+        {
+            title: 'Menu QR Codes',
+            desc: 'One QR code for several menus',
+            href: '/admin/hubs',
+            icon: (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm2-2h2v2h-2v-2z" />
+                </svg>
+            ),
+            color: 'bg-amber-50 text-amber-600',
+        },
         ...(isAdmin ? [
             {
                 title: 'User Access',

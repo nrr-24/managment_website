@@ -43,11 +43,43 @@ function publicUrl(objectPath: string): string {
     return `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media`;
 }
 
-/** Get the storage object path (for the SDK) from a plain path or a firebase URL. */
-function objectPath(path?: string): string | null {
-    if (!path) return null;
-    if (path.startsWith("http")) return tryExtractStoragePathFromFirebaseUrl(path);
-    return path;
+/**
+ * Build the server-resized variant path for an object, matching the Firebase
+ * "Resize Images" extension layout: `<dir>/thumbnails/<name>_<size>x<size>.<ext>`.
+ *
+ * Many originals have been deleted from Storage after their variants were
+ * generated (the iOS app loads the variant, so it never noticed). This lets the
+ * website fall back to the variant instead of showing a broken-image icon.
+ * Returns null if `objectPath` is already a variant/thumbnail.
+ */
+function resizedVariantPath(objectPath: string, size = 1024): string | null {
+    const slash = objectPath.lastIndexOf("/");
+    const dir = slash >= 0 ? objectPath.slice(0, slash) : "";
+    const file = slash >= 0 ? objectPath.slice(slash + 1) : objectPath;
+    if (dir.endsWith("thumbnails") || /_\d+x\d+\.[^./]+$/.test(file)) return null;
+    const dot = file.lastIndexOf(".");
+    const name = dot >= 0 ? file.slice(0, dot) : file;
+    const ext = dot >= 0 ? file.slice(dot + 1) : "";
+    const thumb = ext ? `${name}_${size}x${size}.${ext}` : `${name}_${size}x${size}`;
+    return dir ? `${dir}/thumbnails/${thumb}` : `thumbnails/${thumb}`;
+}
+
+/** Ordered list of sources to try for a stored value: original first, then its resized variant. */
+function candidateSources(path?: string): { raw: string; op: string | null }[] {
+    if (!path) return [];
+    // Legacy full URL: extract the firebase object path if we can, else use as-is.
+    if (path.startsWith("http")) {
+        const op = tryExtractStoragePathFromFirebaseUrl(path);
+        if (!op) return [{ raw: path, op: null }];
+        const variant = resizedVariantPath(op);
+        const list = [{ raw: publicUrl(op), op }];
+        if (variant) list.push({ raw: publicUrl(variant), op: variant });
+        return list;
+    }
+    const variant = resizedVariantPath(path);
+    const list = [{ raw: publicUrl(path), op: path }];
+    if (variant) list.push({ raw: publicUrl(variant), op: variant });
+    return list;
 }
 
 /** Resolve any stored value (plain path or legacy full URL) to a usable src. */
@@ -88,21 +120,33 @@ export function StorageImage({
     optWidth = 1080,
     ...props
 }: StorageImageProps) {
-    const rawUrl = useMemo(() => resolveSrc(path), [path]);
-    // Serve a resized WebP via the Next.js optimizer for public-menu images.
-    const optimizedUrl = useMemo(() => storageImageUrl(path, { optimize, width: optWidth }), [path, optimize, optWidth]);
+    // Sources to try in order: original object, then its resized variant (the
+    // original is often missing from Storage even though the variant exists).
+    const sources = useMemo(() => candidateSources(path), [path]);
+    const [srcIdx, setSrcIdx] = useState(0);
     const [error, setError] = useState(false);
     const [loaded, setLoaded] = useState(false);
-    // Fallback chain: 0 = optimized · 1 = raw public URL · 2 = SDK getDownloadURL (tokened).
+    // Per-source fallback chain: 0 = optimized · 1 = raw public URL · 2 = SDK getDownloadURL (tokened).
     const [stage, setStage] = useState(0);
     const [tokenedUrl, setTokenedUrl] = useState<string | null>(null);
     const [showLightbox, setShowLightbox] = useState(false);
 
+    const current = sources[srcIdx];
+    const rawUrl = current?.raw ?? null;
+    // Serve a resized WebP via the Next.js optimizer for public-menu images.
+    const optimizedUrl = useMemo(() => {
+        if (optimize && rawUrl && rawUrl.includes("firebasestorage.googleapis.com")) {
+            return `/_next/image?url=${encodeURIComponent(rawUrl)}&w=${optWidth}&q=72`;
+        }
+        return rawUrl;
+    }, [rawUrl, optimize, optWidth]);
+
     const url = stage === 0 ? optimizedUrl : stage === 1 ? rawUrl : tokenedUrl;
 
-    // Restart the fallback chain whenever the source path changes.
+    // Restart the whole chain whenever the source path changes.
     useEffect(() => {
         setError(false);
+        setSrcIdx(0);
         setStage(0);
         setTokenedUrl(null);
     }, [path]);
@@ -111,24 +155,35 @@ export function StorageImage({
     // Third layer: fetch a fresh, tokened download URL directly from the SDK.
     useEffect(() => {
         if (stage !== 2 || tokenedUrl) return;
-        const op = objectPath(path);
+        const op = current?.op ?? null;
         if (!op) {
-            setError(true);
+            advanceSource();
             return;
         }
         let mounted = true;
         getDownloadURL(ref(storage, op))
             .then((u) => mounted && setTokenedUrl(u))
-            .catch(() => mounted && setError(true));
+            .catch(() => mounted && advanceSource());
         return () => {
             mounted = false;
         };
-    }, [stage, tokenedUrl, path]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [stage, tokenedUrl, srcIdx]);
+
+    function advanceSource() {
+        if (srcIdx + 1 < sources.length) {
+            setSrcIdx(srcIdx + 1);
+            setStage(0);
+            setTokenedUrl(null);
+        } else {
+            setError(true);
+        }
+    }
 
     function advanceStage() {
         if (stage === 0 && optimizedUrl !== rawUrl) setStage(1);
-        else if (stage < 2) setStage(2);
-        else setError(true);
+        else if (stage < 2 && current?.op) setStage(2);
+        else advanceSource();
     }
 
     // Hard failure (no path, or every source exhausted) → fallback icon.

@@ -15,6 +15,7 @@ import {
     getForm,
     listFormResponses,
 } from "@/lib/data";
+import { downloadFeedbackWorkbook, exportFileName, groupByDay } from "@/lib/feedback-export";
 
 const SMILEYS = ["😞", "🙁", "😐", "🙂", "😄"];
 const ALL = "__all__";
@@ -56,6 +57,8 @@ export default function ResponsesPage() {
     const [responses, setResponses] = useState<FormResponse[]>([]);
     const [loaded, setLoaded] = useState(false);
     const [restaurantFilter, setRestaurantFilter] = useState(ALL);
+    const [exportDay, setExportDay] = useState("");
+    const [exporting, setExporting] = useState(false);
 
     async function refresh() {
         try {
@@ -118,6 +121,28 @@ export default function ResponsesPage() {
     const title = form?.title ? `${form.title} · Responses` : "Responses";
     const isFiltered = restaurantFilter !== ALL;
 
+    // Excel export works on whatever the restaurant filter currently shows, grouped by local day.
+    const byDay = useMemo(() => groupByDay(filtered), [filtered]);
+    const dayList = useMemo(() => Array.from(byDay.keys()).sort().reverse(), [byDay]);
+    const selectedDay = exportDay || dayList[0] || "";
+    const selectedDayCount = byDay.get(selectedDay)?.length ?? 0;
+    const scopeLabel = restaurantFilter === ALL ? "all restaurants" : restaurantFilter;
+
+    async function runExport(days: string[], suffix: string) {
+        if (!form || days.length === 0) return;
+        setExporting(true);
+        try {
+            await downloadFeedbackWorkbook(
+                form,
+                days.map((day) => ({ day, responses: byDay.get(day) ?? [] })),
+                exportFileName(form.title, suffix)
+            );
+        } catch {
+            toast("Couldn't create the Excel file", "error");
+        }
+        setExporting(false);
+    }
+
     return (
         <Page
             title={title}
@@ -175,6 +200,45 @@ export default function ResponsesPage() {
                         </Card>
                     ) : (
                         <>
+                            {/* Excel export */}
+                            <Card className="space-y-3">
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900">Export to Excel</h3>
+                                    <p className="text-[12px] text-gray-400 mt-0.5">
+                                        One row per response, one column per question. Includes {scopeLabel}.
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-end gap-3">
+                                    <div>
+                                        <label htmlFor="export-day" className="block text-[13px] font-medium text-gray-500 mb-1.5">Day</label>
+                                        <input
+                                            id="export-day"
+                                            type="date"
+                                            value={selectedDay}
+                                            onChange={(e) => setExportDay(e.target.value)}
+                                            className={filterClass}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => runExport([selectedDay], selectedDay)}
+                                        disabled={exporting || selectedDayCount === 0}
+                                        className="h-10 px-4 rounded-xl bg-green-800 text-white text-sm font-semibold hover:bg-green-900 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        {exporting ? "Preparing…" : `Download this day (${selectedDayCount})`}
+                                    </button>
+                                    <button
+                                        onClick={() => runExport(dayList, "all-days")}
+                                        disabled={exporting || dayList.length === 0}
+                                        className="h-10 px-4 rounded-xl bg-gray-100 text-gray-900 text-sm font-semibold hover:bg-gray-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Download all days ({dayList.length} sheet{dayList.length === 1 ? "" : "s"})
+                                    </button>
+                                </div>
+                                {selectedDay && selectedDayCount === 0 && (
+                                    <p className="text-[12px] text-amber-700">No responses on this day.</p>
+                                )}
+                            </Card>
+
                             {/* Summary */}
                             <Card className="space-y-3">
                                 <h3 className="text-sm font-bold text-gray-900">Summary</h3>
